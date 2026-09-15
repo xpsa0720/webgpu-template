@@ -1,5 +1,6 @@
 import { DEBUG_MODE, DEBUG_PASSTIMESTAMP, DEBUG_PRINT, FPS } from "../setting";
 import type { AppBuffers } from "../shader_queue";
+import { loadImageBitmap } from "../utill/load_image_bitmap";
 import { printDefault } from "../utill/print";
 import { ComputePass, type OutGPUBuffer } from "./compute_pass";
 import type { ParamsBuffer } from "./params_buffer";
@@ -206,6 +207,30 @@ export class WP {
         rowsPerImage: size.height,
       },
       { width: size.width, height: size.height },
+    );
+    const textureObj: WebGPUTexture = {
+      texture: texture,
+    };
+
+    return textureObj;
+  }
+
+  async createTextureFromImage(url: string, usage: GPUTextureUsageFlags) {
+    if (!this.device) throw new Error("init WP 누락");
+    const imageBitmap = await loadImageBitmap(url);
+    const texture = this.device.createTexture({
+      size: [imageBitmap.width, imageBitmap.height, 1],
+      format: "rgba8unorm",
+      usage: usage | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    this.device.queue.copyExternalImageToTexture(
+      { source: imageBitmap },
+      { texture },
+      {
+        width: imageBitmap.width,
+        height: imageBitmap.height,
+      },
     );
     const textureObj: WebGPUTexture = {
       texture: texture,
