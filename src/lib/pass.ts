@@ -1,0 +1,116 @@
+import type { OutGPUBuffer } from "./compute_pass";
+import type { PrintType } from "./struct/out_buffer_type";
+import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
+import type { WebGPUBuffer } from "./struct/webgpu_buffer";
+import type { CreatePassTimeTag } from "./WP";
+
+export interface PassArg {
+  device: GPUDevice;
+  shaderCode: string;
+  label?: string;
+  time?: CreatePassTimeTag;
+  encoderCallback?: EncoderCallback;
+}
+
+export interface PassBuffer extends WebGPUBuffer {
+  isPrint: boolean;
+  label: string;
+  type: PrintType;
+  print?: PrintGPUBuffer;
+}
+
+interface WriteBufferArg {
+  bindigIdx: number;
+  bufferObj: WebGPUBuffer;
+  isPrint?: boolean;
+  print?: PrintGPUBuffer;
+  label?: string;
+  type?: PrintType;
+}
+
+export interface DebugPassArg {
+  querySet: GPUQuerySet;
+  time?: CreatePassTimeTag;
+}
+
+export type EncoderCallback = (encoder: GPUCommandEncoder) => void;
+export class Pass {
+  buffers: Record<number, PassBuffer>;
+  shaderCode: string;
+  shaderModule: GPUShaderModule;
+  device: GPUDevice;
+  label: string;
+  time?: CreatePassTimeTag;
+  encoderCallback?: EncoderCallback;
+  constructor(arg: PassArg) {
+    if (!arg.device) {
+      throw Error("wp를 초기화 하십시오");
+    }
+    this.shaderCode = arg.shaderCode;
+    this.buffers = [];
+    this.device = arg.device;
+    this.shaderModule = this.device.createShaderModule({
+      code: this.shaderCode,
+    });
+    this.label = arg.label ?? "";
+    this.time = arg.time;
+    this.encoderCallback = arg.encoderCallback;
+  }
+
+  writeBuffer(bindingBuffers: WriteBufferArg[]) {
+    bindingBuffers.forEach((buffer) => {
+      const bindigIdx = buffer.bindigIdx;
+      const bufferObj = buffer.bufferObj;
+      const isPrint = buffer.isPrint;
+      const label = buffer.label;
+      const type = buffer.type ?? "f32";
+      const print = buffer.print;
+      if (this.buffers[bindigIdx]) {
+        throw Error(
+          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+        );
+      }
+      const buf: PassBuffer = {
+        buffer: bufferObj.buffer,
+        label: label ?? "None Label",
+        isPrint: isPrint ?? false,
+        type: type,
+        print: print,
+      };
+
+      this.buffers[bindigIdx] = buf;
+    });
+  }
+
+  deleteBuffer(bindigIdx: number) {
+    if (!this.buffers[bindigIdx]) {
+      throw Error("해당 바인딩에 버퍼가 없습니다");
+    }
+    delete this.buffers[bindigIdx];
+  }
+
+  createPass(encoder: GPUCommandEncoder): OutGPUBuffer[] {
+    const stagingBuffers: Array<OutGPUBuffer> = [];
+
+    for (const [key, value] of Object.entries(this.buffers)) {
+      if (!value.isPrint) {
+        continue;
+      }
+      const stagingBuffer = this.device.createBuffer({
+        size: value.buffer.size,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      });
+      const buffer = value.buffer;
+      encoder.copyBufferToBuffer(buffer, 0, stagingBuffer, 0, buffer.size);
+
+      stagingBuffers.push({
+        staginigBuffer: stagingBuffer,
+        label: value.label,
+        type: value.type,
+        print: value.print,
+      });
+    }
+    // if (this.encoderCallback) this.encoderCallback(encoder);
+    return stagingBuffers;
+  }
+}
