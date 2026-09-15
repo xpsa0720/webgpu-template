@@ -1,7 +1,11 @@
 import type { OutGPUBuffer } from "./compute_pass";
 import type { PrintType } from "./struct/out_buffer_type";
 import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
-import type { WebGPUBuffer } from "./struct/webgpu_buffer";
+import type {
+  WebGPUBuffer,
+  WebGPUSampler,
+  WebGPUTexture,
+} from "./struct/webgpu_buffer";
 import type { CreatePassTimeTag } from "./WP";
 
 export interface PassArg {
@@ -19,6 +23,13 @@ export interface PassBuffer extends WebGPUBuffer {
   print?: PrintGPUBuffer;
 }
 
+export interface PassTexture extends WebGPUTexture {
+  label: string;
+}
+export interface PassSampler extends WebGPUSampler {
+  label: string;
+}
+
 interface WriteBufferArg {
   bindigIdx: number;
   bufferObj: WebGPUBuffer;
@@ -26,6 +37,18 @@ interface WriteBufferArg {
   print?: PrintGPUBuffer;
   label?: string;
   type?: PrintType;
+}
+
+interface WriteTextureArg {
+  bindigIdx: number;
+  textureObj: WebGPUTexture;
+  label?: string;
+}
+
+interface WriteSamplerArg {
+  bindigIdx: number;
+  samplerObj: WebGPUSampler;
+  label?: string;
 }
 
 export interface DebugPassArg {
@@ -36,6 +59,8 @@ export interface DebugPassArg {
 export type EncoderCallback = (encoder: GPUCommandEncoder) => void;
 export class Pass {
   buffers: Record<number, PassBuffer>;
+  textures: Record<number, PassTexture>;
+  sampler: Record<number, PassSampler>;
   shaderCode: string;
   shaderModule: GPUShaderModule;
   device: GPUDevice;
@@ -48,6 +73,8 @@ export class Pass {
     }
     this.shaderCode = arg.shaderCode;
     this.buffers = [];
+    this.textures = [];
+    this.sampler = [];
     this.device = arg.device;
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
@@ -79,6 +106,46 @@ export class Pass {
       };
 
       this.buffers[bindigIdx] = buf;
+    });
+  }
+
+  writeTexture(bindingTextures: WriteTextureArg[]) {
+    bindingTextures.forEach((texture) => {
+      const bindigIdx = texture.bindigIdx;
+      const bufferObj = texture.textureObj;
+      const label = texture.label;
+
+      if (this.textures[bindigIdx]) {
+        throw Error(
+          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+        );
+      }
+      const tex: PassTexture = {
+        texture: bufferObj.texture,
+        label: label ?? "None Label",
+      };
+
+      this.textures[bindigIdx] = tex;
+    });
+  }
+
+  writeSampler(bindingSampler: WriteSamplerArg[]) {
+    bindingSampler.forEach((sampler) => {
+      const bindigIdx = sampler.bindigIdx;
+      const bufferObj = sampler.samplerObj;
+      const label = sampler.label;
+
+      if (this.sampler[bindigIdx]) {
+        throw Error(
+          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+        );
+      }
+      const sam: PassSampler = {
+        sampler: bufferObj.sampler,
+        label: label ?? "None Label",
+      };
+
+      this.sampler[bindigIdx] = sam;
     });
   }
 

@@ -1,9 +1,4 @@
-import {
-  DEBUG_MODE,
-  DEBUG_PASSTIMESTAMP,
-  DEBUG_PRINT,
-  FPS,
-} from "../setting";
+import { DEBUG_MODE, DEBUG_PASSTIMESTAMP, DEBUG_PRINT, FPS } from "../setting";
 import type { AppBuffers } from "../shader_queue";
 import { printDefault } from "../utill/print";
 import { ComputePass, type OutGPUBuffer } from "./compute_pass";
@@ -13,7 +8,11 @@ import { RenderPass } from "./render_pass";
 import type { PrintType } from "./struct/out_buffer_type";
 import type { FormatStyle } from "./struct/print_gpu_buffer";
 import type { PassCallback } from "./struct/run_callback";
-import type { WebGPUBuffer } from "./struct/webgpu_buffer";
+import type {
+  WebGPUBuffer,
+  WebGPUSampler,
+  WebGPUTexture,
+} from "./struct/webgpu_buffer";
 import GUI from "lil-gui";
 
 interface WPArg {
@@ -88,7 +87,7 @@ export class WP {
     index: number,
     arg: CreateComputePassArg,
     time?: CreatePassTimeTag,
-    encoderCallback?:(encoder:GPUCommandEncoder)=>void,
+    encoderCallback?: (encoder: GPUCommandEncoder) => void,
   ) {
     if (!this.device) {
       throw new Error("init을 하시오");
@@ -115,7 +114,7 @@ export class WP {
       workgroupSize: arg.workgroupSize,
       label: arg.label,
       time: time,
-      encoderCallback
+      encoderCallback,
     });
     if (typeof time?.startIndex == "number" && typeof time.label == "string") {
       this.timeDebugLabels.push(time.label);
@@ -129,7 +128,7 @@ export class WP {
     index: number,
     arg: CreateRenderPassArg,
     time?: CreatePassTimeTag,
-    encoderCallback?:(encoder:GPUCommandEncoder)=>void,
+    encoderCallback?: (encoder: GPUCommandEncoder) => void,
   ) {
     if (!this.device) {
       throw new Error("init을 하시오");
@@ -162,7 +161,7 @@ export class WP {
       canvas: arg.canvas,
       loadOp: arg.loadOp,
       time: time,
-      encoderCallback
+      encoderCallback,
     });
 
     this.renderPasses[index] = pass;
@@ -185,6 +184,50 @@ export class WP {
     this.device.queue.writeBuffer(buffer, 0, data);
 
     return bufferObj;
+  }
+  createTexture(
+    size: GPUExtent3DDict,
+    data: AllowSharedBufferSource,
+    usage: GPUTextureUsageFlags,
+  ) {
+    if (!this.device) throw new Error("init WP 누락");
+
+    const texture = this.device.createTexture({
+      size: size,
+      format: "rgba8unorm",
+      usage: usage,
+    });
+
+    this.device.queue.writeTexture(
+      { texture },
+      data,
+      {
+        bytesPerRow: size.width * 4,
+        rowsPerImage: size.height,
+      },
+      { width: size.width, height: size.height },
+    );
+    const textureObj: WebGPUTexture = {
+      texture: texture,
+    };
+
+    return textureObj;
+  }
+
+  createSampler() {
+    if (!this.device) throw new Error("init WP 누락");
+
+    const sampler = this.device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+      addressModeU: "repeat",
+      addressModeV: "repeat",
+    });
+    const samplerObj: WebGPUSampler = {
+      sampler,
+    };
+
+    return samplerObj;
   }
 
   prevFrameTime = 0;
@@ -276,6 +319,7 @@ export class WP {
         });
       }
 
+      if (DEBUG_MODE) this.device.pushErrorScope("validation");
       for (const e of passes) {
         const stagingBuffer = await e.createPass(
           encoder,
@@ -286,7 +330,7 @@ export class WP {
               }
             : undefined,
         );
-        if(e.encoderCallback) e.encoderCallback(encoder);
+        if (e.encoderCallback) e.encoderCallback(encoder);
         stagingBuffers.push(stagingBuffer);
       }
       if (
@@ -313,6 +357,11 @@ export class WP {
       }
 
       this.device.queue.submit([encoder.finish()]);
+      if (DEBUG_MODE) {
+        this.device.popErrorScope().then((e) => {
+          if (e) console.error("[GPU Validation Error]", e.message);
+        });
+      }
       const resultDatas: Record<string, Float32Array | Uint32Array> = {};
 
       if (DEBUG_MODE && resolveStagingBuffer) {

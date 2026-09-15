@@ -1,4 +1,3 @@
-
 import { DEBUG_MODE } from "../setting";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
 import type { PrintType } from "./struct/out_buffer_type";
@@ -45,10 +44,24 @@ export class ComputePass extends Pass {
     //     throw new Error("디버그 인자가 없습니다!")
     // }
     const entries: Array<GPUBindGroupEntry> = [];
+    const entries_tex: Array<GPUBindGroupEntry> = [];
+    const entries_sampler: Array<GPUBindGroupEntry> = [];
     for (const [key, value] of Object.entries(this.buffers)) {
       entries.push({
         binding: Number(key),
         resource: { buffer: value.buffer },
+      });
+    }
+    for (const [key, value] of Object.entries(this.textures)) {
+      entries_tex.push({
+        binding: Number(key),
+        resource: value.texture.createView(),
+      });
+    }
+    for (const [key, value] of Object.entries(this.sampler)) {
+      entries_sampler.push({
+        binding: Number(key),
+        resource: value.sampler,
       });
     }
 
@@ -57,17 +70,34 @@ export class ComputePass extends Pass {
       entries: entries,
     });
 
-    const arg:GPUComputePassDescriptor = debugArg?.time && DEBUG_MODE ? {
-        timestampWrites:{
-            querySet: debugArg.querySet,
-            beginningOfPassWriteIndex:debugArg.time?.startIndex,
-            endOfPassWriteIndex:debugArg.time?.endIndex,
-        }
-    }:{}
+    const arg: GPUComputePassDescriptor =
+      debugArg?.time && DEBUG_MODE
+        ? {
+            timestampWrites: {
+              querySet: debugArg.querySet,
+              beginningOfPassWriteIndex: debugArg.time?.startIndex,
+              endOfPassWriteIndex: debugArg.time?.endIndex,
+            },
+          }
+        : {};
     const pass = encoder.beginComputePass(arg);
 
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, bindGroup);
+    if (Object.keys(this.textures).length > 0) {
+      const bindGroup_tex = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(1),
+        entries: entries_tex,
+      });
+      pass.setBindGroup(1, bindGroup_tex);
+    }
+    if (Object.keys(this.sampler).length > 0) {
+      const bindGroup_sam = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(2),
+        entries: entries_sampler,
+      });
+      pass.setBindGroup(2, bindGroup_sam);
+    }
     pass.dispatchWorkgroups(
       Math.ceil(this.computeTargetCount / this.workgroupSize),
     );

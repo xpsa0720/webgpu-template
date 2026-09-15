@@ -1,22 +1,24 @@
-import type { AppBuffers } from "../../shader_queue";
+import type { AppBuffers, AppSamplers, AppTextures } from "../../shader_queue";
 import type { CreatePassTimeTag, WP } from "../WP";
 
 export type PassQueue = (arg: PassQueueArg) => void;
-export interface PassQueueArg {
+
+interface BasePassQueueArg {
   wp: WP;
-  b: AppBuffers;
+  buffers: AppBuffers;
+  samplers: AppSamplers;
+  textures: AppTextures;
   idx: number;
   time?: CreatePassTimeTag;
-  computeTargetCount: number;
   compileVariable?: Record<string, string>;
 }
 
+export interface PassQueueArg extends BasePassQueueArg {
+  computeTargetCount: number;
+}
+
 export type PassRenderQueue = (arg: PassRenderQueueArg) => void;
-export interface PassRenderQueueArg extends PassQueueArg {
-  wp: WP;
-  b: AppBuffers;
-  idx: number;
+export interface PassRenderQueueArg extends BasePassQueueArg {
   canvas: HTMLCanvasElement;
-  time?: CreatePassTimeTag;
   loadOp?: GPULoadOp;
 }

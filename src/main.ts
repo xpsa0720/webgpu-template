@@ -3,7 +3,29 @@ import { GPU_PARAMS_BYTE_SIZE, ParamsBuffer } from "./lib/params_buffer";
 import type { PassCallback, PassCallbackArg } from "./lib/struct/run_callback";
 import { WP } from "./lib/WP";
 import { DT } from "./setting";
-import type { AppBuffers } from "./shader_queue";
+import type { AppBuffers, AppSamplers, AppTextures } from "./shader_queue";
+
+// ============================================================
+// 예시: 체커보드 텍스처 예제용 데이터 생성 (RGBA8Unorm)
+// createTextures()/createSamplers() 예제와 함께 사용
+// ============================================================
+// const CHECKER_TEX_SIZE = 64;
+// const CHECKER_CELL_SIZE = 8;
+// function createCheckerboardData(size: number, cell: number): Uint8Array {
+//   const data = new Uint8Array(size * size * 4);
+//   for (let y = 0; y < size; y++) {
+//     for (let x = 0; x < size; x++) {
+//       const isWhite = (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0;
+//       const idx = (y * size + x) * 4;
+//       const v = isWhite ? 255 : 40;
+//       data[idx + 0] = v;
+//       data[idx + 1] = v;
+//       data[idx + 2] = v;
+//       data[idx + 3] = 255;
+//     }
+//   }
+//   return data;
+// }
 
 // ============================================================
 // substep마다 호출되는 콜백 — 버퍼 초기화 등에 사용
@@ -25,6 +47,8 @@ class App {
   params: ParamsBuffer;
   wp: WP;
   b: AppBuffers | null;
+  t: AppTextures | null;
+  s: AppSamplers | null;
 
   constructor() {
     this.params = new ParamsBuffer();
@@ -33,6 +57,8 @@ class App {
     const canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.wp = new WP({ canvas: canvas, params: this.params });
     this.b = null;
+    this.t = null;
+    this.s = null;
   }
 
   resize() {
@@ -56,6 +82,9 @@ class App {
 
     this.resize();
     this.b = this.createBuffer();
+    // 예시: 텍스처/샘플러 생성 (아래 createTextures()/createSamplers() 예제 참고)
+    // this.t = this.createTextures();
+    // this.s = this.createSamplers();
     if (!this.wp.canvas) {
       throw new Error("canvas가 없습니다");
     }
@@ -139,6 +168,30 @@ class App {
     };
   }
 
+  // ============================================================
+  // 예시: 텍스처 + 샘플러 사용 — 체커보드 텍스처 생성
+  // (실제로 동작 검증까지 마친 예제. shader_queue.ts의 CheckerRender 주석과 짝을 이룸)
+  // ============================================================
+  // createTextures(): AppTextures {
+  //   const Checker = this.wp.createTexture(
+  //     { width: CHECKER_TEX_SIZE, height: CHECKER_TEX_SIZE },
+  //     createCheckerboardData(CHECKER_TEX_SIZE, CHECKER_CELL_SIZE),
+  //     GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  //   );
+  //
+  //   return {
+  //     Checker,
+  //   };
+  // }
+  //
+  // createSamplers(): AppSamplers {
+  //   const Checker = this.wp.createSampler();
+  //
+  //   return {
+  //     Checker,
+  //   };
+  // }
+
   setQueue() {
     if (!this.b || !this.wp.canvas) {
       throw new Error("버퍼 또는 canvas가 없습니다");
@@ -148,28 +201,31 @@ class App {
     this.wp.renderPasses = [];
 
     // ============================================================
-    // 예시: Compute/Render Pass 등록
+    // 예시: Compute/Render Pass 등록 (텍스처/샘플러 포함)
     // ============================================================
     // const computeQueue = [];
     // computeQueue.push(
     //   SomeComputePass({
     //     idx: computeQueue.length,
     //     wp: this.wp,
-    //     b: this.b,
+    //     buffers: this.b,
+    //     textures: this.t,
+    //     samplers: this.s,
     //     computeTargetCount: PARTICLE_COUNT,
     //     time: { label: "SomePass", startIndex: 0, endIndex: 1 },
     //   }),
     // );
     //
-    // const renderQueue = [];
+    // const renderQueue: unknown[] = [];
     // renderQueue.push(
-    //   Render({
+    //   CheckerRender({
     //     idx: renderQueue.length,
     //     wp: this.wp,
-    //     b: this.b,
+    //     buffers: this.b,
+    //     textures: this.t,
+    //     samplers: this.s,
     //     canvas: this.wp.canvas,
-    //     computeTargetCount: PARTICLE_COUNT,
-    //     time: { label: "Render", startIndex: 2, endIndex: 3 },
+    //     time: { label: "CheckerRender" },
     //   }),
     // );
   }

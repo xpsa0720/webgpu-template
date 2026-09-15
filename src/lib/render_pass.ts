@@ -81,7 +81,7 @@ export class RenderPass extends Pass {
         targets: [
           {
             format: presentationFormat,
-            blend:blendState
+            blend: blendState,
           },
         ],
       },
@@ -103,12 +103,27 @@ export class RenderPass extends Pass {
     debugArg?: DebugPassArg,
   ): OutGPUBuffer[] {
     const entries: Array<GPUBindGroupEntry> = [];
+    const entries_tex: Array<GPUBindGroupEntry> = [];
+    const entries_sampler: Array<GPUBindGroupEntry> = [];
     for (const [key, value] of Object.entries(this.buffers)) {
       entries.push({
         binding: Number(key),
         resource: { buffer: value.buffer },
       });
     }
+    for (const [key, value] of Object.entries(this.textures)) {
+      entries_tex.push({
+        binding: Number(key),
+        resource: value.texture.createView(),
+      });
+    }
+    for (const [key, value] of Object.entries(this.sampler)) {
+      entries_sampler.push({
+        binding: Number(key),
+        resource: value.sampler,
+      });
+    }
+
     const bindGroup = this.device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),
       entries: entries,
@@ -134,6 +149,20 @@ export class RenderPass extends Pass {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, bindGroup);
+    if (Object.keys(this.textures).length > 0) {
+      const bindGroup_tex = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(1),
+        entries: entries_tex,
+      });
+      pass.setBindGroup(1, bindGroup_tex);
+    }
+    if (Object.keys(this.sampler).length > 0) {
+      const bindGroup_sam = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(2),
+        entries: entries_sampler,
+      });
+      pass.setBindGroup(2, bindGroup_sam);
+    }
     pass.draw(
       this.vertexCount,
       this.instanceCount == 0 ? 1 : this.instanceCount,

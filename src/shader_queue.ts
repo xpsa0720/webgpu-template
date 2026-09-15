@@ -33,6 +33,15 @@ export interface AppBuffers {
   // Pressure_B: WebGPUBuffer;
 }
 
+export interface AppTextures {
+  // 예시: 체커보드 텍스처 예제에서 사용했던 필드
+  // Checker: WebGPUTexture;
+}
+export interface AppSamplers {
+  // 예시: 체커보드 텍스처 예제에서 사용했던 필드
+  // Checker: WebGPUSampler;
+}
+
 // ============================================================
 // 셰이더 코드 전처리 — @WORKGROUP_SIZE 등 컴파일 변수 치환
 // ============================================================
@@ -65,8 +74,15 @@ const applyVariableShaderCode = (
 //     arg.time,
 //   );
 //   pass.writeBuffer([
-//     { bindigIdx: 0, bufferObj: arg.b.SomeBuffer },
-//     { bindigIdx: 1, bufferObj: arg.b.Params },
+//     { bindigIdx: 0, bufferObj: arg.buffers.SomeBuffer },
+//     { bindigIdx: 1, bufferObj: arg.buffers.Params },
+//   ]);
+//   // 텍스처/샘플러는 각각 group(1)/group(2)에 별도 바인딩되므로 인덱스가 buffer와 독립적임
+//   pass.writeTexture([
+//     { bindigIdx: 0, textureObj: arg.textures.SomeTexture },
+//   ]);
+//   pass.writeSampler([
+//     { bindigIdx: 0, samplerObj: arg.samplers.SomeSampler },
 //   ]);
 // };
 
@@ -91,7 +107,44 @@ const applyVariableShaderCode = (
 //     arg.time,
 //   );
 //   render_pass.writeBuffer([
-//     { bindigIdx: 0, bufferObj: arg.b.Particle, label: "Particle" },
-//     { bindigIdx: 1, bufferObj: arg.b.Params },
+//     { bindigIdx: 0, bufferObj: arg.buffers.Particle, label: "Particle" },
+//     { bindigIdx: 1, bufferObj: arg.buffers.Params },
+//   ]);
+// };
+
+// ============================================================
+// 예시: 텍스처 + 샘플러 사용 — 체커보드 텍스처를 화면 전체에 렌더
+// (실제로 동작 검증까지 마친 예제. src/shader/checker.wgsl에 셰이더 파일이 남아있으니
+//  아래 주석을 풀고 AppTextures/AppSamplers에 Checker 필드를 추가하면 바로 재사용 가능)
+//
+// group 0: Params(uniform) — 셰이더에서 실제로 읽어야 함. 안 그러면 layout: "auto"가
+//   해당 그룹의 파이프라인 레이아웃을 통째로 비워버려서(사용 안 하는 바인딩은 제거됨)
+//   bindGroup 생성이 실패하고 draw가 조용히 스킵됨(에러 throw 없이 그냥 안 그려짐).
+// group 1: texture, group 2: sampler
+// ============================================================
+// import checkerShaderCode from "./shader/checker.wgsl?raw";
+//
+// export const CheckerRender: PassRenderQueue = (arg: PassRenderQueueArg) => {
+//   const render_pass = arg.wp.createRenderPass(
+//     arg.idx,
+//     {
+//       fragmentEntryPoint: "fMain",
+//       vertexEntryPoint: "vMain",
+//       shaderCode: applyVariableShaderCode(checkerShaderCode),
+//       instanceCount: 1,
+//       vertexCount: 3, // vertex_index만으로 풀스크린 삼각형을 그리는 셰이더
+//       canvas: arg.canvas,
+//       label: "CheckerRender",
+//     },
+//     arg.time,
+//   );
+//   render_pass.writeBuffer([
+//     { bindigIdx: 0, bufferObj: arg.buffers.Params, label: "Params" },
+//   ]);
+//   render_pass.writeTexture([
+//     { bindigIdx: 0, textureObj: arg.textures.Checker, label: "Checker" },
+//   ]);
+//   render_pass.writeSampler([
+//     { bindigIdx: 0, samplerObj: arg.samplers.Checker, label: "Checker" },
 //   ]);
 // };
