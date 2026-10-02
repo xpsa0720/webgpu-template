@@ -1,19 +1,23 @@
 {
-  "name": "webgpu-template",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@xpsa0720/webgpu",
+  "version": "0.1.0",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xpsa0720/webgpu-template.git"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.72",
-    "typescript": "~6.0.2",
-    "vite": "^8.2.2"
-  },
-  "dependencies": {
-    "lil-gui": "^0.21.0"
+    "typescript": "~6.0.2"
   }
 }

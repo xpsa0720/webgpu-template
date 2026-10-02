@@ -1,4 +1,3 @@
-import { DEBUG_MODE } from "../setting";
 import type { OutGPUBuffer } from "./compute_pass";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
 
@@ -10,8 +9,8 @@ interface RenderPassArg extends PassArg {
   instanceCount: GPUSize32;
   loadOp?: GPULoadOp;
   format?: GPUTextureFormat;
-  // 알파 블렌딩이 필요한 패스만 명시적으로 켬 (loadOp랑은 무관한 별개의 설정)
   blend?: boolean;
+  debugMode?: boolean;
 }
 
 export class RenderPass extends Pass {
@@ -26,17 +25,17 @@ export class RenderPass extends Pass {
   vertexCount: GPUSize32;
   instanceCount: GPUSize32;
   loadOp: GPULoadOp;
-  // 컬러 어태치먼트 뷰(캔버스 스왑체인)는 매 프레임 새로 받아야 하지만,
-  // 바인드그룹은 참조하는 버퍼/텍스처가 안 바뀌므로 한 번만 만들어서 재사용한다
+  private debugMode: boolean;
   private bindGroup: GPUBindGroup | null = null;
   private bindGroupTex: GPUBindGroup | null = null;
   private bindGroupSampler: GPUBindGroup | null = null;
   constructor(arg: RenderPassArg) {
     if (!arg.device) {
-      throw Error("wp를 초기화 하십시오");
+      throw Error("Device not initialized");
     }
 
     super(arg);
+    this.debugMode = arg.debugMode ?? false;
     const presentationFormat: GPUTextureFormat =
       arg.format ?? navigator.gpu.getPreferredCanvasFormat();
     this.shaderCode = arg.shaderCode;
@@ -56,10 +55,6 @@ export class RenderPass extends Pass {
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
     });
-    // this.target.configure({
-    //   device: this.device,
-    //   format: presentationFormat,
-    // });
     const blendState: GPUBlendState | undefined =
       arg.blend
         ? {
@@ -103,7 +98,7 @@ export class RenderPass extends Pass {
 
   deleteBuffer(bindigIdx: number) {
     if (!this.entries[bindigIdx]) {
-      throw Error("해당 바인딩에 버퍼가 없습니다");
+      throw Error("No buffer at this binding index");
     }
     delete this.entries[bindigIdx];
   }
@@ -166,7 +161,7 @@ export class RenderPass extends Pass {
         },
       ],
     };
-    if (debugArg?.time && DEBUG_MODE) {
+    if (debugArg?.time && this.debugMode) {
       renderPassDescriptor.timestampWrites = {
         querySet: debugArg.querySet,
         beginningOfPassWriteIndex: debugArg.time?.startIndex ?? undefined,

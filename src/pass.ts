@@ -72,7 +72,7 @@ export class Pass {
   preEncoderCallback?: EncoderCallback;
   constructor(arg: PassArg) {
     if (!arg.device) {
-      throw Error("wp를 초기화 하십시오");
+      throw Error("Device not initialized");
     }
     this.shaderCode = arg.shaderCode;
     this.buffers = [];
@@ -98,7 +98,7 @@ export class Pass {
       const print = buffer.print;
       if (this.buffers[bindigIdx]) {
         throw Error(
-          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+          "Binding index already occupied",
         );
       }
       const buf: PassBuffer = {
@@ -121,7 +121,7 @@ export class Pass {
 
       if (this.textures[bindigIdx]) {
         throw Error(
-          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+          "Binding index already occupied",
         );
       }
       const tex: PassTexture = {
@@ -141,7 +141,7 @@ export class Pass {
 
       if (this.sampler[bindigIdx]) {
         throw Error(
-          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+          "Binding index already occupied",
         );
       }
       const sam: PassSampler = {
@@ -155,7 +155,7 @@ export class Pass {
 
   deleteBuffer(bindigIdx: number) {
     if (!this.buffers[bindigIdx]) {
-      throw Error("해당 바인딩에 버퍼가 없습니다");
+      throw Error("No buffer at this binding index");
     }
     delete this.buffers[bindigIdx];
   }

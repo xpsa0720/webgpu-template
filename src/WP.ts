@@ -1,14 +1,6 @@
-import {
-  DEBUG_MODE,
-  DEBUG_PASSTIMESTAMP,
-  DEBUG_PRINT,
-  DEBUG_SAMPLE_INTERVAL,
-  FPS,
-} from "../setting";
-import type { AppBuffers } from "../shader_queue";
-import { loadImageBitmap } from "../utill/load_image_bitmap";
-import { loadImageBitmap } from "../utill/load_image_bitmap";
-import { printDefault } from "../utill/print";
+import { DEFAULT_CONFIG, type WPConfig } from "./setting";
+import { loadImageBitmap } from "./util/load_image_bitmap";
+import { printDefault } from "./util/print";
 import { ComputePass, type OutGPUBuffer } from "./compute_pass";
 import type { ParamsBuffer } from "./params_buffer";
 import type { Pass } from "./pass";
@@ -24,6 +16,7 @@ import type {
 interface WPArg {
   canvas: HTMLCanvasElement;
   params: ParamsBuffer;
+  config?: WPConfig;
 }
 interface CreateComputePassArg {
   shaderCode: string;
@@ -48,16 +41,21 @@ interface CreateRenderPassArg {
   vertexCount: number;
   instanceCount: number;
   loadOp?: GPULoadOp;
-  foramt?: GPUTextureFormat;
+  format?: GPUTextureFormat;
 }
 
-export class WP {
+export class WP<
+  B extends Record<string, WebGPUBuffer> = Record<string, WebGPUBuffer>,
+  T extends Record<string, WebGPUTexture> = Record<string, WebGPUTexture>,
+  S extends Record<string, WebGPUSampler> = Record<string, WebGPUSampler>,
+> {
   canvas: HTMLCanvasElement;
   context: GPUCanvasContext;
   adapter: GPUAdapter | null;
   device: GPUDevice | null;
   passes: Array<ComputePass | RenderPass>;
   params: ParamsBuffer;
+  config: Required<WPConfig>;
   timeDebugPass: number;
   timeDebugLabels: string[];
   totalFrame: number;
@@ -71,9 +69,10 @@ export class WP {
   constructor(arg: WPArg) {
     this.canvas = arg.canvas;
     this.params = arg.params;
+    this.config = { ...DEFAULT_CONFIG, ...arg.config };
     const ctx = this.canvas?.getContext("webgpu");
     if (!ctx) {
-      throw new Error("webgpu 가져오지 못함");
+      throw new Error("Failed to get WebGPU context");
     }
     this.context = ctx;
     this.adapter = null;
@@ -108,7 +107,7 @@ export class WP {
       navigator.gpu.getPreferredCanvasFormat();
     this.adapter = await navigator.gpu.requestAdapter();
     if (!this.adapter) {
-      throw Error("WebGPU를 지원하는 브라우저가 아닙니다");
+      throw Error("WebGPU is not supported in this browser");
     }
     const requiredFeatures: GPUFeatureName[] = [];
     if (this.adapter.features.has("timestamp-query")) {
@@ -132,14 +131,14 @@ export class WP {
     preEncoderCallback?: (encoder: GPUCommandEncoder) => void,
   ) {
     if (!this.device) {
-      throw new Error("init을 하시오");
+      throw new Error("WP.init() must be called first");
     }
     if (
       time?.startIndex &&
       time?.endIndex &&
       time?.startIndex == time?.endIndex
     ) {
-      throw new Error("인덱스가 겹칠 수 없습니다!");
+      throw new Error("startIndex and endIndex must not be equal");
     }
     if (typeof time?.startIndex === "number") {
       this.timeDebugPass += 1;
@@ -159,6 +158,7 @@ export class WP {
       time: time,
       encoderCallback,
       preEncoderCallback,
+      debugMode: this.config.debugMode,
     });
     if (typeof time?.startIndex == "number" && typeof time.label == "string") {
       this.timeDebugLabels.push(time.label);
@@ -173,17 +173,17 @@ export class WP {
     arg: CreateRenderPassArg,
     time?: CreatePassTimeTag,
     encoderCallback?: (encoder: GPUCommandEncoder) => void,
-    encoderCallback?: (encoder: GPUCommandEncoder) => void,
+    preEncoderCallback?: (encoder: GPUCommandEncoder) => void,
   ) {
     if (!this.device) {
-      throw new Error("init을 하시오");
+      throw new Error("WP.init() must be called first");
     }
     if (
       time?.startIndex &&
       time?.endIndex &&
       time?.startIndex == time?.endIndex
     ) {
-      throw new Error("인덱스가 겹칠 수 없습니다!");
+      throw new Error("startIndex and endIndex must not be equal");
     }
     if (typeof time?.startIndex === "number") {
       this.timeDebugPass += 1;
@@ -205,8 +205,10 @@ export class WP {
       loadOp: arg.loadOp,
       time: time,
       encoderCallback,
+      preEncoderCallback,
       target: arg.target,
-      format: arg.foramt,
+      format: arg.format,
+      debugMode: this.config.debugMode,
     });
 
     this.passes[index] = pass;
@@ -219,7 +221,7 @@ export class WP {
     data: GPUAllowSharedBufferSource,
     usage: GPUBufferUsageFlags,
   ) {
-    if (!this.device) throw new Error("init WP 누락");
+    if (!this.device) throw new Error("WP.init() must be called first");
 
     const buffer = this.device.createBuffer({ size, usage });
     const bufferObj: WebGPUBuffer = {
@@ -236,7 +238,7 @@ export class WP {
     usage: GPUTextureUsageFlags,
     format?: GPUTextureFormat,
   ) {
-    if (!this.device) throw new Error("init WP 누락");
+    if (!this.device) throw new Error("WP.init() must be called first");
 
     const resolvedFormat = format ?? "rgba8unorm";
     const texture = this.device.createTexture({
@@ -251,7 +253,7 @@ export class WP {
     };
     const bpp = bytesPerPixel[resolvedFormat];
     if (!bpp) {
-      throw new Error(`bytesPerPixel을 모르는 포맷입니다: ${resolvedFormat}`);
+      throw new Error(`Unknown bytes-per-pixel for format: ${resolvedFormat}`);
     }
 
     this.device.queue.writeTexture(
@@ -271,7 +273,7 @@ export class WP {
   }
 
   async createTextureFromImage(url: string, usage: GPUTextureUsageFlags) {
-    if (!this.device) throw new Error("init WP 누락");
+    if (!this.device) throw new Error("WP.init() must be called first");
     const imageBitmap = await loadImageBitmap(url);
     const texture = this.device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
@@ -294,7 +296,7 @@ export class WP {
     return textureObj;
   }
   createSampler() {
-    if (!this.device) throw new Error("init WP 누락");
+    if (!this.device) throw new Error("WP.init() must be called first");
 
     const sampler = this.device.createSampler({
       magFilter: "linear",
@@ -312,9 +314,9 @@ export class WP {
   prevFrameTime = 0;
 
   async animate(arg: {
-    b: AppBuffers;
-    callBack?: PassCallback;
-    substepCallback?: PassCallback;
+    b: B;
+    callBack?: PassCallback<B>;
+    substepCallback?: PassCallback<B>;
   }) {
     if (!this.device) {
       return;
@@ -333,7 +335,7 @@ export class WP {
     );
 
     this.fpsFrameCount += 1;
-    if (FPS) {
+    if (this.config.fps) {
       if (this.lastFpsLogTime == 0) {
         this.lastFpsLogTime = now;
       } else if (now - this.lastFpsLogTime >= 1000) {
@@ -360,20 +362,18 @@ export class WP {
   async run(
     passes: Array<RenderPass | ComputePass>,
     substep: number,
-    buffers: AppBuffers,
+    buffers: B,
     dt: number,
-    substepCallback?: PassCallback,
+    substepCallback?: PassCallback<B>,
   ) {
     if (!this.device) {
-      throw new Error("device가 없습니다");
+      throw new Error("Device not initialized");
     }
     let returnDatas = null;
 
     for (let i = 0; i < substep; i++) {
-      // 매 프레임 타임스탬프 리드백을 하면 CPU-GPU 파이프라이닝이 깨져서
-      // 측정 자체가 프레임을 느리게 만든다 — N프레임에 한 번만 샘플링한다
       const shouldSample =
-        DEBUG_MODE && this.debugFrameCounter % DEBUG_SAMPLE_INTERVAL === 0;
+        this.config.debugMode && this.debugFrameCounter % this.config.debugSampleInterval === 0;
       this.debugFrameCounter += 1;
 
       const encoder = this.device?.createCommandEncoder();
@@ -425,7 +425,6 @@ export class WP {
               }
             : undefined,
         );
-        if (e.encoderCallback) e.encoderCallback(encoder);
         if (e.encoderCallback) e.encoderCallback(encoder);
         stagingBuffers.push(stagingBuffer);
       }
@@ -506,12 +505,12 @@ export class WP {
           buffer.staginigBuffer.unmap();
         }
       }
-      if (DEBUG_PRINT) {
+      if (this.config.debugPrint) {
         for (const line of lines) {
           console.log(line.format, ...line.styles);
         }
       }
-      if (debugLines.length && DEBUG_PASSTIMESTAMP) {
+      if (debugLines.length && this.config.debugPassTimestamp) {
         this.latestTimestampLines = debugLines;
       }
       returnDatas = resultDatas;

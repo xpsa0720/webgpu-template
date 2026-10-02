@@ -1,4 +1,3 @@
-import { DEBUG_MODE } from "../setting";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
 import type { PrintType } from "./struct/out_buffer_type";
 import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
@@ -8,6 +7,7 @@ export interface ComputePassArg extends PassArg {
   computeTargetCountX: number;
   computeTargetCountY?: number;
   entryPoint: string;
+  debugMode?: boolean;
 }
 
 export interface OutGPUBuffer {
@@ -22,16 +22,16 @@ export class ComputePass extends Pass {
   computeTargetCountX: number;
   computeTargetCountY: number;
   pipeline: GPUComputePipeline;
-  // 바인딩 대상(버퍼/텍스처/샘플러)이 프레임마다 안 바뀌므로, 바인드그룹은
-  // 첫 createPass() 때 한 번만 만들어서 재사용한다 (매 프레임 재생성은 순수 낭비)
+  private debugMode: boolean;
   private bindGroup: GPUBindGroup | null = null;
   private bindGroupTex: GPUBindGroup | null = null;
   private bindGroupSampler: GPUBindGroup | null = null;
   constructor(arg: ComputePassArg) {
     super(arg);
     if (!arg.device) {
-      throw Error("wp를 초기화 하십시오");
+      throw Error("Device not initialized");
     }
+    this.debugMode = arg.debugMode ?? false;
     this.workgroupSize = arg.workgroupSize;
     this.computeTargetCountX = arg.computeTargetCountX;
     this.computeTargetCountY = arg.computeTargetCountY ?? 0;
@@ -48,9 +48,6 @@ export class ComputePass extends Pass {
     encoder: GPUCommandEncoder,
     debugArg?: DebugPassArg,
   ): OutGPUBuffer[] {
-    // if(!debugArg && DEBUG_MODE){
-    //     throw new Error("디버그 인자가 없습니다!")
-    // }
     this.preEncoderCallback?.(encoder);
 
     if (!this.bindGroup) {
@@ -94,7 +91,7 @@ export class ComputePass extends Pass {
     }
 
     const passArg: GPUComputePassDescriptor =
-      debugArg?.time && DEBUG_MODE
+      debugArg?.time && this.debugMode
         ? {
             timestampWrites: {
               querySet: debugArg.querySet,
