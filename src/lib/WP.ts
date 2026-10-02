@@ -7,6 +7,7 @@ import {
 } from "../setting";
 import type { AppBuffers } from "../shader_queue";
 import { loadImageBitmap } from "../utill/load_image_bitmap";
+import { loadImageBitmap } from "../utill/load_image_bitmap";
 import { printDefault } from "../utill/print";
 import { ComputePass, type OutGPUBuffer } from "./compute_pass";
 import type { ParamsBuffer } from "./params_buffer";
@@ -171,6 +172,7 @@ export class WP {
     index: number,
     arg: CreateRenderPassArg,
     time?: CreatePassTimeTag,
+    encoderCallback?: (encoder: GPUCommandEncoder) => void,
     encoderCallback?: (encoder: GPUCommandEncoder) => void,
   ) {
     if (!this.device) {
@@ -423,6 +425,7 @@ export class WP {
               }
             : undefined,
         );
+        if (e.encoderCallback) e.encoderCallback(encoder);
         if (e.encoderCallback) e.encoderCallback(encoder);
         stagingBuffers.push(stagingBuffer);
       }

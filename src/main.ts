@@ -27,6 +27,8 @@ class App {
   b: AppBuffers | null;
   t: AppTextures | null;
   s: AppSamplers | null;
+  t: AppTextures | null;
+  s: AppSamplers | null;
 
   constructor() {
     this.params = new ParamsBuffer();
@@ -35,6 +37,8 @@ class App {
     const canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.wp = new WP({ canvas: canvas, params: this.params });
     this.b = null;
+    this.t = null;
+    this.s = null;
     this.t = null;
     this.s = null;
   }
