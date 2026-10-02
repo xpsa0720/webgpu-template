@@ -3,7 +3,7 @@ import { GPU_PARAMS_BYTE_SIZE, ParamsBuffer } from "./lib/params_buffer";
 import type { PassCallback, PassCallbackArg } from "./lib/struct/run_callback";
 import { WP } from "./lib/WP";
 import { DT } from "./setting";
-import type { AppBuffers } from "./shader_queue";
+import type { AppBuffers, AppSamplers, AppTextures } from "./shader_queue";
 
 // ============================================================
 // substep마다 호출되는 콜백 — 버퍼 초기화 등에 사용
@@ -25,6 +25,8 @@ class App {
   params: ParamsBuffer;
   wp: WP;
   b: AppBuffers | null;
+  t: AppTextures | null;
+  s: AppSamplers | null;
 
   constructor() {
     this.params = new ParamsBuffer();
@@ -33,6 +35,8 @@ class App {
     const canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.wp = new WP({ canvas: canvas, params: this.params });
     this.b = null;
+    this.t = null;
+    this.s = null;
   }
 
   resize() {
@@ -56,6 +60,9 @@ class App {
 
     this.resize();
     this.b = this.createBuffer();
+    // 예시: 텍스처/샘플러 생성 (아래 createTextures()/createSamplers() 참고)
+    // this.t = await this.createTextures();
+    // this.s = this.createSampler();
     if (!this.wp.canvas) {
       throw new Error("canvas가 없습니다");
     }
@@ -71,7 +78,7 @@ class App {
     this.setQueue();
 
     await this.wp.run(
-      this.wp.computePasses,
+      this.wp.passes,
       this.params.cpu.subSteps,
       this.b,
       DT,
@@ -119,7 +126,7 @@ class App {
     );
 
     // ============================================================
-    // 예시: FLIP 시뮬레이션에서 사용했던 버퍼 생성
+    // 예시: 시뮬레이션 버퍼 생성
     // ============================================================
     // const PARTICLE_COUNT = 2000;
     // const Particle = this.wp.createBuffer(
@@ -127,48 +134,63 @@ class App {
     //   randomParticle(PARTICLE_COUNT),
     //   GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     // );
-    // const U_vel_scale = this.wp.createBuffer(
-    //   U_FACE_COUNT * 4,
-    //   new Float32Array(U_FACE_COUNT),
-    //   GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-    // );
-    // ...
 
     return {
       Params,
     };
   }
 
+  // ============================================================
+  // 예시: 텍스처 생성
+  // ============================================================
+  // async createTextures(): Promise<AppTextures> {
+  //   const someTexture = await this.wp.createTextureFromImage(
+  //     imageUrl,
+  //     GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
+  //   );
+  //   return { someTexture };
+  // }
+
+  // ============================================================
+  // 예시: 샘플러 생성
+  // ============================================================
+  // createSampler(): AppSamplers {
+  //   const sampler = this.wp.createSampler();
+  //   return { sampler };
+  // }
+
   setQueue() {
     if (!this.b || !this.wp.canvas) {
       throw new Error("버퍼 또는 canvas가 없습니다");
     }
 
-    this.wp.computePasses = [];
-    this.wp.renderPasses = [];
+    this.wp.passes = [];
 
     // ============================================================
-    // 예시: Compute/Render Pass 등록
+    // 예시: Compute/Render Pass 등록 (passes 단일 배열에 순서대로 push)
     // ============================================================
-    // const computeQueue = [];
-    // computeQueue.push(
+    // const queue = [];
+    // queue.push(
     //   SomeComputePass({
-    //     idx: computeQueue.length,
+    //     idx: queue.length,
     //     wp: this.wp,
-    //     b: this.b,
-    //     computeTargetCount: PARTICLE_COUNT,
+    //     buffers: this.b,
+    //     textures: this.t,
+    //     samplers: this.s,
+    //     computeTargetCountX: PARTICLE_COUNT,
     //     time: { label: "SomePass", startIndex: 0, endIndex: 1 },
     //   }),
     // );
-    //
-    // const renderQueue = [];
-    // renderQueue.push(
+    // queue.push(
     //   Render({
-    //     idx: renderQueue.length,
+    //     idx: queue.length,
     //     wp: this.wp,
-    //     b: this.b,
-    //     canvas: this.wp.canvas,
-    //     computeTargetCount: PARTICLE_COUNT,
+    //     buffers: this.b,
+    //     textures: this.t,
+    //     samplers: this.s,
+    //     instanceCount: PARTICLE_COUNT,
+    //     target: this.wp.canvas,
+    //     loadOp: "clear",
     //     time: { label: "Render", startIndex: 2, endIndex: 3 },
     //   }),
     // );

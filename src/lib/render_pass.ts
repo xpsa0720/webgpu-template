@@ -3,17 +3,20 @@ import type { OutGPUBuffer } from "./compute_pass";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
 
 interface RenderPassArg extends PassArg {
-  canvas: HTMLCanvasElement;
+  target: GPUTexture | HTMLCanvasElement;
   vertexEntryPoint: string;
   fragmentEntryPoint: string;
   vertexCount: GPUSize32;
   instanceCount: GPUSize32;
   loadOp?: GPULoadOp;
+  format?: GPUTextureFormat;
+  // 알파 블렌딩이 필요한 패스만 명시적으로 켬 (loadOp랑은 무관한 별개의 설정)
+  blend?: boolean;
 }
 
 export class RenderPass extends Pass {
-  canvas: HTMLCanvasElement;
-  context: GPUCanvasContext;
+  target: GPUTexture | HTMLCanvasElement;
+  context: GPUCanvasContext | null;
   shaderModule: GPUShaderModule;
   pipeline: GPURenderPipeline;
   entries: Record<number, GPUBindingResource>;
@@ -23,6 +26,11 @@ export class RenderPass extends Pass {
   vertexCount: GPUSize32;
   instanceCount: GPUSize32;
   loadOp: GPULoadOp;
+  // 컬러 어태치먼트 뷰(캔버스 스왑체인)는 매 프레임 새로 받아야 하지만,
+  // 바인드그룹은 참조하는 버퍼/텍스처가 안 바뀌므로 한 번만 만들어서 재사용한다
+  private bindGroup: GPUBindGroup | null = null;
+  private bindGroupTex: GPUBindGroup | null = null;
+  private bindGroupSampler: GPUBindGroup | null = null;
   constructor(arg: RenderPassArg) {
     if (!arg.device) {
       throw Error("wp를 초기화 하십시오");
@@ -30,16 +38,15 @@ export class RenderPass extends Pass {
 
     super(arg);
     const presentationFormat: GPUTextureFormat =
-      navigator.gpu.getPreferredCanvasFormat();
+      arg.format ?? navigator.gpu.getPreferredCanvasFormat();
     this.shaderCode = arg.shaderCode;
-    this.canvas = arg.canvas;
-    const ctx = this.canvas.getContext("webgpu");
-    if (!ctx) {
-      throw new Error("context을 가져 올 수 없습니다!");
+    this.target = arg.target;
+    this.context = null;
+    if (this.target instanceof HTMLCanvasElement) {
+      this.context = this.target.getContext("webgpu");
     }
     this.device = arg.device;
     this.loadOp = arg.loadOp ?? "clear";
-    this.context = ctx;
     this.buffers = [];
     this.entries = [];
     this.vertexCount = arg.vertexCount;
@@ -49,12 +56,12 @@ export class RenderPass extends Pass {
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
     });
-    this.context.configure({
-      device: this.device,
-      format: presentationFormat,
-    });
+    // this.target.configure({
+    //   device: this.device,
+    //   format: presentationFormat,
+    // });
     const blendState: GPUBlendState | undefined =
-      this.loadOp == "load"
+      arg.blend
         ? {
             color: {
               srcFactor: "src-alpha",
@@ -68,7 +75,10 @@ export class RenderPass extends Pass {
             },
           }
         : undefined;
-
+    const format =
+      this.target instanceof HTMLCanvasElement
+        ? presentationFormat
+        : this.target.format;
     this.pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
@@ -80,8 +90,8 @@ export class RenderPass extends Pass {
         module: this.shaderModule,
         targets: [
           {
-            format: presentationFormat,
-            blend:blendState
+            format: format,
+            blend: blendState,
           },
         ],
       },
@@ -102,22 +112,54 @@ export class RenderPass extends Pass {
     encoder: GPUCommandEncoder,
     debugArg?: DebugPassArg,
   ): OutGPUBuffer[] {
-    const entries: Array<GPUBindGroupEntry> = [];
-    for (const [key, value] of Object.entries(this.buffers)) {
-      entries.push({
-        binding: Number(key),
-        resource: { buffer: value.buffer },
+    if (!this.bindGroup) {
+      const entries: Array<GPUBindGroupEntry> = [];
+      for (const [key, value] of Object.entries(this.buffers)) {
+        entries.push({
+          binding: Number(key),
+          resource: { buffer: value.buffer },
+        });
+      }
+      this.bindGroup = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(0),
+        entries: entries,
       });
     }
-    const bindGroup = this.device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: entries,
-    });
+    if (!this.bindGroupTex && Object.keys(this.textures).length > 0) {
+      const entries_tex: Array<GPUBindGroupEntry> = [];
+      for (const [key, value] of Object.entries(this.textures)) {
+        entries_tex.push({
+          binding: Number(key),
+          resource: value.texture.createView(),
+        });
+      }
+      this.bindGroupTex = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(1),
+        entries: entries_tex,
+      });
+    }
+    if (!this.bindGroupSampler && Object.keys(this.sampler).length > 0) {
+      const entries_sampler: Array<GPUBindGroupEntry> = [];
+      for (const [key, value] of Object.entries(this.sampler)) {
+        entries_sampler.push({
+          binding: Number(key),
+          resource: value.sampler,
+        });
+      }
+      this.bindGroupSampler = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(2),
+        entries: entries_sampler,
+      });
+    }
+
+    const view = this.context
+      ? this.context.getCurrentTexture().createView()
+      : (this.target as GPUTexture).createView();
 
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [
         {
-          view: this.context.getCurrentTexture().createView(),
+          view: view,
           loadOp: this.loadOp,
           storeOp: "store",
           clearValue: { r: 0, g: 0, b: 0, a: 1 },
@@ -133,7 +175,13 @@ export class RenderPass extends Pass {
     }
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(0, this.bindGroup);
+    if (this.bindGroupTex) {
+      pass.setBindGroup(1, this.bindGroupTex);
+    }
+    if (this.bindGroupSampler) {
+      pass.setBindGroup(2, this.bindGroupSampler);
+    }
     pass.draw(
       this.vertexCount,
       this.instanceCount == 0 ? 1 : this.instanceCount,

@@ -1,7 +1,11 @@
 import type { OutGPUBuffer } from "./compute_pass";
 import type { PrintType } from "./struct/out_buffer_type";
 import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
-import type { WebGPUBuffer } from "./struct/webgpu_buffer";
+import type {
+  WebGPUBuffer,
+  WebGPUSampler,
+  WebGPUTexture,
+} from "./struct/webgpu_buffer";
 import type { CreatePassTimeTag } from "./WP";
 
 export interface PassArg {
@@ -10,6 +14,7 @@ export interface PassArg {
   label?: string;
   time?: CreatePassTimeTag;
   encoderCallback?: EncoderCallback;
+  preEncoderCallback?: EncoderCallback;
 }
 
 export interface PassBuffer extends WebGPUBuffer {
@@ -17,6 +22,13 @@ export interface PassBuffer extends WebGPUBuffer {
   label: string;
   type: PrintType;
   print?: PrintGPUBuffer;
+}
+
+export interface PassTexture extends WebGPUTexture {
+  label: string;
+}
+export interface PassSampler extends WebGPUSampler {
+  label: string;
 }
 
 interface WriteBufferArg {
@@ -28,26 +40,44 @@ interface WriteBufferArg {
   type?: PrintType;
 }
 
+interface WriteTextureArg {
+  bindigIdx: number;
+  textureObj: WebGPUTexture;
+  label?: string;
+}
+
+interface WriteSamplerArg {
+  bindigIdx: number;
+  samplerObj: WebGPUSampler;
+  label?: string;
+}
+
 export interface DebugPassArg {
   querySet: GPUQuerySet;
   time?: CreatePassTimeTag;
 }
 
 export type EncoderCallback = (encoder: GPUCommandEncoder) => void;
+
 export class Pass {
   buffers: Record<number, PassBuffer>;
+  textures: Record<number, PassTexture>;
+  sampler: Record<number, PassSampler>;
   shaderCode: string;
   shaderModule: GPUShaderModule;
   device: GPUDevice;
   label: string;
   time?: CreatePassTimeTag;
   encoderCallback?: EncoderCallback;
+  preEncoderCallback?: EncoderCallback;
   constructor(arg: PassArg) {
     if (!arg.device) {
       throw Error("wp를 초기화 하십시오");
     }
     this.shaderCode = arg.shaderCode;
     this.buffers = [];
+    this.textures = [];
+    this.sampler = [];
     this.device = arg.device;
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
@@ -55,6 +85,7 @@ export class Pass {
     this.label = arg.label ?? "";
     this.time = arg.time;
     this.encoderCallback = arg.encoderCallback;
+    this.preEncoderCallback = arg.preEncoderCallback;
   }
 
   writeBuffer(bindingBuffers: WriteBufferArg[]) {
@@ -82,6 +113,46 @@ export class Pass {
     });
   }
 
+  writeTexture(bindingTextures: WriteTextureArg[]) {
+    bindingTextures.forEach((texture) => {
+      const bindigIdx = texture.bindigIdx;
+      const bufferObj = texture.textureObj;
+      const label = texture.label;
+
+      if (this.textures[bindigIdx]) {
+        throw Error(
+          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+        );
+      }
+      const tex: PassTexture = {
+        texture: bufferObj.texture,
+        label: label ?? "None Label",
+      };
+
+      this.textures[bindigIdx] = tex;
+    });
+  }
+
+  writeSampler(bindingSampler: WriteSamplerArg[]) {
+    bindingSampler.forEach((sampler) => {
+      const bindigIdx = sampler.bindigIdx;
+      const bufferObj = sampler.samplerObj;
+      const label = sampler.label;
+
+      if (this.sampler[bindigIdx]) {
+        throw Error(
+          "해당 바인딩에 버퍼가 있습니다 버퍼를 수정하면 ___메서드를 사용하세요",
+        );
+      }
+      const sam: PassSampler = {
+        sampler: bufferObj.sampler,
+        label: label ?? "None Label",
+      };
+
+      this.sampler[bindigIdx] = sam;
+    });
+  }
+
   deleteBuffer(bindigIdx: number) {
     if (!this.buffers[bindigIdx]) {
       throw Error("해당 바인딩에 버퍼가 없습니다");
@@ -89,10 +160,13 @@ export class Pass {
     delete this.buffers[bindigIdx];
   }
 
-  createPass(encoder: GPUCommandEncoder): OutGPUBuffer[] {
+  createPass(
+    encoder: GPUCommandEncoder,
+    debugArg?: DebugPassArg,
+  ): OutGPUBuffer[] {
     const stagingBuffers: Array<OutGPUBuffer> = [];
 
-    for (const [key, value] of Object.entries(this.buffers)) {
+    for (const [, value] of Object.entries(this.buffers)) {
       if (!value.isPrint) {
         continue;
       }

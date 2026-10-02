@@ -5,9 +5,17 @@
 export const DEBUG_MODE = false;
 export const DEBUG_PRINT = false;
 export const DEBUG_PASSTIMESTAMP = false;
+// 매 프레임 타임스탬프 리드백(mapAsync)을 하면 CPU-GPU 파이프라이닝이 깨져서
+// 측정 자체가 프레임을 느리게 만듦 — N프레임마다 한 번만 샘플링해서 그 부작용을 줄임
+export const DEBUG_SAMPLE_INTERVAL = 60;
 export const FPS = true;
 export const DT = 1 / 60;
-export const WORKGROUP_SIZE = 128;
+export const WORKGROUP_SIZE_X = 128;
+export const WORKGROUP_SIZE_Y = 128;
+// 픽셀 단위 완전 병렬(2D 디스패치)이 필요한 패스용 — 워크그룹당 총
+// 스레드 수가 maxComputeInvocationsPerWorkgroup(보통 256)을 못 넘어야 해서 작게 잡음
+export const WORKGROUP_SIZE_2D_X = 16;
+export const WORKGROUP_SIZE_2D_Y = 16;
 
 // ============================================================
 // 예시: FLIP 시뮬레이션에서 사용했던 상수들

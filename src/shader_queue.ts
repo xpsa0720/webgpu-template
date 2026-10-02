@@ -8,11 +8,15 @@ import type {
   PassRenderQueue,
   PassRenderQueueArg,
 } from "./lib/struct/pass_queue";
-import type { WebGPUBuffer } from "./lib/struct/webgpu_buffer";
-import { WORKGROUP_SIZE } from "./setting";
+import type {
+  WebGPUBuffer,
+  WebGPUSampler,
+  WebGPUTexture,
+} from "./lib/struct/webgpu_buffer";
+import { WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y } from "./setting";
 
 // ============================================================
-// 프로젝트별 GPU 버퍼 인터페이스 — 필요한 버퍼를 여기에 정의
+// 프로젝트별 GPU 버퍼/텍스처/샘플러 인터페이스 — 필요한 리소스를 여기에 정의
 // ============================================================
 export interface AppBuffers {
   Params: WebGPUBuffer;
@@ -33,14 +37,28 @@ export interface AppBuffers {
   // Pressure_B: WebGPUBuffer;
 }
 
+export interface AppTextures {
+  // 예시: 체커보드 텍스처
+  // Checker: WebGPUTexture;
+}
+
+export interface AppSamplers {
+  // 예시: 체커보드 샘플러
+  // Checker: WebGPUSampler;
+}
+
 // ============================================================
-// 셰이더 코드 전처리 — @WORKGROUP_SIZE 등 컴파일 변수 치환
+// 셰이더 코드 전처리 — @WORKGROUP_SIZE_X / @WORKGROUP_SIZE_Y 등 컴파일 변수 치환
 // ============================================================
 const applyVariableShaderCode = (
   code: string,
   record: Record<string, string> = {},
+  workgroupSizeX: number = WORKGROUP_SIZE_X,
+  workgroupSizeY: number = WORKGROUP_SIZE_Y,
 ) => {
-  let result = code.replaceAll("@WORKGROUP_SIZE", String(WORKGROUP_SIZE));
+  let result = code
+    .replaceAll("@WORKGROUP_SIZE_X", String(workgroupSizeX))
+    .replaceAll("@WORKGROUP_SIZE_Y", String(workgroupSizeY));
   for (const [variable, value] of Object.entries(record)) {
     result = result.replaceAll(variable, value);
   }
@@ -58,16 +76,20 @@ const applyVariableShaderCode = (
 //     {
 //       entryPoint: "main",
 //       shaderCode: applyVariableShaderCode(someShaderCode, arg.compileVariable),
-//       workgroupSize: WORKGROUP_SIZE,
-//       computeTargetCount: arg.computeTargetCount,
+//       workgroupSizeX: WORKGROUP_SIZE_X,
+//       computeTargetCountX: arg.computeTargetCountX,
+//       computeTargetCountY: arg.computeTargetCountY,
 //       label: "SomeCompute",
 //     },
 //     arg.time,
 //   );
 //   pass.writeBuffer([
-//     { bindigIdx: 0, bufferObj: arg.b.SomeBuffer },
-//     { bindigIdx: 1, bufferObj: arg.b.Params },
+//     { bindigIdx: 0, bufferObj: arg.buffers.SomeBuffer },
+//     { bindigIdx: 1, bufferObj: arg.buffers.Params },
 //   ]);
+//   // 텍스처/샘플러는 각각 group(1)/group(2)에 별도 바인딩
+//   // pass.writeTexture([{ bindigIdx: 0, textureObj: arg.textures.SomeTexture }]);
+//   // pass.writeSampler([{ bindigIdx: 0, samplerObj: arg.samplers.someSampler }]);
 // };
 
 // ============================================================
@@ -82,16 +104,16 @@ const applyVariableShaderCode = (
 //       fragmentEntryPoint: "fMain",
 //       vertexEntryPoint: "vMain",
 //       shaderCode: applyVariableShaderCode(renderShaderCode),
-//       instanceCount: arg.computeTargetCount,
+//       instanceCount: arg.instanceCount,
 //       vertexCount: 6,
-//       canvas: arg.canvas,
+//       target: arg.target,
 //       label: "Render",
 //       loadOp: arg.loadOp,
 //     },
 //     arg.time,
 //   );
 //   render_pass.writeBuffer([
-//     { bindigIdx: 0, bufferObj: arg.b.Particle, label: "Particle" },
-//     { bindigIdx: 1, bufferObj: arg.b.Params },
+//     { bindigIdx: 0, bufferObj: arg.buffers.Particle, label: "Particle" },
+//     { bindigIdx: 1, bufferObj: arg.buffers.Params },
 //   ]);
 // };
