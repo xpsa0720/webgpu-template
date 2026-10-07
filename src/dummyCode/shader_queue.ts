@@ -1,6 +1,5 @@
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../struct/webgpu_buffer";
 import type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "../struct/pass_queue";
-import { DEFAULT_CONFIG } from "../setting";
 
 // ============================================================
 // 프로젝트별 버퍼/텍스처/샘플러 타입 정의
@@ -22,29 +21,13 @@ export interface AppSamplers extends Record<string, WebGPUSampler> {
 
 // ============================================================
 // 셰이더 코드 컴파일 변수 치환
-// @WORKGROUP_SIZE_X 등을 실제 값으로 교체한다.
+// variable의 key를 value로 교체한다. (workgroup size는 셰이더의 @workgroup_size에서 ComputePass가 직접 읽는다)
 // ============================================================
 export function applyVariableShaderCode(
   shaderCode: string,
   variable?: Record<string, string>,
 ) {
   let code = shaderCode;
-  code = code.replaceAll(
-    "@WORKGROUP_SIZE_X",
-    String(DEFAULT_CONFIG.workgroupSizeX),
-  );
-  code = code.replaceAll(
-    "@WORKGROUP_SIZE_Y",
-    String(DEFAULT_CONFIG.workgroupSizeY),
-  );
-  code = code.replaceAll(
-    "@WORKGROUP_SIZE_2D_X",
-    String(DEFAULT_CONFIG.workgroupSize2dX),
-  );
-  code = code.replaceAll(
-    "@WORKGROUP_SIZE_2D_Y",
-    String(DEFAULT_CONFIG.workgroupSize2dY),
-  );
   if (variable) {
     for (const [key, value] of Object.entries(variable)) {
       code = code.replaceAll(key, value);
@@ -63,7 +46,6 @@ export function applyVariableShaderCode(
 //   const pass = arg.wp.createComputePass(arg.idx, {
 //     shaderCode,
 //     entryPoint: "main",
-//     workgroupSizeX: DEFAULT_CONFIG.workgroupSizeX,
 //     computeTargetCountX: arg.computeTargetCountX,
 //   }, arg.time);
 //

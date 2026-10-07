@@ -8,6 +8,8 @@ A utility library for concisely setting up WebGPU render/compute pipelines.
 npm install @xpsa0720/webgpu
 ```
 
+`@webgpu/types` is installed as a dependency and referenced from the package's type declarations, so WebGPU globals (`GPUDevice`, `GPUBufferUsage`, ...) are typed as soon as you import the library — no need to add it to your `tsconfig.json` `types`.
+
 For local development, you can also use a `file:` reference:
 
 ```json
@@ -22,7 +24,6 @@ For local development, you can also use a `file:` reference:
 
 ```ts
 import { WP, ParamsBuffer, GPUSetting } from "@xpsa0720/webgpu";
-import type { WebGPUBuffer } from "@xpsa0720/webgpu";
 import shaderCode from "./shader/my_shader.wgsl?raw";
 
 // Define the uniform layout (must match the WGSL struct, BYTE_SIZE multiple of 16)
@@ -59,8 +60,15 @@ pass.writeBuffer([
   { bindigIdx: 0, bufferObj: paramsBuffer, label: "params" },
 ]);
 
-// Animation loop
-wp.animate({ b: { params: paramsBuffer } });
+// Animation loop — callBack runs once per frame after the passes
+const startTime = performance.now();
+wp.animate({
+  b: { params: paramsBuffer },
+  callBack: ({ device, gpuBuffers }) => {
+    params.gpu.time = (performance.now() - startTime) / 1000;
+    device.queue.writeBuffer(gpuBuffers.params.buffer, 0, params.data);
+  },
+});
 ```
 
 ## API
@@ -76,7 +84,7 @@ wp.animate({ b: { params: paramsBuffer } });
 
 ## Example
 
-The `example/` directory contains a fullscreen gradient demo.
+The `example/` directory contains an animated metaball demo: a 1D compute pass (`@workgroup_size(WG)` read from a `const`), a 2D compute pass using `@X_AUTO`/`@Y_AUTO` auto-tuning placeholders, and a render pass that displays the result.
 
 ```bash
 # 1. Install root dependencies and build the library
@@ -89,7 +97,7 @@ npm install
 npm run dev
 ```
 
-Open the browser to see a time-varying gradient.
+Open the browser to see the metaballs move; the resolved workgroup sizes of each compute pass are logged to the console.
 
 ## Development
 

@@ -1,8 +1,14 @@
 import { WP, ParamsBuffer, GPUSetting } from "@xpsa0720/webgpu";
 import type { WebGPUBuffer } from "@xpsa0720/webgpu";
-import gradientWGSL from "./shader/gradient.wgsl?raw";
+import sourcesWGSL from "./shader/sources.wgsl?raw";
+import fieldWGSL from "./shader/field.wgsl?raw";
+import displayWGSL from "./shader/display.wgsl?raw";
 
-// gradient.wgsl의 struct Params와 같은 순서/레이아웃
+// field.wgsl / display.wgsl의 GRID와 같은 값
+const GRID = 256;
+const SOURCE_COUNT = 16;
+
+// 각 셰이더의 struct Params와 같은 순서/레이아웃
 class AppGPUSetting extends GPUSetting {
   static BYTE_SIZE = 4 * 4;
 
@@ -18,6 +24,8 @@ class AppGPUSetting extends GPUSetting {
 
 interface AppBuffers extends Record<string, WebGPUBuffer> {
   params: WebGPUBuffer;
+  sources: WebGPUBuffer;
+  field: WebGPUBuffer;
 }
 
 class App {
@@ -44,10 +52,8 @@ class App {
   async init() {
     await this.wp.init();
     this.resize();
-    window.addEventListener("resize", () => {
-      this.resize();
-      this.writeParamsToGPU();
-    });
+    // params는 callBack에서 매 프레임 GPU로 업로드되므로 resize에서는 CPU 값만 갱신한다
+    window.addEventListener("resize", () => this.resize());
 
     const buffers = this.createBuffers();
     this.setupPasses(buffers);
@@ -67,13 +73,57 @@ class App {
       this.params.data,
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
-    return { params };
+    const sources = this.wp.createBuffer(
+      SOURCE_COUNT * 4 * 4,
+      new Float32Array(SOURCE_COUNT * 4),
+      GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    );
+    const field = this.wp.createBuffer(
+      GRID * GRID * 4,
+      new Float32Array(GRID * GRID),
+      GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    );
+    return { params, sources, field };
   }
 
   setupPasses(buffers: AppBuffers) {
-    const renderPass = this.wp.createRenderPass(0, {
+    // 1D: @workgroup_size(WG), const WG = 64u → 셰이더에서 읽은 고정값
+    const sourcesPass = this.wp.createComputePass(0, {
+      shaderCode: sourcesWGSL,
+      entryPoint: "main",
+      computeTargetCountX: SOURCE_COUNT,
+      label: "sources",
+    });
+    sourcesPass.writeBuffer([
+      { bindigIdx: 0, bufferObj: buffers.params, label: "params" },
+      { bindigIdx: 1, bufferObj: buffers.sources, label: "sources" },
+    ]);
+
+    // 2D: @workgroup_size(@X_AUTO, @Y_AUTO) → auto-tuning 대상
+    const fieldPass = this.wp.createComputePass(1, {
+      shaderCode: fieldWGSL,
+      entryPoint: "main",
+      computeTargetCountX: GRID,
+      computeTargetCountY: GRID,
+      label: "field",
+    });
+    fieldPass.writeBuffer([
+      { bindigIdx: 0, bufferObj: buffers.sources, label: "sources" },
+      { bindigIdx: 1, bufferObj: buffers.field, label: "field" },
+    ]);
+
+    for (const pass of [sourcesPass, fieldPass]) {
+      console.log(
+        `[${pass.label}] workgroupSize =`,
+        [pass.workgroupSizeX, pass.workgroupSizeY, pass.workgroupSizeZ],
+        "autoWorkgroupSize =",
+        pass.autoWorkgroupSize,
+      );
+    }
+
+    const renderPass = this.wp.createRenderPass(2, {
       target: this.canvas,
-      shaderCode: gradientWGSL,
+      shaderCode: displayWGSL,
       vertexEntryPoint: "vs",
       fragmentEntryPoint: "fs",
       vertexCount: 3,
@@ -82,10 +132,9 @@ class App {
 
     renderPass.writeBuffer([
       { bindigIdx: 0, bufferObj: buffers.params, label: "params" },
+      { bindigIdx: 1, bufferObj: buffers.field, label: "field" },
     ]);
   }
-
-  private writeParamsToGPU() {}
 }
 
 const app = new App();

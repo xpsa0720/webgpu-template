@@ -19,10 +19,9 @@ interface WPArg {
 interface CreateComputePassArg {
   shaderCode: string;
   entryPoint: string;
-  workgroupSizeX: number;
-  workgroupSizeY?: number;
   computeTargetCountX: number;
   computeTargetCountY?: number;
+  computeTargetCountZ?: number;
   label?: string;
 }
 export interface CreatePassTimeTag {
@@ -147,9 +146,9 @@ export class WP<
       device: this.device,
       computeTargetCountX: arg.computeTargetCountX,
       computeTargetCountY: arg.computeTargetCountY,
+      computeTargetCountZ: arg.computeTargetCountZ,
       entryPoint: arg.entryPoint,
       shaderCode: arg.shaderCode,
-      workgroupSize: arg.workgroupSizeX,
       label: arg.label,
       time: time,
       encoderCallback,
