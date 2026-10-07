@@ -2,7 +2,6 @@ import { DEFAULT_CONFIG, type WPConfig } from "./setting";
 import { loadImageBitmap } from "./util/load_image_bitmap";
 import { printDefault } from "./util/print";
 import { ComputePass, type OutGPUBuffer } from "./compute_pass";
-import type { ParamsBuffer } from "./params_buffer";
 import type { Pass } from "./pass";
 import { RenderPass } from "./render_pass";
 import type { FormatStyle } from "./struct/print_gpu_buffer";
@@ -15,7 +14,6 @@ import type {
 
 interface WPArg {
   canvas: HTMLCanvasElement;
-  params: ParamsBuffer;
   config?: WPConfig;
 }
 interface CreateComputePassArg {
@@ -54,7 +52,6 @@ export class WP<
   adapter: GPUAdapter | null;
   device: GPUDevice | null;
   passes: Array<ComputePass | RenderPass>;
-  params: ParamsBuffer;
   config: Required<WPConfig>;
   timeDebugPass: number;
   timeDebugLabels: string[];
@@ -68,7 +65,6 @@ export class WP<
 
   constructor(arg: WPArg) {
     this.canvas = arg.canvas;
-    this.params = arg.params;
     this.config = { ...DEFAULT_CONFIG, ...arg.config };
     const ctx = this.canvas?.getContext("webgpu");
     if (!ctx) {
@@ -328,7 +324,7 @@ export class WP<
 
     await this.run(
       this.passes,
-      this.params.cpu.subSteps,
+      this.config.subSteps,
       arg.b,
       simDt,
       arg.substepCallback,
@@ -381,7 +377,7 @@ export class WP<
         substepCallback({
           device: this.device,
           gpuBuffers: buffers,
-          dt: (dt / substep) * this.params.cpu.playSpeed,
+          dt: (dt / substep) * this.config.playSpeed,
           encoder,
         });
       }

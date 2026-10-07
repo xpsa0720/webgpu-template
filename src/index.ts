@@ -1,8 +1,10 @@
+/// <reference types="@webgpu/types" preserve="true" />
 export { WP } from "./WP";
 export { ComputePass } from "./compute_pass";
 export { RenderPass } from "./render_pass";
 export { Pass } from "./pass";
-export { ParamsBuffer, GPUSetting, CPUSetting, GPU_PARAMS_BYTE_SIZE } from "./params_buffer";
+export { ParamsBuffer, GPUSetting, CPUSetting } from "./params_buffer";
+export type { GPUSettingClass, ParamsBufferOptions } from "./params_buffer";
 export { Position } from "./position";
 export { loadImageBitmap } from "./util/load_image_bitmap";
 export { printDefault } from "./util/print";

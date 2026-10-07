@@ -1,9 +1,21 @@
-import { ParamsBuffer, GPU_PARAMS_BYTE_SIZE } from "../params_buffer";
+import { GPUSetting, ParamsBuffer } from "../params_buffer";
 import { Position } from "../position";
 import type { WP } from "../WP";
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../struct/webgpu_buffer";
 import type { PassCallback } from "../struct/run_callback";
 import { applyVariableShaderCode, type AppBuffers, type AppTextures, type AppSamplers } from "./shader_queue";
+
+// 프로젝트별 uniform 레이아웃 (WGSL struct와 일치시킬 것)
+class AppGPUSetting extends GPUSetting {
+  static BYTE_SIZE = 16;
+
+  get aspectRatio() { return this.f32[0]; }
+  set aspectRatio(v: number) { this.f32[0] = v; }
+  get resolutionX() { return this.f32[1]; }
+  set resolutionX(v: number) { this.f32[1] = v; }
+  get resolutionY() { return this.f32[2]; }
+  set resolutionY(v: number) { this.f32[2] = v; }
+}
 
 const clearBuffer: PassCallback<AppBuffers> = (arg) => {
   // substep마다 호출
@@ -12,19 +24,19 @@ const clearBuffer: PassCallback<AppBuffers> = (arg) => {
 class App {
   canvas: HTMLCanvasElement;
   wp: WP<AppBuffers, AppTextures, AppSamplers>;
-  params: ParamsBuffer;
+  params: ParamsBuffer<AppGPUSetting>;
   position: Position;
 
   constructor() {
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
-    this.params = new ParamsBuffer();
+    this.params = new ParamsBuffer({ gpu: AppGPUSetting });
     this.position = new Position();
     this.wp = new (
       // @ts-ignore -- 실제 사용 시 WP를 import
       (await import("../WP")).WP
     )({
       canvas: this.canvas,
-      params: this.params,
+      config: { subSteps: 1, playSpeed: 1 },
     });
   }
 
@@ -65,12 +77,12 @@ class App {
 
   // guiSetting() {
   //   const gui = new GUI();
-  //   gui.add(this.params.cpu, "subSteps", 1, 10, 1).name("Sub Steps");
+  //   gui.add(this.wp.config, "subSteps", 1, 10, 1).name("Sub Steps");
   // }
 
   createBuffer(): AppBuffers {
     const params = this.wp.createBuffer(
-      GPU_PARAMS_BYTE_SIZE,
+      this.params.byteSize,
       this.params.data,
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );

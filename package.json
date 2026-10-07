@@ -1,10 +1,12 @@
 {
   "name": "@xpsa0720/webgpu",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "npm run build"
@@ -16,8 +18,10 @@
     "type": "git",
     "url": "https://github.com/xpsa0720/webgpu-template.git"
   },
+  "dependencies": {
+    "@webgpu/types": "^0.1.72"
+  },
   "devDependencies": {
-    "@webgpu/types": "^0.1.72",
     "typescript": "~6.0.2"
   }
 }

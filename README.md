@@ -21,19 +21,26 @@ For local development, you can also use a `file:` reference:
 ## Quick Start
 
 ```ts
-import { WP, ParamsBuffer, GPU_PARAMS_BYTE_SIZE } from "@xpsa0720/webgpu";
+import { WP, ParamsBuffer, GPUSetting } from "@xpsa0720/webgpu";
 import type { WebGPUBuffer } from "@xpsa0720/webgpu";
 import shaderCode from "./shader/my_shader.wgsl?raw";
 
+// Define the uniform layout (must match the WGSL struct, BYTE_SIZE multiple of 16)
+class MyGPUSetting extends GPUSetting {
+  static BYTE_SIZE = 16;
+  get time() { return this.f32[0]; }
+  set time(v: number) { this.f32[0] = v; }
+}
+
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const params = new ParamsBuffer();
-const wp = new WP({ canvas, params });
+const params = new ParamsBuffer({ gpu: MyGPUSetting }); // params.gpu.time is typed
+const wp = new WP({ canvas, config: { subSteps: 1, playSpeed: 1 } }); // wp.config.* is mutable at runtime
 
 await wp.init();
 
 // Create buffer
 const paramsBuffer = wp.createBuffer(
-  GPU_PARAMS_BYTE_SIZE,
+  params.byteSize,
   params.data,
   GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 );
@@ -61,7 +68,7 @@ wp.animate({ b: { params: paramsBuffer } });
 | Class / Function | Description |
 |---|---|
 | `WP` | Device init, buffer/texture/sampler creation, pass registration, animation loop |
-| `ParamsBuffer` | Manages GPU uniform buffer and CPU-side settings together |
+| `ParamsBuffer<G, C>` | Manages GPU uniform buffer and CPU-side settings together. `G` extends `GPUSetting` (required, no default fields), `C` extends `CPUSetting` |
 | `RenderPass` | Render pipeline wrapper |
 | `ComputePass` | Compute pipeline wrapper |
 | `Position` | Mouse/touch input utility |
