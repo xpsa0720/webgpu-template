@@ -87,7 +87,6 @@ class App {
   }
 
   setupPasses(buffers: AppBuffers) {
-    // 1D: @workgroup_size(WG), const WG = 64u → 셰이더에서 읽은 고정값
     const sourcesPass = this.wp.createComputePass(0, {
       shaderCode: sourcesWGSL,
       entryPoint: "main",
@@ -99,7 +98,6 @@ class App {
       { bindigIdx: 1, bufferObj: buffers.sources, label: "sources" },
     ]);
 
-    // 2D: @workgroup_size(@X_AUTO, @Y_AUTO) → auto-tuning 대상
     const fieldPass = this.wp.createComputePass(1, {
       shaderCode: fieldWGSL,
       entryPoint: "main",

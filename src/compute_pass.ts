@@ -2,21 +2,10 @@ import { Pass, type DebugPassArg, type PassArg } from "./pass";
 import type { PrintType } from "./struct/out_buffer_type";
 import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
 
-// workgroup size는 셰이더의 @workgroup_size(...)에서 정한다
-// - 숫자 / 리터럴로 초기화된 const·override → 그 값 고정
-// - @X_AUTO / @Y_AUTO / @Z_AUTO → 라이브러리 레벨 auto-tuning 대상 (실측으로 최적 크기 선택)
-// - 인자가 없는 축 → 0 (축 없음)
-
-// @workgroup_size(...) 속성. 공백/줄바꿈과 한 단계 중첩 괄호(min(...) 등)까지 인자로 캡처
 const WORKGROUP_SIZE_ATTR = /@\s*workgroup_size\s*\(((?:[^()]|\([^()]*\))*)\)/g;
-// 축별 auto-tuning 플레이스홀더
 const AUTO_PLACEHOLDER = [/@X_AUTO\b/, /@Y_AUTO\b/, /@Z_AUTO\b/] as const;
-// auto-tuning 대상 축에 튜닝 전까지 적용하는 기본 workgroup size
-// @workgroup_size 인자 개수(1D/2D/3D)별 축당 크기 → 모두 워크그룹당 64 invocation
 const DEFAULT_AUTO_WORKGROUP_SIZE: Record<number, number> = { 1: 64, 2: 8, 3: 4 };
-// 다른 entry point의 플레이스홀더는 컴파일만 되면 되므로 어떤 차원이어도 한도를 넘지 않는 값으로 치환
 const FALLBACK_PLACEHOLDER_SIZE = 4;
-// WGSL 정수 리터럴 (10진/16진, i/u 접미사)
 const INT_LITERAL = /^(0[xX][0-9a-fA-F]+|\d+)[iu]?$/;
 
 type AxisFlags = [boolean, boolean, boolean];
@@ -40,9 +29,7 @@ export class ComputePass extends Pass {
   workgroupSizeX: number;
   workgroupSizeY: number;
   workgroupSizeZ: number;
-  // [X, Y, Z] 축별 auto-tuning 대상 여부
   autoWorkgroupSize: AxisFlags;
-  // 플레이스홀더 치환 전 원본 셰이더 코드 (this.shaderCode는 치환 후 컴파일된 코드)
   shaderCodeTemplate: string;
   computeTargetCountX: number;
   computeTargetCountY: number;
@@ -53,7 +40,6 @@ export class ComputePass extends Pass {
   private bindGroupTex: GPUBindGroup | null = null;
   private bindGroupSampler: GPUBindGroup | null = null;
   constructor(arg: ComputePassArg) {
-    // Pass 생성자가 셰이더를 컴파일하므로 workgroup size를 먼저 확정하고 플레이스홀더를 치환해 넘긴다
     const label = arg.label ?? "";
     const attrArgs = ComputePass.findWorkgroupSizeArgs(arg.shaderCode, arg.entryPoint);
     if (!attrArgs) {
@@ -168,8 +154,6 @@ export class ComputePass extends Pass {
     return super.createPass(encoder);
   }
 
-  // entryPoint 함수에 붙은 @workgroup_size(...)의 축별 인자 (주석 제거, 최상위 콤마로 분리)
-  // 해당 속성을 못 찾으면 null
   private static findWorkgroupSizeArgs(
     shaderCode: string,
     entryPoint: string,
@@ -199,8 +183,6 @@ export class ComputePass extends Pass {
     return null;
   }
 
-  // 플레이스홀더 → auto-tuning 대상 (튜닝 전까지 기본값)
-  // 그 외 → 셰이더 @workgroup_size의 값 추출, 인자가 없으면 0(축 없음)
   private static resolveSize(
     axis: number,
     attrArgs: string[],
@@ -222,8 +204,6 @@ export class ComputePass extends Pass {
     return { size: value, isAuto: false };
   }
 
-  // 플레이스홀더를 축별 현재 workgroup size로 치환
-  // 이 entryPoint의 @workgroup_size에 없는 플레이스홀더(다른 entry point 등)는 컴파일만 되도록 기본값으로 치환
   private static applyWorkgroupSize(
     shaderCode: string,
     sizes: number[],
@@ -238,7 +218,6 @@ export class ComputePass extends Pass {
     return code;
   }
 
-  // 정수 리터럴 또는 리터럴로 초기화된 const/override 식별자만 해석, 그 외는 null
   private static evalIntExpr(expr: string, shaderCode: string): number | null {
     const literal = INT_LITERAL.exec(expr);
     if (literal) return Number(literal[1]);
@@ -252,7 +231,6 @@ export class ComputePass extends Pass {
     return init ? Number(init[1]) : null;
   }
 
-  // 축이 없으면(target count 0 또는 workgroup size 0) undefined
   private dispatchCount(count: number, size: number): number | undefined {
     if (count <= 0 || size === 0) return undefined;
     return Math.ceil(count / size);
