@@ -1,7 +1,7 @@
 import type {
   PrintGPUBuffer,
   PrintGPUBufferArg,
-} from "../struct/print_gpu_buffer";
+} from "../types/print";
 
 export const printDefault: PrintGPUBuffer = (arg: PrintGPUBufferArg) => {
   let format = "";

@@ -1,12 +1,11 @@
-import type { OutGPUBuffer } from "./compute_pass";
-import type { PrintType } from "./struct/out_buffer_type";
-import type { PrintGPUBuffer } from "./struct/print_gpu_buffer";
+import type { EncoderCallback } from "../types/callback";
+import type { CreatePassTimeTag, OutGPUBuffer } from "../types/pass";
+import type { PrintGPUBuffer, PrintType } from "../types/print";
 import type {
   WebGPUBuffer,
   WebGPUSampler,
   WebGPUTexture,
-} from "./struct/webgpu_buffer";
-import type { CreatePassTimeTag } from "./WP";
+} from "../types/resource";
 
 export interface PassArg {
   device: GPUDevice;
@@ -56,8 +55,6 @@ export interface DebugPassArg {
   querySet: GPUQuerySet;
   time?: CreatePassTimeTag;
 }
-
-export type EncoderCallback = (encoder: GPUCommandEncoder) => void;
 
 export class Pass {
   buffers: Record<number, PassBuffer>;

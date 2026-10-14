@@ -1,5 +1,5 @@
-import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../struct/webgpu_buffer";
-import type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "../struct/pass_queue";
+import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../src/types/resource";
+import type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "../src/types/pass_queue";
 
 // ============================================================
 // 프로젝트별 버퍼/텍스처/샘플러 타입 정의

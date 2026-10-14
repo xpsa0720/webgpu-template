@@ -1,44 +1,32 @@
-import { DEFAULT_CONFIG, type WPConfig } from "./setting";
-import { loadImageBitmap } from "./util/load_image_bitmap";
-import { printDefault } from "./util/print";
-import { ComputePass, type OutGPUBuffer } from "./compute_pass";
-import type { Pass } from "./pass";
-import { RenderPass } from "./render_pass";
-import type { FormatStyle } from "./struct/print_gpu_buffer";
-import type { PassCallback } from "./struct/run_callback";
+import { createOverlayElement } from "../debug/overlay";
+import { printDefault } from "../debug/print";
+import {
+  createTimestampQuery,
+  readTimestampLines,
+  resolveTimestampQuery,
+  type TimestampQuery,
+} from "../debug/timestamp";
+import { ComputePass } from "../pass/compute_pass";
+import { RenderPass } from "../pass/render_pass";
+import type { PassCallback } from "../types/callback";
+import type {
+  CreateComputePassArg,
+  CreatePassTimeTag,
+  CreateRenderPassArg,
+  OutGPUBuffer,
+} from "../types/pass";
+import type { FormatStyle } from "../types/print";
 import type {
   WebGPUBuffer,
   WebGPUSampler,
   WebGPUTexture,
-} from "./struct/webgpu_buffer";
+} from "../types/resource";
+import { loadImageBitmap } from "../util/load_image_bitmap";
+import { DEFAULT_CONFIG, type WPConfig } from "./config";
 
 interface WPArg {
   canvas: HTMLCanvasElement;
   config?: WPConfig;
-}
-interface CreateComputePassArg {
-  shaderCode: string;
-  entryPoint: string;
-  computeTargetCountX: number;
-  computeTargetCountY?: number;
-  computeTargetCountZ?: number;
-  label?: string;
-}
-export interface CreatePassTimeTag {
-  label?: string;
-  startIndex?: number;
-  endIndex?: number;
-}
-interface CreateRenderPassArg {
-  target: GPUTexture | HTMLCanvasElement;
-  shaderCode: string;
-  vertexEntryPoint: string;
-  fragmentEntryPoint: string;
-  label?: string;
-  vertexCount: number;
-  instanceCount: number;
-  loadOp?: GPULoadOp;
-  format?: GPUTextureFormat;
 }
 
 export class WP<
@@ -75,26 +63,13 @@ export class WP<
     this.totalFrame = 0;
     this.fpsFrameCount = 0;
     this.lastFpsLogTime = 0;
-    this.fpsElement = this.createOverlayElement("fps", "top:0;left:0");
-    this.timestampElement = this.createOverlayElement("timestamps", "top:20px;left:0");
+    this.fpsElement = createOverlayElement("fps", "top:0;left:0");
+    this.timestampElement = createOverlayElement("timestamps", "top:20px;left:0");
     this.latestTimestampLines = [];
     this.debugFrameCounter = 0;
     this.passes = [];
     this.timeDebugLabels = [];
     this.timeDebugPass = 0;
-  }
-
-  private createOverlayElement(id: string, position: string): HTMLElement {
-    const existing = document.getElementById(id);
-    if (existing) return existing;
-    const el = document.createElement("pre");
-    el.id = id;
-    el.style.cssText =
-      `position:fixed;${position};margin:0;padding:4px 8px;` +
-      "font:12px monospace;color:#0f0;background:rgba(0,0,0,0.5);" +
-      "pointer-events:none;z-index:9999;white-space:pre";
-    document.body.appendChild(el);
-    return el;
   }
 
   async init() {
@@ -385,37 +360,20 @@ export class WP<
 
       const stagingBuffers: Array<OutGPUBuffer[]> = [];
 
-      let querySet: GPUQuerySet | null = null;
-      let resolveBuffer: GPUBuffer | null = null;
-      let resolveStagingBuffer: GPUBuffer | null = null;
-
-      if (
+      const timestampQuery: TimestampQuery | null =
         shouldSample &&
         this.timeDebugPass > 0 &&
         this.device.features.has("timestamp-query")
-      ) {
-        const PASS_COUNT = this.timeDebugPass;
-        querySet = this.device.createQuerySet({
-          type: "timestamp",
-          count: PASS_COUNT,
-        });
-        resolveBuffer = this.device.createBuffer({
-          size: PASS_COUNT * 8,
-          usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE,
-        });
-        resolveStagingBuffer = this.device.createBuffer({
-          size: PASS_COUNT * 8,
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        });
-      }
+          ? createTimestampQuery(this.device, this.timeDebugPass)
+          : null;
 
       if (shouldSample) this.device.pushErrorScope("validation");
       for (const e of passes) {
         const stagingBuffer = e.createPass(
           encoder,
-          querySet
+          timestampQuery
             ? {
-                querySet: querySet,
+                querySet: timestampQuery.querySet,
                 time: e.time,
               }
             : undefined,
@@ -424,28 +382,7 @@ export class WP<
         stagingBuffers.push(stagingBuffer);
       }
 
-      if (
-        shouldSample &&
-        querySet &&
-        resolveBuffer &&
-        resolveStagingBuffer &&
-        this.timeDebugPass > 0
-      ) {
-        encoder.resolveQuerySet(
-          querySet,
-          0,
-          this.timeDebugPass,
-          resolveBuffer,
-          0,
-        );
-        encoder.copyBufferToBuffer(
-          resolveBuffer,
-          0,
-          resolveStagingBuffer,
-          0,
-          resolveBuffer.size,
-        );
-      }
+      if (timestampQuery) resolveTimestampQuery(encoder, timestampQuery);
 
       this.device.queue.submit([encoder.finish()]);
       if (shouldSample) {
@@ -455,20 +392,10 @@ export class WP<
       }
       const resultDatas: Record<string, Float32Array | Uint32Array> = {};
 
-      if (shouldSample && resolveStagingBuffer) {
-        await resolveStagingBuffer?.mapAsync(GPUMapMode.READ);
-        const times = new BigUint64Array(
-          resolveStagingBuffer?.getMappedRange(),
+      if (timestampQuery) {
+        debugLines.push(
+          ...(await readTimestampLines(timestampQuery, this.timeDebugLabels)),
         );
-        for (let i = 0; i < this.timeDebugLabels.length; i += 1) {
-          const begin = times[i * 2];
-          const end = times[i * 2 + 1];
-          const label = this.timeDebugLabels[i];
-          const line = `${label ?? `debug${i / 2}`}: ${(Number(end - begin) / 1_000_000).toFixed(3)}ms`;
-          debugLines.push(line);
-        }
-
-        resolveStagingBuffer?.unmap();
       }
 
       for (const [, buffers] of stagingBuffers.entries()) {

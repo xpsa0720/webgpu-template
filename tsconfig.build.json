@@ -16,6 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
-  "include": ["src"],
-  "exclude": ["src/dummyCode"]
+  "include": ["src"]
 }

@@ -1,4 +1,6 @@
-import type { WebGPUBuffer } from "./webgpu_buffer";
+import type { WebGPUBuffer } from "./resource";
+
+export type EncoderCallback = (encoder: GPUCommandEncoder) => void;
 
 export type PassCallback<
   B extends Record<string, WebGPUBuffer> = Record<string, WebGPUBuffer>,

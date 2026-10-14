@@ -1,5 +1,6 @@
-import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "./webgpu_buffer";
-import type { CreatePassTimeTag, WP } from "../WP";
+import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "./resource";
+import type { WP } from "../core/wp";
+import type { CreatePassTimeTag } from "./pass";
 
 export type PassQueue<
   B extends Record<string, WebGPUBuffer> = Record<string, WebGPUBuffer>,

@@ -1,5 +1,5 @@
-import type { OutGPUBuffer } from "./compute_pass";
-import { Pass, type DebugPassArg, type PassArg } from "./pass";
+import type { OutGPUBuffer } from "../types/pass";
+import { Pass, type DebugPassArg, type PassArg, type PassBuffer } from "./pass";
 
 interface RenderPassArg extends PassArg {
   target: GPUTexture | HTMLCanvasElement;
@@ -25,10 +25,10 @@ export class RenderPass extends Pass {
   vertexCount: GPUSize32;
   instanceCount: GPUSize32;
   loadOp: GPULoadOp;
-  private debugMode: boolean;
-  private bindGroup: GPUBindGroup | null = null;
-  private bindGroupTex: GPUBindGroup | null = null;
-  private bindGroupSampler: GPUBindGroup | null = null;
+  protected debugMode: boolean;
+  protected bindGroup: GPUBindGroup | null = null;
+  protected bindGroupTex: GPUBindGroup | null = null;
+  protected bindGroupSampler: GPUBindGroup | null = null;
   constructor(arg: RenderPassArg) {
     if (!arg.device) {
       throw Error("Device not initialized");
@@ -36,8 +36,6 @@ export class RenderPass extends Pass {
 
     super(arg);
     this.debugMode = arg.debugMode ?? false;
-    const presentationFormat: GPUTextureFormat =
-      arg.format ?? navigator.gpu.getPreferredCanvasFormat();
     this.shaderCode = arg.shaderCode;
     this.target = arg.target;
     this.context = null;
@@ -55,6 +53,8 @@ export class RenderPass extends Pass {
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
     });
+        const presentationFormat: GPUTextureFormat =
+      arg.format ?? navigator.gpu.getPreferredCanvasFormat();
     const blendState: GPUBlendState | undefined =
       arg.blend
         ? {
@@ -74,11 +74,24 @@ export class RenderPass extends Pass {
       this.target instanceof HTMLCanvasElement
         ? presentationFormat
         : this.target.format;
-    this.pipeline = this.device.createRenderPipeline({
+    this.pipeline = this.settingPipeline(blendState,format);
+  }
+
+  settingPipeline(blendState:GPUBlendState | undefined,format:GPUTextureFormat):GPURenderPipeline{
+    const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
         entryPoint: this.vertexEntryPoint,
         module: this.shaderModule,
+        buffers: [
+            {
+            arrayStride: 6 * 4, // float32 6개 (pos3 + color3)
+            attributes: [
+                { shaderLocation: 0, offset: 0, format: "float32x3" },// position
+                { shaderLocation: 1, offset: 3 * 4, format: "float32x3" }, // color
+            ],
+            },
+        ],
       },
       fragment: {
         entryPoint: this.fragmentEntryPoint,
@@ -89,11 +102,13 @@ export class RenderPass extends Pass {
             blend: blendState,
           },
         ],
+        
       },
       primitive: {
         topology: "triangle-list",
       },
     });
+    return pipeline;
   }
 
   deleteBuffer(bindigIdx: number) {
@@ -103,10 +118,8 @@ export class RenderPass extends Pass {
     delete this.entries[bindigIdx];
   }
 
-  createPass(
-    encoder: GPUCommandEncoder,
-    debugArg?: DebugPassArg,
-  ): OutGPUBuffer[] {
+
+  ensureBindGroups(){
     if (!this.bindGroup) {
       const entries: Array<GPUBindGroupEntry> = [];
       for (const [key, value] of Object.entries(this.buffers)) {
@@ -146,28 +159,9 @@ export class RenderPass extends Pass {
         entries: entries_sampler,
       });
     }
+  }
 
-    const view = this.context
-      ? this.context.getCurrentTexture().createView()
-      : (this.target as GPUTexture).createView();
-
-    const renderPassDescriptor: GPURenderPassDescriptor = {
-      colorAttachments: [
-        {
-          view: view,
-          loadOp: this.loadOp,
-          storeOp: "store",
-          clearValue: { r: 0, g: 0, b: 0, a: 1 },
-        },
-      ],
-    };
-    if (debugArg?.time && this.debugMode) {
-      renderPassDescriptor.timestampWrites = {
-        querySet: debugArg.querySet,
-        beginningOfPassWriteIndex: debugArg.time?.startIndex ?? undefined,
-        endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
-      };
-    }
+  encoderWriteCommand(encoder: GPUCommandEncoder,renderPassDescriptor:GPURenderPassDescriptor){
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
@@ -182,6 +176,38 @@ export class RenderPass extends Pass {
       this.instanceCount == 0 ? 1 : this.instanceCount,
     );
     pass.end();
+  }
+
+  createPass(
+    encoder: GPUCommandEncoder,
+    debugArg?: DebugPassArg,
+  ): OutGPUBuffer[] {
+    this.ensureBindGroups()
+
+    const view = this.context
+      ? this.context.getCurrentTexture().createView()
+      : (this.target as GPUTexture).createView();
+
+    const renderPassDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: view,
+          loadOp: this.loadOp,
+          storeOp: "store",
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+          
+        },
+      ],
+    };
+    if (debugArg?.time && this.debugMode) {
+      renderPassDescriptor.timestampWrites = {
+        querySet: debugArg.querySet,
+        beginningOfPassWriteIndex: debugArg.time?.startIndex ?? undefined,
+        endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
+      };
+    }
+    
+    this.encoderWriteCommand(encoder,renderPassDescriptor)
 
     return super.createPass(encoder);
   }

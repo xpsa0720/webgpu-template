@@ -1,8 +1,8 @@
-import { GPUSetting, ParamsBuffer } from "../params_buffer";
-import { Position } from "../position";
-import type { WP } from "../WP";
-import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../struct/webgpu_buffer";
-import type { PassCallback } from "../struct/run_callback";
+import { GPUSetting, ParamsBuffer } from "../src/resource/params_buffer";
+import { Position } from "../src/input/position";
+import type { WP } from "../src/core/wp";
+import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../src/types/resource";
+import type { PassCallback } from "../src/types/callback";
 import { applyVariableShaderCode, type AppBuffers, type AppTextures, type AppSamplers } from "./shader_queue";
 
 // 프로젝트별 uniform 레이아웃 (WGSL struct와 일치시킬 것)
@@ -33,7 +33,7 @@ class App {
     this.position = new Position();
     this.wp = new (
       // @ts-ignore -- 실제 사용 시 WP를 import
-      (await import("../WP")).WP
+      (await import("../src/core/wp")).WP
     )({
       canvas: this.canvas,
       config: { subSteps: 1, playSpeed: 1 },
