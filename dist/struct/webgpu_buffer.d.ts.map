@@ -1,0 +1,1 @@
+{"version":3,"file":"webgpu_buffer.d.ts","sourceRoot":"","sources":["../../src/struct/webgpu_buffer.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,YAAY;IAC3B,MAAM,EAAE,SAAS,CAAC;CACnB;AAED,MAAM,WAAW,aAAa;IAC5B,OAAO,EAAE,UAAU,CAAC;CACrB;AAED,MAAM,WAAW,aAAa;IAC5B,OAAO,EAAE,UAAU,CAAC;CACrB"}

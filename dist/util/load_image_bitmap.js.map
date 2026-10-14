@@ -1,0 +1,1 @@
+{"version":3,"file":"load_image_bitmap.js","sourceRoot":"","sources":["../../src/util/load_image_bitmap.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,KAAK,UAAU,eAAe,CAAC,GAAW;IAC/C,MAAM,GAAG,GAAG,MAAM,KAAK,CAAC,GAAG,CAAC,CAAC;IAC7B,MAAM,IAAI,GAAG,MAAM,GAAG,CAAC,IAAI,EAAE,CAAC;IAC9B,OAAO,iBAAiB,CAAC,IAAI,CAAC,CAAC;AACjC,CAAC"}
