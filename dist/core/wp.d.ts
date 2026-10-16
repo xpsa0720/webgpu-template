@@ -1,7 +1,8 @@
 import { ComputePass } from "../pass/compute_pass";
+import { Render3DPass } from "../pass/render_3d_pass";
 import { RenderPass } from "../pass/render_pass";
 import type { PassCallback } from "../types/callback";
-import type { CreateComputePassArg, CreatePassTimeTag, CreateRenderPassArg } from "../types/pass";
+import type { CreateComputePassArg, CreatePassTimeTag, CreateRender3DPassArg, CreateRenderPassArg } from "../types/pass";
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../types/resource";
 import { type WPConfig } from "./config";
 interface WPArg {
@@ -28,6 +29,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
     init(): Promise<void>;
     createComputePass(index: number, arg: CreateComputePassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): ComputePass;
     createRenderPass(index: number, arg: CreateRenderPassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): RenderPass;
+    createRender3DPass(index: number, arg: CreateRender3DPassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): Render3DPass;
     createBuffer(size: number, data: GPUAllowSharedBufferSource, usage: GPUBufferUsageFlags): WebGPUBuffer;
     createTexture(size: GPUExtent3DDict, data: BufferSource, usage: GPUTextureUsageFlags, format?: GPUTextureFormat): WebGPUTexture;
     createTextureFromImage(url: string, usage: GPUTextureUsageFlags): Promise<WebGPUTexture>;

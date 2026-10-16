@@ -1,6 +1,6 @@
 import type { OutGPUBuffer } from "../types/pass";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
-interface RenderPassArg extends PassArg {
+export interface RenderPassArg extends PassArg {
     target: GPUTexture | HTMLCanvasElement;
     vertexEntryPoint: string;
     fragmentEntryPoint: string;
@@ -23,13 +23,15 @@ export declare class RenderPass extends Pass {
     vertexCount: GPUSize32;
     instanceCount: GPUSize32;
     loadOp: GPULoadOp;
-    private debugMode;
-    private bindGroup;
-    private bindGroupTex;
-    private bindGroupSampler;
+    protected debugMode: boolean;
+    protected bindGroup: GPUBindGroup | null;
+    protected bindGroupTex: GPUBindGroup | null;
+    protected bindGroupSampler: GPUBindGroup | null;
     constructor(arg: RenderPassArg);
+    settingPipeline(arg: RenderPassArg): GPURenderPipeline;
     deleteBuffer(bindigIdx: number): void;
+    ensureBindGroups(): void;
+    encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
     createPass(encoder: GPUCommandEncoder, debugArg?: DebugPassArg): OutGPUBuffer[];
 }
-export {};
 //# sourceMappingURL=render_pass.d.ts.map

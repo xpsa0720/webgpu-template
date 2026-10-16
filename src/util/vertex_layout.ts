@@ -14,6 +14,8 @@ type TypeFamily = "float" | "sint" | "uint";
 interface ShaderType {
   family: TypeFamily;
   defaultFormat: GPUVertexFormat | null;
+  /** 행렬이면 열 수 (vec/scalar은 1) */
+  columns: number;
 }
 
 const SCALAR: Record<string, { family: TypeFamily; bits: number; suffix: string }> = {
@@ -22,12 +24,57 @@ const SCALAR: Record<string, { family: TypeFamily; bits: number; suffix: string 
   i32: { family: "sint", bits: 32, suffix: "i" },
   u32: { family: "uint", bits: 32, suffix: "u" },
 };
-const FORMAT_PREFIX: Record<string, TypeFamily> = {
-  float: "float",
-  unorm: "float",
-  snorm: "float",
-  sint: "sint",
-  uint: "uint",
+
+/** GPUVertexFormat → { byteSize, family } */
+const FORMAT_TABLE: Record<string, { byteSize: number; family: TypeFamily }> = {
+  // float 계열
+  float16:     { byteSize:  2, family: "float" },
+  float16x2:   { byteSize:  4, family: "float" },
+  float16x4:   { byteSize:  8, family: "float" },
+  float32:     { byteSize:  4, family: "float" },
+  float32x2:   { byteSize:  8, family: "float" },
+  float32x3:   { byteSize: 12, family: "float" },
+  float32x4:   { byteSize: 16, family: "float" },
+  // sint 계열
+  sint8:       { byteSize:  1, family: "sint" },
+  sint8x2:     { byteSize:  2, family: "sint" },
+  sint8x4:     { byteSize:  4, family: "sint" },
+  sint16:      { byteSize:  2, family: "sint" },
+  sint16x2:    { byteSize:  4, family: "sint" },
+  sint16x4:    { byteSize:  8, family: "sint" },
+  sint32:      { byteSize:  4, family: "sint" },
+  sint32x2:    { byteSize:  8, family: "sint" },
+  sint32x3:    { byteSize: 12, family: "sint" },
+  sint32x4:    { byteSize: 16, family: "sint" },
+  // uint 계열
+  uint8:       { byteSize:  1, family: "uint" },
+  uint8x2:     { byteSize:  2, family: "uint" },
+  uint8x4:     { byteSize:  4, family: "uint" },
+  uint16:      { byteSize:  2, family: "uint" },
+  uint16x2:    { byteSize:  4, family: "uint" },
+  uint16x4:    { byteSize:  8, family: "uint" },
+  uint32:      { byteSize:  4, family: "uint" },
+  uint32x2:    { byteSize:  8, family: "uint" },
+  uint32x3:    { byteSize: 12, family: "uint" },
+  uint32x4:    { byteSize: 16, family: "uint" },
+  // unorm 계열
+  unorm8:      { byteSize:  1, family: "float" },
+  unorm8x2:    { byteSize:  2, family: "float" },
+  unorm8x4:    { byteSize:  4, family: "float" },
+  unorm16:     { byteSize:  2, family: "float" },
+  unorm16x2:   { byteSize:  4, family: "float" },
+  unorm16x4:   { byteSize:  8, family: "float" },
+  // snorm 계열
+  snorm8:      { byteSize:  1, family: "float" },
+  snorm8x2:    { byteSize:  2, family: "float" },
+  snorm8x4:    { byteSize:  4, family: "float" },
+  snorm16:     { byteSize:  2, family: "float" },
+  snorm16x2:   { byteSize:  4, family: "float" },
+  snorm16x4:   { byteSize:  8, family: "float" },
+  // 특수 포맷
+  "unorm10-10-10-2": { byteSize: 4, family: "float" },
+  "snorm10-10-10-2": { byteSize: 4, family: "float" },
+  "unorm8x4-bgra":   { byteSize: 4, family: "float" },
 };
 
 export interface VertexBufferSpec {
@@ -53,6 +100,8 @@ export interface VertexLayoutOptions {
 
 export interface VertexAttributeInfo {
   name: string;
+  /** 행렬에서 펼쳐진 경우 원본 이름 (예: transform_0 → transform). 아니면 name과 동일 */
+  sourceName: string;
   location: number;
   buffer: number;
   offset: number;
@@ -73,6 +122,8 @@ interface VertexInput {
   location: number;
   type: string;
   shaderType: ShaderType;
+  /** 행렬에서 펼쳐진 경우 원본 이름. 아니면 name과 동일 */
+  sourceName: string;
 }
 
 /**
@@ -101,13 +152,27 @@ export function vertexLayoutFromWGSL(
   );
   const byName = new Map(inputs.map((i) => [i.name, i]));
 
+  const bySourceName = new Map<string, VertexInput[]>();
+  for (const i of inputs) {
+    const group = bySourceName.get(i.sourceName);
+    if (group) group.push(i);
+    else bySourceName.set(i.sourceName, [i]);
+  }
+  const sourceNames = new Set(inputs.map((i) => i.sourceName));
+
   const formats = options.formats ?? {};
   for (const name of Object.keys(formats)) {
-    if (!byName.has(name)) throw new Error(`${label}: formats의 "${name}"은 셰이더 입력에 없음`);
+    if (!sourceNames.has(name)) {
+      throw new Error(`${label}: formats의 "${name}"은 셰이더 입력에 없음`);
+    }
   }
 
   const specs: VertexBufferSpec[] = options.buffers ?? [
-    { attributes: [...inputs].sort((a, b) => a.location - b.location).map((i) => i.name) },
+    {
+      attributes: [...bySourceName.entries()]
+        .sort((a, b) => a[1][0].location - b[1][0].location)
+        .map(([srcName]) => srcName),
+    },
   ];
   const limits = { ...DEFAULT_LIMITS, ...options.limits };
   if (specs.length > limits.maxVertexBuffers) {
@@ -118,26 +183,42 @@ export function vertexLayoutFromWGSL(
   }
 
   const attributes: Record<string, VertexAttributeInfo> = {};
+  const assignedSources = new Set<string>();
+
   const buffers = specs.map((spec, bufferIdx): GPUVertexBufferLayout => {
     if (spec.attributes.length === 0) throw new Error(`${label}: 버퍼 ${bufferIdx}의 attributes가 비어 있음`);
     let offset = 0;
-    const gpuAttributes = spec.attributes.map((name): GPUVertexAttribute => {
-      const input = byName.get(name);
-      if (!input) throw new Error(`${label}: 버퍼 ${bufferIdx}의 "${name}"은 셰이더 입력에 없음`);
-      if (attributes[name]) throw new Error(`${label}: "${name}"이 여러 버퍼에 지정됨`);
+    const gpuAttributes: GPUVertexAttribute[] = [];
 
-      const format = formats[name] ?? input.shaderType.defaultFormat;
-      if (!format) {
-        throw new Error(`${label}: ${name}: ${input.type}에 대응하는 기본 format이 없음, formats로 지정할 것`);
+    for (const specName of spec.attributes) {
+      // 펼쳐진 이름(transform_0 등)이 아닌 원본 이름(transform)으로만 지정 가능
+      if (!bySourceName.has(specName) && byName.has(specName)) {
+        const input = byName.get(specName)!;
+        if (input.sourceName !== input.name) {
+          throw new Error(`${label}: "${specName}"은 행렬 "${input.sourceName}"에서 펼쳐진 이름임, 원본 이름 "${input.sourceName}"을 사용할 것`);
+        }
       }
-      checkFamily(input, format, label);
-      const size = formatByteSize(format, label);
-      offset = roundUp(Math.min(4, size), offset);
-      attributes[name] = { name, location: input.location, buffer: bufferIdx, offset, format };
-      const attr = { shaderLocation: input.location, offset, format };
-      offset += size;
-      return attr;
-    });
+      const expandedInputs = bySourceName.get(specName);
+      if (!expandedInputs) throw new Error(`${label}: 버퍼 ${bufferIdx}의 "${specName}"은 셰이더 입력에 없음`);
+
+      if (assignedSources.has(specName)) throw new Error(`${label}: "${specName}"이 여러 버퍼에 지정됨`);
+      assignedSources.add(specName);
+
+      for (const input of expandedInputs) {
+        if (attributes[input.name]) throw new Error(`${label}: "${input.name}"이 여러 버퍼에 지정됨`);
+
+        const format = formats[input.sourceName] ?? input.shaderType.defaultFormat;
+        if (!format) {
+          throw new Error(`${label}: ${input.name}: ${input.type}에 대응하는 기본 format이 없음, formats로 지정할 것`);
+        }
+        checkFamily(input, format, label);
+        const size = formatByteSize(format, label);
+        offset = roundUp(Math.min(4, size), offset);
+        attributes[input.name] = { name: input.name, sourceName: input.sourceName, location: input.location, buffer: bufferIdx, offset, format };
+        gpuAttributes.push({ shaderLocation: input.location, offset, format });
+        offset += size;
+      }
+    }
 
     const arrayStride = roundUp(4, offset);
     if (arrayStride > limits.maxVertexBufferArrayStride) {
@@ -154,10 +235,6 @@ export function vertexLayoutFromWGSL(
   return { entryPoints, buffers, attributes };
 }
 
-/**
- * entryPoint의 @location 입력을 layout이 모두 제공하는지 확인한다.
- * layout에 남는 attribute는 허용 (WebGPU도 허용함).
- */
 export function checkVertexLayout(
   layout: VertexLayout,
   shaderCode: string,
@@ -196,8 +273,8 @@ function parseVertexInputs(code: string, entryPoint: string): VertexInput[] {
     if (attrs.length === 0) {
       inputs.push(...parseStructInputs(code, type, label));
     } else {
-      const input = toInput(attrs, name, type, label);
-      if (input) inputs.push(input);
+      const expanded = toInput(attrs, name, type, label);
+      if (expanded) inputs.push(...expanded);
     }
   }
 
@@ -222,8 +299,8 @@ function parseStructInputs(code: string, structName: string, label: string): Ver
     if (attrs.length === 0) {
       throw new Error(`${label}: ${structName}.${name}에 @location/@builtin이 없음`);
     }
-    const input = toInput(attrs, name, type, label);
-    if (input) inputs.push(input);
+    const expanded = toInput(attrs, name, type, label);
+    if (expanded) inputs.push(...expanded);
   }
   return inputs;
 }
@@ -233,7 +310,7 @@ function toInput(
   name: string,
   type: string,
   label: string,
-): VertexInput | null {
+): VertexInput[] | null {
   if (attrs.some((a) => a.name === "builtin")) return null;
   const location = attrs.find((a) => a.name === "location");
   if (!location) throw new Error(`${label}: ${name}에 @location이 없음`);
@@ -243,7 +320,19 @@ function toInput(
   }
   const shaderType = resolveShaderType(type);
   if (!shaderType) throw new Error(`${label}: ${name}의 타입 "${type}"은 지원하지 않음`);
-  return { name, location: Number(literal[1]), type, shaderType };
+
+  const loc = Number(literal[1]);
+  if (shaderType.columns === 1) {
+    return [{ name, location: loc, type, shaderType, sourceName: name }];
+  }
+
+  // 행렬: 열 개수만큼 location을 소비하며 펼침
+  const colType: ShaderType = { family: shaderType.family, defaultFormat: shaderType.defaultFormat, columns: 1 };
+  const expanded: VertexInput[] = [];
+  for (let c = 0; c < shaderType.columns; c++) {
+    expanded.push({ name: `${name}_${c}`, location: loc + c, type, shaderType: colType, sourceName: name });
+  }
+  return expanded;
 }
 
 function parseDecl(decl: string, label: string) {
@@ -262,40 +351,64 @@ function parseDecl(decl: string, label: string) {
   }
   const m = /^([A-Za-z_]\w*)\s*:\s*([\s\S]+)$/.exec(rest);
   if (!m) throw new Error(`${label}: 선언 "${decl.trim()}"을 해석할 수 없음`);
-  return { attrs, name: m[1], type: m[2].replace(/\s+/g, "") };
+  return { attrs, name: m[1], type: normalizeType(m[2].replace(/\s+/g, "")) };
+}
+
+/** WGSL 타입 약칭을 정규형으로 변환: vec3f → vec3<f32>, mat4x4h → mat4x4<f16> 등 */
+function normalizeType(type: string): string {
+  const SUFFIX_TO_SCALAR: Record<string, string> = { f: "f32", h: "f16", i: "i32", u: "u32" };
+  // vec 약칭: vec3f → vec3<f32>
+  const vec = /^(vec[234])([fhiu])$/.exec(type);
+  if (vec) return `${vec[1]}<${SUFFIX_TO_SCALAR[vec[2]]}>`;
+  // mat 약칭: mat4x4f → mat4x4<f32>
+  const mat = /^(mat[234]x[234])([fh])$/.exec(type);
+  if (mat) return `${mat[1]}<${SUFFIX_TO_SCALAR[mat[2]]}>`;
+  return type;
 }
 
 function resolveShaderType(type: string): ShaderType | null {
   const scalar = SCALAR[type];
-  if (scalar) return { family: scalar.family, defaultFormat: vertexFormat(scalar.family, scalar.bits, 1) };
+  if (scalar) return { family: scalar.family, defaultFormat: vertexFormat(scalar.family, scalar.bits, 1), columns: 1 };
 
-  const vec =
-    /^vec([234])<(f32|f16|i32|u32)>$/.exec(type) ??
-    /^vec([234])([fhiu])$/.exec(type);
-  if (!vec) return null;
-  const s = SCALAR[vec[2]] ?? Object.values(SCALAR).find((v) => v.suffix === vec[2])!;
-  return { family: s.family, defaultFormat: vertexFormat(s.family, s.bits, Number(vec[1])) };
+  // normalizeType()에 의해 약칭은 이미 정규형으로 변환됨 (vec3f → vec3<f32>)
+  const vec = /^vec([234])<(f32|f16|i32|u32)>$/.exec(type);
+  if (vec) {
+    const s = SCALAR[vec[2]]!;
+    return { family: s.family, defaultFormat: vertexFormat(s.family, s.bits, Number(vec[1])), columns: 1 };
+  }
+
+  // 행렬: mat2x2<f32>, mat4x4<f16> 등 (WGSL 행렬은 f32/f16만 가능)
+  const mat = /^mat([234])x([234])<(f32|f16)>$/.exec(type);
+  if (mat) {
+    const cols = Number(mat[1]);
+    const rows = Number(mat[2]);
+    const s = SCALAR[mat[3]]!;
+    return { family: s.family, defaultFormat: vertexFormat(s.family, s.bits, rows), columns: cols };
+  }
+
+  return null;
 }
 
 function vertexFormat(family: TypeFamily, bits: number, count: number): GPUVertexFormat | null {
-  // 16비트 3성분 format은 존재하지 않음
-  if (bits === 16 && count === 3) return null;
-  return `${family}${bits}${count > 1 ? `x${count}` : ""}` as GPUVertexFormat;
+  const key = `${family}${bits}${count > 1 ? `x${count}` : ""}`;
+  if (!(key in FORMAT_TABLE)) return null;
+  return key as GPUVertexFormat;
 }
 
 function checkFamily(input: VertexInput, format: GPUVertexFormat, label: string) {
-  const formatFamily = FORMAT_PREFIX[/^[a-z]+/.exec(format)?.[0] ?? ""];
-  if (formatFamily !== input.shaderType.family) {
+  const info = FORMAT_TABLE[format];
+  if (!info) throw new Error(`${label}: 알 수 없는 format "${format}"`);
+  if (info.family !== input.shaderType.family) {
     throw new Error(`${label}: ${input.name}의 타입(${input.type})과 format(${format}) 계열이 다름`);
   }
 }
 
 function formatByteSize(format: GPUVertexFormat, label: string): number {
-  if (["unorm10-10-10-2", "snorm10-10-10-2", "unorm8x4-bgra"].includes(format)) return 4;
-  const m = /^[a-z]+(8|16|32)(?:x([234]))?$/.exec(format);
-  if (!m) throw new Error(`${label}: 알 수 없는 format "${format}"`);
-  return (Number(m[1]) / 8) * Number(m[2] ?? 1);
+  const info = FORMAT_TABLE[format];
+  if (!info) throw new Error(`${label}: 알 수 없는 format "${format}"`);
+  return info.byteSize;
 }
+
 
 function readParenBody(text: string, openIdx: number): string {
   return readDelimited(text, openIdx, "(", ")");

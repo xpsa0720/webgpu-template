@@ -1,3 +1,6 @@
+import type { Mesh } from "../3d/mesh/mesh";
+import type { VertexLayoutOptions } from "../util/vertex_layout";
+import type { Camera } from "./camera";
 import type { PrintGPUBuffer, PrintType } from "./print";
 
 export interface CreatePassTimeTag {
@@ -25,6 +28,12 @@ export interface CreateRenderPassArg {
   instanceCount: number;
   loadOp?: GPULoadOp;
   format?: GPUTextureFormat;
+}
+
+export interface CreateRender3DPassArg extends CreateRenderPassArg{
+  vertexLayoutOptions?: VertexLayoutOptions;
+  camera: Camera;
+  meshs?: Mesh[];
 }
 
 export interface OutGPUBuffer {

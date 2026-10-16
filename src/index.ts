@@ -17,6 +17,18 @@ export type {
 } from "./util/vertex_layout";
 export { printDefault } from "./debug/print";
 
+// 3D
+export { Render3DPass } from "./pass/render_3d_pass";
+export { Vector3, Vector4 } from "./3d/math/vector";
+export { Mat3x3, Mat4x4 } from "./3d/math/matrix";
+export { Mesh } from "./3d/mesh/mesh";
+export type { MeshParams } from "./3d/mesh/mesh";
+export { Geometry } from "./3d/mesh/geometry/geometry";
+export { Vertex } from "./3d/mesh/unit/vertex";
+export { Camera } from "./types/camera";
+export { createMvpMatrix } from "./util/matrix";
+export { crossProduct, normalize } from "./util/math";
+
 // types
 export type { WebGPUBuffer, WebGPUTexture, WebGPUSampler } from "./types/resource";
 export type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "./types/pass_queue";

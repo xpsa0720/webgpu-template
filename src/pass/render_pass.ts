@@ -1,7 +1,11 @@
 import type { OutGPUBuffer } from "../types/pass";
+import {
+  vertexLayoutFromWGSL,
+  type VertexLayoutOptions,
+} from "../util/vertex_layout";
 import { Pass, type DebugPassArg, type PassArg, type PassBuffer } from "./pass";
 
-interface RenderPassArg extends PassArg {
+export interface RenderPassArg extends PassArg {
   target: GPUTexture | HTMLCanvasElement;
   vertexEntryPoint: string;
   fragmentEntryPoint: string;
@@ -53,45 +57,39 @@ export class RenderPass extends Pass {
     this.shaderModule = this.device.createShaderModule({
       code: this.shaderCode,
     });
-        const presentationFormat: GPUTextureFormat =
+
+    this.pipeline = this.settingPipeline(arg);
+  }
+
+  settingPipeline(
+    arg:RenderPassArg
+  ): GPURenderPipeline {
+    const presentationFormat: GPUTextureFormat =
       arg.format ?? navigator.gpu.getPreferredCanvasFormat();
-    const blendState: GPUBlendState | undefined =
-      arg.blend
-        ? {
-            color: {
-              srcFactor: "src-alpha",
-              dstFactor: "one-minus-src-alpha",
-              operation: "add",
-            },
-            alpha: {
-              srcFactor: "one",
-              dstFactor: "one-minus-src-alpha",
-              operation: "add",
-            },
-          }
-        : undefined;
+    const blendState: GPUBlendState | undefined = arg.blend
+      ? {
+          color: {
+            srcFactor: "src-alpha",
+            dstFactor: "one-minus-src-alpha",
+            operation: "add",
+          },
+          alpha: {
+            srcFactor: "one",
+            dstFactor: "one-minus-src-alpha",
+            operation: "add",
+          },
+        }
+      : undefined;
     const format =
       this.target instanceof HTMLCanvasElement
         ? presentationFormat
         : this.target.format;
-    this.pipeline = this.settingPipeline(blendState,format);
-  }
 
-  settingPipeline(blendState:GPUBlendState | undefined,format:GPUTextureFormat):GPURenderPipeline{
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
         entryPoint: this.vertexEntryPoint,
         module: this.shaderModule,
-        buffers: [
-            {
-            arrayStride: 6 * 4, // float32 6개 (pos3 + color3)
-            attributes: [
-                { shaderLocation: 0, offset: 0, format: "float32x3" },// position
-                { shaderLocation: 1, offset: 3 * 4, format: "float32x3" }, // color
-            ],
-            },
-        ],
       },
       fragment: {
         entryPoint: this.fragmentEntryPoint,
@@ -102,7 +100,6 @@ export class RenderPass extends Pass {
             blend: blendState,
           },
         ],
-        
       },
       primitive: {
         topology: "triangle-list",
@@ -118,8 +115,7 @@ export class RenderPass extends Pass {
     delete this.entries[bindigIdx];
   }
 
-
-  ensureBindGroups(){
+  ensureBindGroups() {
     if (!this.bindGroup) {
       const entries: Array<GPUBindGroupEntry> = [];
       for (const [key, value] of Object.entries(this.buffers)) {
@@ -161,7 +157,10 @@ export class RenderPass extends Pass {
     }
   }
 
-  encoderWriteCommand(encoder: GPUCommandEncoder,renderPassDescriptor:GPURenderPassDescriptor){
+  encoderWriteCommand(
+    encoder: GPUCommandEncoder,
+    renderPassDescriptor: GPURenderPassDescriptor,
+  ) {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
@@ -171,6 +170,7 @@ export class RenderPass extends Pass {
     if (this.bindGroupSampler) {
       pass.setBindGroup(2, this.bindGroupSampler);
     }
+
     pass.draw(
       this.vertexCount,
       this.instanceCount == 0 ? 1 : this.instanceCount,
@@ -182,7 +182,7 @@ export class RenderPass extends Pass {
     encoder: GPUCommandEncoder,
     debugArg?: DebugPassArg,
   ): OutGPUBuffer[] {
-    this.ensureBindGroups()
+    this.ensureBindGroups();
 
     const view = this.context
       ? this.context.getCurrentTexture().createView()
@@ -195,7 +195,6 @@ export class RenderPass extends Pass {
           loadOp: this.loadOp,
           storeOp: "store",
           clearValue: { r: 0, g: 0, b: 0, a: 1 },
-          
         },
       ],
     };
@@ -206,8 +205,8 @@ export class RenderPass extends Pass {
         endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
       };
     }
-    
-    this.encoderWriteCommand(encoder,renderPassDescriptor)
+
+    this.encoderWriteCommand(encoder, renderPassDescriptor);
 
     return super.createPass(encoder);
   }

@@ -1,3 +1,4 @@
+import { vertexLayoutFromWGSL, } from "../util/vertex_layout";
 import { Pass } from "./pass";
 export class RenderPass extends Pass {
     target;
@@ -21,7 +22,6 @@ export class RenderPass extends Pass {
         }
         super(arg);
         this.debugMode = arg.debugMode ?? false;
-        const presentationFormat = arg.format ?? navigator.gpu.getPreferredCanvasFormat();
         this.shaderCode = arg.shaderCode;
         this.target = arg.target;
         this.context = null;
@@ -39,6 +39,10 @@ export class RenderPass extends Pass {
         this.shaderModule = this.device.createShaderModule({
             code: this.shaderCode,
         });
+        this.pipeline = this.settingPipeline(arg);
+    }
+    settingPipeline(arg) {
+        const presentationFormat = arg.format ?? navigator.gpu.getPreferredCanvasFormat();
         const blendState = arg.blend
             ? {
                 color: {
@@ -56,7 +60,7 @@ export class RenderPass extends Pass {
         const format = this.target instanceof HTMLCanvasElement
             ? presentationFormat
             : this.target.format;
-        this.pipeline = this.device.createRenderPipeline({
+        const pipeline = this.device.createRenderPipeline({
             layout: "auto",
             vertex: {
                 entryPoint: this.vertexEntryPoint,
@@ -76,6 +80,7 @@ export class RenderPass extends Pass {
                 topology: "triangle-list",
             },
         });
+        return pipeline;
     }
     deleteBuffer(bindigIdx) {
         if (!this.entries[bindigIdx]) {
@@ -83,7 +88,7 @@ export class RenderPass extends Pass {
         }
         delete this.entries[bindigIdx];
     }
-    createPass(encoder, debugArg) {
+    ensureBindGroups() {
         if (!this.bindGroup) {
             const entries = [];
             for (const [key, value] of Object.entries(this.buffers)) {
@@ -123,6 +128,22 @@ export class RenderPass extends Pass {
                 entries: entries_sampler,
             });
         }
+    }
+    encoderWriteCommand(encoder, renderPassDescriptor) {
+        const pass = encoder.beginRenderPass(renderPassDescriptor);
+        pass.setPipeline(this.pipeline);
+        pass.setBindGroup(0, this.bindGroup);
+        if (this.bindGroupTex) {
+            pass.setBindGroup(1, this.bindGroupTex);
+        }
+        if (this.bindGroupSampler) {
+            pass.setBindGroup(2, this.bindGroupSampler);
+        }
+        pass.draw(this.vertexCount, this.instanceCount == 0 ? 1 : this.instanceCount);
+        pass.end();
+    }
+    createPass(encoder, debugArg) {
+        this.ensureBindGroups();
         const view = this.context
             ? this.context.getCurrentTexture().createView()
             : this.target.createView();
@@ -143,17 +164,7 @@ export class RenderPass extends Pass {
                 endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
             };
         }
-        const pass = encoder.beginRenderPass(renderPassDescriptor);
-        pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0, this.bindGroup);
-        if (this.bindGroupTex) {
-            pass.setBindGroup(1, this.bindGroupTex);
-        }
-        if (this.bindGroupSampler) {
-            pass.setBindGroup(2, this.bindGroupSampler);
-        }
-        pass.draw(this.vertexCount, this.instanceCount == 0 ? 1 : this.instanceCount);
-        pass.end();
+        this.encoderWriteCommand(encoder, renderPassDescriptor);
         return super.createPass(encoder);
     }
 }

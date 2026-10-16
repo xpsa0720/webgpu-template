@@ -2,6 +2,7 @@ import { createOverlayElement } from "../debug/overlay";
 import { printDefault } from "../debug/print";
 import { createTimestampQuery, readTimestampLines, resolveTimestampQuery, } from "../debug/timestamp";
 import { ComputePass } from "../pass/compute_pass";
+import { Render3DPass } from "../pass/render_3d_pass";
 import { RenderPass } from "../pass/render_pass";
 import { loadImageBitmap } from "../util/load_image_bitmap";
 import { DEFAULT_CONFIG } from "./config";
@@ -132,6 +133,46 @@ export class WP {
         this.passes[index] = pass;
         return pass;
     }
+    createRender3DPass(index, arg, time, encoderCallback, preEncoderCallback) {
+        if (!this.device) {
+            throw new Error("WP.init() must be called first");
+        }
+        if (time?.startIndex &&
+            time?.endIndex &&
+            time?.startIndex == time?.endIndex) {
+            throw new Error("startIndex and endIndex must not be equal");
+        }
+        if (typeof time?.startIndex === "number") {
+            this.timeDebugPass += 1;
+        }
+        if (typeof time?.endIndex === "number") {
+            this.timeDebugPass += 1;
+        }
+        if (typeof time?.startIndex == "number" && typeof time.label == "string") {
+            this.timeDebugLabels.push(time.label);
+        }
+        const pass = new Render3DPass({
+            device: this.device,
+            vertexEntryPoint: arg.vertexEntryPoint,
+            fragmentEntryPoint: arg.fragmentEntryPoint,
+            shaderCode: arg.shaderCode,
+            label: arg.label,
+            vertexCount: arg.vertexCount,
+            instanceCount: arg.instanceCount,
+            loadOp: arg.loadOp,
+            time: time,
+            encoderCallback,
+            preEncoderCallback,
+            target: arg.target,
+            format: arg.format,
+            debugMode: this.config.debugMode,
+            camera: arg.camera,
+            meshs: arg.meshs,
+            vertexLayoutOptions: arg.vertexLayoutOptions,
+        });
+        this.passes[index] = pass;
+        return pass;
+    }
     createBuffer(size, data, usage) {
         if (!this.device)
             throw new Error("WP.init() must be called first");
@@ -241,7 +282,8 @@ export class WP {
         }
         let returnDatas = null;
         for (let i = 0; i < substep; i++) {
-            const shouldSample = this.config.debugMode && this.debugFrameCounter % this.config.debugSampleInterval === 0;
+            const shouldSample = this.config.debugMode &&
+                this.debugFrameCounter % this.config.debugSampleInterval === 0;
             this.debugFrameCounter += 1;
             const encoder = this.device?.createCommandEncoder();
             if (substepCallback) {

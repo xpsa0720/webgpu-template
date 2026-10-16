@@ -1,28 +1,32 @@
-import { Vector3 } from "../math/vector";
-import type { Primitive } from "./geometry/primitive";
+import type { WP } from "../../core/wp";
+import type { Render3DPass } from "../../pass/render_3d_pass";
+import { Vector3, Vector4 } from "../math/vector";
+import { Geometry } from "./geometry/geometry";
 import type { Vertex } from "./unit/vertex";
 
 export interface MeshParams {
+  render3DPass: Render3DPass;
   location: Vector3
   rotate?: Vector3;
-  scale?: number;
-  vertexs: Vertex[];
-  primitives: Primitive[];
+  scale?: Vector3;
+  geometry:Geometry;
+  color?: Vector4;
 }
 
 export class Mesh{
-  // 각 정점은 local 위치 기준으로
+  render3DPass: Render3DPass;
   location: Vector3;  // World Space 기준
-  rotate: Vector3;
-  scale: number;
-  vertexs: Vertex[];
-  primitives: Primitive[];
+  rotate: Vector3; // 방향 벡터가 아닌 각 축의 각도 기준 (0~360)
+  scale: Vector3;
+  geometry:Geometry;
+  color: Vector4;
 
-  constructor({ location, rotate, scale,vertexs, primitives }: MeshParams) {
+  constructor({ location, rotate, scale, geometry, render3DPass, color }: MeshParams) {
+    this.render3DPass = render3DPass;
     this.location = location;
-    this.vertexs = vertexs??[];
-    this.primitives = primitives??[];
+    this.geometry = geometry
     this.rotate = rotate ?? new Vector3(0);
-    this.scale = scale ?? 1;
+    this.scale = scale ??  new Vector3(1,1,1);
+    this.color = color ?? new Vector4(1, 1, 1, 1);
   }
 }

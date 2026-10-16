@@ -7,11 +7,13 @@ import {
   type TimestampQuery,
 } from "../debug/timestamp";
 import { ComputePass } from "../pass/compute_pass";
+import { Render3DPass } from "../pass/render_3d_pass";
 import { RenderPass } from "../pass/render_pass";
 import type { PassCallback } from "../types/callback";
 import type {
   CreateComputePassArg,
   CreatePassTimeTag,
+  CreateRender3DPassArg,
   CreateRenderPassArg,
   OutGPUBuffer,
 } from "../types/pass";
@@ -64,7 +66,10 @@ export class WP<
     this.fpsFrameCount = 0;
     this.lastFpsLogTime = 0;
     this.fpsElement = createOverlayElement("fps", "top:0;left:0");
-    this.timestampElement = createOverlayElement("timestamps", "top:20px;left:0");
+    this.timestampElement = createOverlayElement(
+      "timestamps",
+      "top:20px;left:0",
+    );
     this.latestTimestampLines = [];
     this.debugFrameCounter = 0;
     this.passes = [];
@@ -179,6 +184,57 @@ export class WP<
       target: arg.target,
       format: arg.format,
       debugMode: this.config.debugMode,
+    });
+
+    this.passes[index] = pass;
+
+    return pass;
+  }
+
+  createRender3DPass(
+    index: number,
+    arg: CreateRender3DPassArg,
+    time?: CreatePassTimeTag,
+    encoderCallback?: (encoder: GPUCommandEncoder) => void,
+    preEncoderCallback?: (encoder: GPUCommandEncoder) => void,
+  ) {
+    if (!this.device) {
+      throw new Error("WP.init() must be called first");
+    }
+    if (
+      time?.startIndex &&
+      time?.endIndex &&
+      time?.startIndex == time?.endIndex
+    ) {
+      throw new Error("startIndex and endIndex must not be equal");
+    }
+    if (typeof time?.startIndex === "number") {
+      this.timeDebugPass += 1;
+    }
+    if (typeof time?.endIndex === "number") {
+      this.timeDebugPass += 1;
+    }
+    if (typeof time?.startIndex == "number" && typeof time.label == "string") {
+      this.timeDebugLabels.push(time.label);
+    }
+    const pass = new Render3DPass({
+      device: this.device,
+      vertexEntryPoint: arg.vertexEntryPoint,
+      fragmentEntryPoint: arg.fragmentEntryPoint,
+      shaderCode: arg.shaderCode,
+      label: arg.label,
+      vertexCount: arg.vertexCount,
+      instanceCount: arg.instanceCount,
+      loadOp: arg.loadOp,
+      time: time,
+      encoderCallback,
+      preEncoderCallback,
+      target: arg.target,
+      format: arg.format,
+      debugMode: this.config.debugMode,
+      camera: arg.camera,
+      meshs: arg.meshs,
+      vertexLayoutOptions: arg.vertexLayoutOptions,
     });
 
     this.passes[index] = pass;
@@ -343,7 +399,8 @@ export class WP<
 
     for (let i = 0; i < substep; i++) {
       const shouldSample =
-        this.config.debugMode && this.debugFrameCounter % this.config.debugSampleInterval === 0;
+        this.config.debugMode &&
+        this.debugFrameCounter % this.config.debugSampleInterval === 0;
       this.debugFrameCounter += 1;
 
       const encoder = this.device?.createCommandEncoder();

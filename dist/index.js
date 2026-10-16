@@ -6,7 +6,18 @@ export { Pass } from "./pass/pass";
 export { ParamsBuffer, GPUSetting, CPUSetting } from "./resource/params_buffer";
 export { Position } from "./input/position";
 export { loadImageBitmap } from "./util/load_image_bitmap";
+export { vertexLayoutFromWGSL, checkVertexLayout } from "./util/vertex_layout";
 export { printDefault } from "./debug/print";
+// 3D
+export { Render3DPass } from "./pass/render_3d_pass";
+export { Vector3, Vector4 } from "./3d/math/vector";
+export { Mat3x3, Mat4x4 } from "./3d/math/matrix";
+export { Mesh } from "./3d/mesh/mesh";
+export { Geometry } from "./3d/mesh/geometry/geometry";
+export { Vertex } from "./3d/mesh/unit/vertex";
+export { Camera } from "./types/camera";
+export { createMvpMatrix } from "./util/matrix";
+export { crossProduct, normalize } from "./util/math";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map

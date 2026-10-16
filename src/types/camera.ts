@@ -1,0 +1,29 @@
+import { Vector3, Vector4 } from "../3d/math/vector";
+
+export class Camera {
+  position: Vector3;
+  upref: Vector3;
+  fov: number;
+  near: number;
+  far: number;
+  target: Vector3;
+  rotate: Vector3;
+
+  constructor(
+    position = new Vector3(),
+    target = new Vector3(),
+    fov = 60,
+    near = 0.1,
+    far = 100,
+    upref = new Vector3(0,1,0),
+    rotate = new Vector3(0,0,0),
+  ) {
+    this.position = position;
+    this.target = target;
+    this.rotate = rotate;
+    this.fov = fov;
+    this.near = near;
+    this.far = far;
+    this.upref = upref;
+  }
+}
