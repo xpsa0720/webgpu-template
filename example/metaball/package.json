@@ -1,0 +1,17 @@
+{
+  "name": "webgpu-example-metaball",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "@xpsa0720/webgpu": "file:../.."
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "^6.3.5"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "webgpu-example",
+  "name": "webgpu-example-triangle-3d",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "tsc && vite build"
   },
   "dependencies": {
-    "@xpsa0720/webgpu": "file:.."
+    "@xpsa0720/webgpu": "file:../.."
   },
   "devDependencies": {
     "typescript": "~6.0.2",
