@@ -84,20 +84,21 @@ wp.animate({
 
 ## Example
 
-The `example/` directory contains an animated metaball demo: a 1D compute pass (`@workgroup_size(WG)` read from a `const`), a 2D compute pass using `@X_AUTO`/`@Y_AUTO` auto-tuning placeholders, and a render pass that displays the result.
+The `example/` directory contains independent Vite projects, each with its own `package.json`:
+
+- `example/metaball/` — an animated metaball demo: a 1D compute pass (`@workgroup_size(WG)` read from a `const`), a 2D compute pass using `@X_AUTO`/`@Y_AUTO` auto-tuning placeholders, and a render pass that displays the result. The resolved workgroup sizes of each compute pass are logged to the console.
+- `example/triangle-3d/` — a 3D triangle render demo.
 
 ```bash
 # 1. Install root dependencies and build the library
 npm install
 npm run build
 
-# 2. Run the example
-cd example
+# 2. Run an example
+cd example/metaball   # or example/triangle-3d
 npm install
 npm run dev
 ```
-
-Open the browser to see the metaballs move; the resolved workgroup sizes of each compute pass are logged to the console.
 
 ## Development
 

@@ -34,7 +34,7 @@ function createRotateMatrix(rotate: Vector3, inverse: boolean = false) {
   return XYZ;
 }
 
-function createFowardRotateMatrix(rotate: Vector3, inverse: boolean = false) {
+export function createFowardRotateMatrix(rotate: Vector3, inverse: boolean = false) {
   const rotate_X = rotate.x * (inverse ? -1 : 1);
   const rotate_Y = rotate.y * (inverse ? -1 : 1);
   const rotate_Z = rotate.z * (inverse ? -1 : 1);
@@ -153,14 +153,13 @@ export function createMvpMatrix(
   // M.multiply(V).multiply(P) → P * V * M (읽는 순서 = 적용 순서)
   const MVP = M.multiply(V).multiply(P);
 
-  // mat4x4(64bytes) + vec4f(16bytes) = 80bytes
-  const data = new Float32Array(20);
+  // mat4x4(64bytes)
+  const data = new Float32Array(16);
   data.set(MVP.getArrayData(), 0);
-  data.set([mesh.color.x, mesh.color.y, mesh.color.z, mesh.color.w], 16);
 
   const buffer: WebGPUBuffer = {
     buffer: device.createBuffer({
-      size: 80,
+      size: 64,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
     }),
   };

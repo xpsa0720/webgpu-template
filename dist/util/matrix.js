@@ -27,7 +27,7 @@ function createRotateMatrix(rotate, inverse = false) {
     const XYZ = Z_Matrix.multiply(XY);
     return XYZ;
 }
-function createFowardRotateMatrix(rotate, inverse = false) {
+export function createFowardRotateMatrix(rotate, inverse = false) {
     const rotate_X = rotate.x * (inverse ? -1 : 1);
     const rotate_Y = rotate.y * (inverse ? -1 : 1);
     const rotate_Z = rotate.z * (inverse ? -1 : 1);
@@ -121,13 +121,12 @@ export function createMvpMatrix(mesh, camera, aspect, device) {
     const P = createProjectionMatrix(camera, aspect);
     // M.multiply(V).multiply(P) → P * V * M (읽는 순서 = 적용 순서)
     const MVP = M.multiply(V).multiply(P);
-    // mat4x4(64bytes) + vec4f(16bytes) = 80bytes
-    const data = new Float32Array(20);
+    // mat4x4(64bytes)
+    const data = new Float32Array(16);
     data.set(MVP.getArrayData(), 0);
-    data.set([mesh.color.x, mesh.color.y, mesh.color.z, mesh.color.w], 16);
     const buffer = {
         buffer: device.createBuffer({
-            size: 80,
+            size: 64,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
         }),
     };
