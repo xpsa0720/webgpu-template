@@ -1,4 +1,4 @@
-import { createMvpMatrix } from "../util/matrix";
+import { createMatrix } from "../util/matrix";
 import { vertexLayoutFromWGSL, } from "../util/vertex_layout";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
@@ -15,24 +15,6 @@ export class Render3DPass extends RenderPass {
         this.camera = arg.camera;
     }
     settingPipeline(arg) {
-        const presentationFormat = arg.format ?? navigator.gpu.getPreferredCanvasFormat();
-        const blendState = arg.blend
-            ? {
-                color: {
-                    srcFactor: "src-alpha",
-                    dstFactor: "one-minus-src-alpha",
-                    operation: "add",
-                },
-                alpha: {
-                    srcFactor: "one",
-                    dstFactor: "one-minus-src-alpha",
-                    operation: "add",
-                },
-            }
-            : undefined;
-        const format = this.target instanceof HTMLCanvasElement
-            ? presentationFormat
-            : this.target.format;
         const vertexLayout = vertexLayoutFromWGSL(this.shaderCode, this.vertexEntryPoint, arg.vertexLayoutOptions);
         const pipeline = this.device.createRenderPipeline({
             layout: "auto",
@@ -46,8 +28,8 @@ export class Render3DPass extends RenderPass {
                 module: this.shaderModule,
                 targets: [
                     {
-                        format: format,
-                        blend: blendState,
+                        format: this.format,
+                        blend: this.blendState,
                     },
                 ],
             },
@@ -58,6 +40,8 @@ export class Render3DPass extends RenderPass {
             },
             primitive: {
                 topology: "triangle-list",
+                frontFace: "ccw",
+                cullMode: "back"
             },
         });
         return pipeline;
@@ -103,7 +87,7 @@ export class Render3DPass extends RenderPass {
             pass.setBindGroup(2, this.bindGroupSampler);
         }
         this.meshs.forEach((mesh) => {
-            const matrixBuffer = createMvpMatrix(mesh, this.camera, aspect, this.device);
+            const matrixBuffer = createMatrix(mesh, this.camera, aspect, this.device);
             this.bindGroupMatrix = this.device.createBindGroup({
                 layout: this.pipeline.getBindGroupLayout(3),
                 entries: [{ binding: 0, resource: { buffer: matrixBuffer.buffer } }],

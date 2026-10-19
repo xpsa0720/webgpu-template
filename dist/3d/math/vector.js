@@ -10,8 +10,17 @@ export class Vector3 {
     dot(other) {
         return this.x * other.x + this.y * other.y + this.z * other.z;
     }
+    crossProduct(other) {
+        return new Vector3(this.y * other.z - this.z * other.y, this.z * other.x - this.x * other.z, this.x * other.y - this.y * other.x);
+    }
     copy() {
         return new Vector3(this.x, this.y, this.z);
+    }
+    add(A) {
+        this.x += A.x;
+        this.y += A.y;
+        this.z += A.z;
+        return this;
     }
     subtract(A) {
         this.x -= A.x;

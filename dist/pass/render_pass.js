@@ -12,6 +12,8 @@ export class RenderPass extends Pass {
     vertexCount;
     instanceCount;
     loadOp;
+    format;
+    blendState;
     debugMode;
     bindGroup = null;
     bindGroupTex = null;
@@ -30,20 +32,12 @@ export class RenderPass extends Pass {
         }
         this.device = arg.device;
         this.loadOp = arg.loadOp ?? "clear";
-        this.buffers = [];
-        this.entries = [];
-        this.vertexCount = arg.vertexCount;
-        this.instanceCount = arg.instanceCount;
-        this.vertexEntryPoint = arg.vertexEntryPoint;
-        this.fragmentEntryPoint = arg.fragmentEntryPoint;
-        this.shaderModule = this.device.createShaderModule({
-            code: this.shaderCode,
-        });
-        this.pipeline = this.settingPipeline(arg);
-    }
-    settingPipeline(arg) {
         const presentationFormat = arg.format ?? navigator.gpu.getPreferredCanvasFormat();
-        const blendState = arg.blend
+        this.format =
+            this.target instanceof HTMLCanvasElement
+                ? presentationFormat
+                : this.target.format;
+        this.blendState = arg.blend
             ? {
                 color: {
                     srcFactor: "src-alpha",
@@ -57,9 +51,18 @@ export class RenderPass extends Pass {
                 },
             }
             : undefined;
-        const format = this.target instanceof HTMLCanvasElement
-            ? presentationFormat
-            : this.target.format;
+        this.buffers = [];
+        this.entries = [];
+        this.vertexCount = arg.vertexCount;
+        this.instanceCount = arg.instanceCount;
+        this.vertexEntryPoint = arg.vertexEntryPoint;
+        this.fragmentEntryPoint = arg.fragmentEntryPoint;
+        this.shaderModule = this.device.createShaderModule({
+            code: this.shaderCode,
+        });
+        this.pipeline = this.settingPipeline(arg);
+    }
+    settingPipeline(arg) {
         const pipeline = this.device.createRenderPipeline({
             layout: "auto",
             vertex: {
@@ -71,8 +74,8 @@ export class RenderPass extends Pass {
                 module: this.shaderModule,
                 targets: [
                     {
-                        format: format,
-                        blend: blendState,
+                        format: this.format,
+                        blend: this.blendState,
                     },
                 ],
             },

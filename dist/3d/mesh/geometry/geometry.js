@@ -10,22 +10,42 @@ export class Geometry {
         this.device = this.render3DPass.device;
         this._vertex = vertex;
         this.indexs = indexs;
+        this.vertexNormalize();
         this.vertexBuffer = this.updateVertexBuffer();
         this.indexBuffer = this.updateIndexBuffer();
+    }
+    vertexNormalize() {
+        for (let i = 0; i < this.indexs.length; i += 3) {
+            const A = this._vertex[this.indexs[i]];
+            const B = this._vertex[this.indexs[i + 1]];
+            const C = this._vertex[this.indexs[i + 2]];
+            const BA = B.location.copy().subtract(A.location);
+            const CA = C.location.copy().subtract(A.location);
+            const normal = BA.crossProduct(CA);
+            this._vertex[this.indexs[i]].normal = A.normalUnspecified ? normal : A.normal;
+            this._vertex[this.indexs[i + 1]].normal = B.normalUnspecified ? normal : B.normal;
+            this._vertex[this.indexs[i + 2]].normal = C.normalUnspecified ? normal : C.normal;
+            this._vertex[this.indexs[i]].normalUnspecified = false;
+            this._vertex[this.indexs[i + 1]].normalUnspecified = false;
+            this._vertex[this.indexs[i + 2]].normalUnspecified = false;
+        }
     }
     updateVertexBuffer() {
         const buffer = {
             buffer: this.device.createBuffer({
-                size: this._vertex.length * 3 * 4,
+                size: this._vertex.length * 6 * 4,
                 usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             }),
         };
-        const data = new Float32Array(this._vertex.length * 3);
+        const data = new Float32Array(this._vertex.length * 6);
         this._vertex.forEach((vertex, i) => {
-            const idx = i * 3;
-            data[idx] = vertex.x;
-            data[idx + 1] = vertex.y;
-            data[idx + 2] = vertex.z;
+            const idx = i * 6;
+            data[idx] = vertex.location.x;
+            data[idx + 1] = vertex.location.y;
+            data[idx + 2] = vertex.location.z;
+            data[idx + 3] = vertex.normal.x;
+            data[idx + 4] = vertex.normal.y;
+            data[idx + 5] = vertex.normal.z;
         });
         this.device.queue.writeBuffer(buffer.buffer, 0, data);
         return buffer;

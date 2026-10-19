@@ -23,6 +23,8 @@ export declare class RenderPass extends Pass {
     vertexCount: GPUSize32;
     instanceCount: GPUSize32;
     loadOp: GPULoadOp;
+    format: GPUTextureFormat;
+    blendState: GPUBlendState | undefined;
     protected debugMode: boolean;
     protected bindGroup: GPUBindGroup | null;
     protected bindGroupTex: GPUBindGroup | null;

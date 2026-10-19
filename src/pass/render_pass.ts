@@ -29,6 +29,8 @@ export class RenderPass extends Pass {
   vertexCount: GPUSize32;
   instanceCount: GPUSize32;
   loadOp: GPULoadOp;
+  format: GPUTextureFormat;
+  blendState: GPUBlendState | undefined;
   protected debugMode: boolean;
   protected bindGroup: GPUBindGroup | null = null;
   protected bindGroupTex: GPUBindGroup | null = null;
@@ -48,25 +50,13 @@ export class RenderPass extends Pass {
     }
     this.device = arg.device;
     this.loadOp = arg.loadOp ?? "clear";
-    this.buffers = [];
-    this.entries = [];
-    this.vertexCount = arg.vertexCount;
-    this.instanceCount = arg.instanceCount;
-    this.vertexEntryPoint = arg.vertexEntryPoint;
-    this.fragmentEntryPoint = arg.fragmentEntryPoint;
-    this.shaderModule = this.device.createShaderModule({
-      code: this.shaderCode,
-    });
-
-    this.pipeline = this.settingPipeline(arg);
-  }
-
-  settingPipeline(
-    arg:RenderPassArg
-  ): GPURenderPipeline {
     const presentationFormat: GPUTextureFormat =
       arg.format ?? navigator.gpu.getPreferredCanvasFormat();
-    const blendState: GPUBlendState | undefined = arg.blend
+    this.format =
+      this.target instanceof HTMLCanvasElement
+        ? presentationFormat
+        : this.target.format;
+    this.blendState = arg.blend
       ? {
           color: {
             srcFactor: "src-alpha",
@@ -80,10 +70,26 @@ export class RenderPass extends Pass {
           },
         }
       : undefined;
-    const format =
-      this.target instanceof HTMLCanvasElement
-        ? presentationFormat
-        : this.target.format;
+    this.buffers = [];
+    this.entries = [];
+    this.vertexCount = arg.vertexCount;
+    this.instanceCount = arg.instanceCount;
+    this.vertexEntryPoint = arg.vertexEntryPoint;
+    this.fragmentEntryPoint = arg.fragmentEntryPoint;
+    this.shaderModule = this.device.createShaderModule({
+      code: this.shaderCode,
+    });
+
+    this.pipeline = this.settingPipeline();
+  }
+
+  settingPipeline(shaderCode?: string): GPURenderPipeline {
+    if (shaderCode) {
+      this.shaderModule = this.device.createShaderModule({
+        code: shaderCode,
+      });
+      this.shaderCode = shaderCode
+    }
 
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
@@ -96,8 +102,8 @@ export class RenderPass extends Pass {
         module: this.shaderModule,
         targets: [
           {
-            format: format,
-            blend: blendState,
+            format: this.format,
+            blend: this.blendState,
           },
         ],
       },

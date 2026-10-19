@@ -6,6 +6,7 @@ import {
   Geometry,
   Vertex,
   Vector3,
+  Cube,
 } from "@xpsa0720/webgpu";
 import render3dWGSL from "./shader/render3d.wgsl?raw";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
@@ -52,35 +53,15 @@ class App3D {
       camera,
     });
 
-    // 정삼각형 정점 (XY 평면, 원점 중심)
-    const r = 0.8; // 반지름
-    const v0 = new Vertex(0, r, 0); // 위쪽
-    const v1 = new Vertex(-r * Math.sin((Math.PI * 2) / 3), -r * 0.5, 0); // 왼쪽 아래
-    const v2 = new Vertex(r * Math.sin((Math.PI * 2) / 3), -r * 0.5, 0); // 오른쪽 아래
-
-    // Geometry 생성
-    const geometry = new Geometry(render3DPass, [v0, v1, v2], [0, 1, 2]);
-
-    // Mesh 생성
-    const mesh = new Mesh({
+    // Cube 생성
+    const cube = new Cube({
       render3DPass,
       location: new Vector3(0, 0, 0),
-      geometry,
+      rotate: new Vector3(0, 0, 60),
+      scale:new Vector3(1,2,1)
     });
 
-    // 두 번째 삼각형 (z=-1 뒤쪽, 약간 오른쪽)
-    const v3 = new Vertex(0, r, 0);
-    const v4 = new Vertex(-r * Math.sin((Math.PI * 2) / 3), -r * 0.5, 0);
-    const v5 = new Vertex(r * Math.sin((Math.PI * 2) / 3), -r * 0.5, 0);
-    const geometry2 = new Geometry(render3DPass, [v3, v4, v5], [0, 1, 2]);
-    const mesh2 = new Mesh({
-      render3DPass,
-      location: new Vector3(0.5, 0, -1),
-      geometry: geometry2,
-    });
-
-    render3DPass.meshs.push(mesh);
-    render3DPass.meshs.push(mesh2);
+    render3DPass.meshs.push(cube);
 
     // WP passes에 등록
     this.wp.passes[0] = render3DPass;

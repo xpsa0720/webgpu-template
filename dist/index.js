@@ -13,11 +13,12 @@ export { Render3DPass } from "./pass/render_3d_pass";
 export { Vector3, Vector4 } from "./3d/math/vector";
 export { Mat3x3, Mat4x4 } from "./3d/math/matrix";
 export { Mesh } from "./3d/mesh/mesh";
+export { Cube } from "./3d/mesh/basic/cube";
 export { Geometry } from "./3d/mesh/geometry/geometry";
 export { Vertex } from "./3d/mesh/unit/vertex";
 export { Camera } from "./types/camera";
-export { createMvpMatrix } from "./util/matrix";
-export { crossProduct, normalize } from "./util/math";
+export { createMatrix } from "./util/matrix";
+export { normalize } from "./util/math";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map

@@ -1,10 +1,12 @@
+import type { Light } from "../3d/light/light";
 import type { Mesh } from "../3d/mesh/mesh";
 import type { Camera } from "../types/camera";
 import type { OutGPUBuffer } from "../types/pass";
 import type { WebGPUBuffer } from "../types/resource";
-import { createMvpMatrix } from "../util/matrix";
+import { createMatrix } from "../util/matrix";
 import {
   vertexLayoutFromWGSL,
+  type VertexLayout,
   type VertexLayoutOptions,
 } from "../util/vertex_layout";
 import type { DebugPassArg, PassArg } from "./pass";
@@ -13,12 +15,15 @@ import { RenderPass, type RenderPassArg } from "./render_pass";
 interface Render3DPassArg extends RenderPassArg {
   vertexLayoutOptions?: VertexLayoutOptions;
   meshs?: Mesh[];
+  lights?: Light[];
   camera: Camera;
 }
 
 export class Render3DPass extends RenderPass {
   meshs: Mesh[];
+  lights: Light[];
   camera: Camera;
+  vertexLayout: VertexLayout;
   protected bindGroupMatrix: GPUBindGroup | null = null;
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
@@ -26,52 +31,39 @@ export class Render3DPass extends RenderPass {
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
-    this.pipeline = this.settingPipeline(arg);
-    this.camera = arg.camera;
-  }
-
-  override settingPipeline(arg: Render3DPassArg): GPURenderPipeline {
-    const presentationFormat: GPUTextureFormat =
-      arg.format ?? navigator.gpu.getPreferredCanvasFormat();
-    const blendState: GPUBlendState | undefined = arg.blend
-      ? {
-          color: {
-            srcFactor: "src-alpha",
-            dstFactor: "one-minus-src-alpha",
-            operation: "add",
-          },
-          alpha: {
-            srcFactor: "one",
-            dstFactor: "one-minus-src-alpha",
-            operation: "add",
-          },
-        }
-      : undefined;
-    const format =
-      this.target instanceof HTMLCanvasElement
-        ? presentationFormat
-        : this.target.format;
-
-    const vertexLayout = vertexLayoutFromWGSL(
+    this.lights = arg.lights??[]
+    this.vertexLayout = vertexLayoutFromWGSL(
       this.shaderCode,
       this.vertexEntryPoint,
       arg.vertexLayoutOptions,
     );
+    this.pipeline = this.settingPipeline();
+    this.camera = arg.camera;
+
+  }
+
+  override settingPipeline(shaderCode?: string): GPURenderPipeline {
+    if (shaderCode) {
+      this.shaderModule = this.device.createShaderModule({
+        code: shaderCode,
+      });
+      this.shaderCode = shaderCode
+    }
 
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
         entryPoint: this.vertexEntryPoint,
         module: this.shaderModule,
-        buffers: vertexLayout.buffers,
+        buffers: this.vertexLayout.buffers,
       },
       fragment: {
         entryPoint: this.fragmentEntryPoint,
         module: this.shaderModule,
         targets: [
           {
-            format: format,
-            blend: blendState,
+            format: this.format,
+            blend: this.blendState,
           },
         ],
       },
@@ -82,6 +74,8 @@ export class Render3DPass extends RenderPass {
       },
       primitive: {
         topology: "triangle-list",
+        frontFace:"ccw",
+        cullMode: "back"
       },
     });
     return pipeline;
@@ -134,7 +128,7 @@ export class Render3DPass extends RenderPass {
     }
 
     this.meshs.forEach((mesh) => {
-      const matrixBuffer = createMvpMatrix(
+      const matrixBuffer = createMatrix(
         mesh,
         this.camera,
         aspect,
@@ -145,6 +139,7 @@ export class Render3DPass extends RenderPass {
         layout: this.pipeline.getBindGroupLayout(3),
         entries: [{ binding: 0, resource: { buffer: matrixBuffer.buffer } }],
       });
+
       pass.setBindGroup(3, this.bindGroupMatrix);
 
       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
@@ -159,6 +154,7 @@ export class Render3DPass extends RenderPass {
     encoder: GPUCommandEncoder,
     debugArg?: DebugPassArg,
   ): OutGPUBuffer[] {
+
     return super.createPass(encoder);
   }
 }

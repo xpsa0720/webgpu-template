@@ -1,6 +1,6 @@
 import { Mat3x3, Mat4x4 } from "../3d/math/matrix";
 import { Vector3, Vector4 } from "../3d/math/vector";
-import { crossProduct, normalize, toRadian } from "./math";
+import { normalize, toRadian } from "./math";
 function createRotateMatrix(rotate, inverse = false) {
     const rotate_X = rotate.x * (inverse ? -1 : 1);
     const rotate_Y = rotate.y * (inverse ? -1 : 1);
@@ -87,8 +87,8 @@ function createViewMatrix(camera) {
     const rotMat = createFowardRotateMatrix(camera.rotate);
     const rawF = normalize(camera.target.copy().subtract(camera.position));
     const F = normalize(rotMat.multiplyVec3(rawF));
-    const R = normalize(crossProduct(F, camera.upref));
-    const U = crossProduct(R, F);
+    const R = normalize(F.crossProduct(camera.upref));
+    const U = R.crossProduct(F);
     const C = camera.position;
     // View 행렬은 -F를 z축으로 사용 (카메라 앞쪽 = -z)
     const V = new Mat4x4([
@@ -115,18 +115,21 @@ function createProjectionMatrix(camera, aspect) {
     ]);
     return V;
 }
-export function createMvpMatrix(mesh, camera, aspect, device) {
+export function createMatrix(mesh, camera, aspect, device) {
     const M = createModelMatrix(mesh);
     const V = createViewMatrix(camera);
     const P = createProjectionMatrix(camera, aspect);
     // M.multiply(V).multiply(P) → P * V * M (읽는 순서 = 적용 순서)
     const MVP = M.multiply(V).multiply(P);
+    const S_inv = createScaleMatrix(mesh.scale, true);
+    const R = createRotateMatrix(mesh.rotate);
+    const NormalMatrix = S_inv.multiply(R);
     // mat4x4(64bytes)
-    const data = new Float32Array(16);
-    data.set(MVP.getArrayData(), 0);
+    const data = new Float32Array(32);
+    data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData()], 0);
     const buffer = {
         buffer: device.createBuffer({
-            size: 64,
+            size: 128,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
         }),
     };

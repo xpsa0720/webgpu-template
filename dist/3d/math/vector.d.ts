@@ -5,7 +5,9 @@ export declare class Vector3 {
     z: number;
     constructor(x?: number, y?: number, z?: number);
     dot(other: Vector3): number;
+    crossProduct(other: Vector3): Vector3;
     copy(): Vector3;
+    add(A: Vector3): this;
     subtract(A: Vector3): this;
 }
 export declare class Vector4 extends Vector3 {

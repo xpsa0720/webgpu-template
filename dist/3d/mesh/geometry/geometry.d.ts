@@ -9,6 +9,7 @@ export declare class Geometry {
     render3DPass: Render3DPass;
     device: GPUDevice;
     constructor(render3DPass: Render3DPass, vertex: Vertex[], indexs: number[]);
+    vertexNormalize(): void;
     updateVertexBuffer(): {
         buffer: GPUBuffer;
     };
