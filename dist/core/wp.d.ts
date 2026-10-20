@@ -1,6 +1,6 @@
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
-import { RenderPass } from "../pass/render_pass";
+import { Render2DPass } from "../pass/render_2d_pass";
 import type { PassCallback } from "../types/callback";
 import type { CreateComputePassArg, CreatePassTimeTag, CreateRender3DPassArg, CreateRenderPassArg } from "../types/pass";
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../types/resource";
@@ -14,7 +14,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
     context: GPUCanvasContext;
     adapter: GPUAdapter | null;
     device: GPUDevice | null;
-    passes: Array<ComputePass | RenderPass>;
+    passes: Array<ComputePass | Render2DPass | Render3DPass>;
     config: Required<WPConfig>;
     timeDebugPass: number;
     timeDebugLabels: string[];
@@ -28,7 +28,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
     constructor(arg: WPArg);
     init(): Promise<void>;
     createComputePass(index: number, arg: CreateComputePassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): ComputePass;
-    createRenderPass(index: number, arg: CreateRenderPassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): RenderPass;
+    createRenderPass(index: number, arg: CreateRenderPassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): Render2DPass;
     createRender3DPass(index: number, arg: CreateRender3DPassArg, time?: CreatePassTimeTag, encoderCallback?: (encoder: GPUCommandEncoder) => void, preEncoderCallback?: (encoder: GPUCommandEncoder) => void): Render3DPass;
     createBuffer(size: number, data: GPUAllowSharedBufferSource, usage: GPUBufferUsageFlags): WebGPUBuffer;
     createTexture(size: GPUExtent3DDict, data: BufferSource, usage: GPUTextureUsageFlags, format?: GPUTextureFormat): WebGPUTexture;
@@ -40,7 +40,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
         callBack?: PassCallback<B>;
         substepCallback?: PassCallback<B>;
     }): Promise<void>;
-    run(passes: Array<RenderPass | ComputePass>, substep: number, buffers: B, dt: number, substepCallback?: PassCallback<B>): Promise<Record<string, Float32Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike>> | null>;
+    run(passes: Array<Render2DPass | Render3DPass | ComputePass>, substep: number, buffers: B, dt: number, substepCallback?: PassCallback<B>): Promise<Record<string, Float32Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike>> | null>;
 }
 export {};
 //# sourceMappingURL=wp.d.ts.map

@@ -4,7 +4,6 @@ import type { PrintGPUBuffer, PrintType } from "../types/print";
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../types/resource";
 export interface PassArg {
     device: GPUDevice;
-    shaderCode: string;
     label?: string;
     time?: CreatePassTimeTag;
     encoderCallback?: EncoderCallback;
@@ -44,12 +43,10 @@ export interface DebugPassArg {
     querySet: GPUQuerySet;
     time?: CreatePassTimeTag;
 }
-export declare class Pass {
+export declare abstract class Pass {
     buffers: Record<number, PassBuffer>;
     textures: Record<number, PassTexture>;
     sampler: Record<number, PassSampler>;
-    shaderCode: string;
-    shaderModule: GPUShaderModule;
     device: GPUDevice;
     label: string;
     time?: CreatePassTimeTag;

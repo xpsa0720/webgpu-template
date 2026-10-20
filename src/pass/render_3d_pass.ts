@@ -1,5 +1,5 @@
-import type { Light } from "../3d/light/light";
 import type { Mesh } from "../3d/mesh/mesh";
+import { ShaderGadgetModule } from "../shader/core/shader_module";
 import type { Camera } from "../types/camera";
 import type { OutGPUBuffer } from "../types/pass";
 import type { WebGPUBuffer } from "../types/resource";
@@ -9,56 +9,69 @@ import {
   type VertexLayout,
   type VertexLayoutOptions,
 } from "../util/vertex_layout";
-import type { DebugPassArg, PassArg } from "./pass";
+import { Pass, type DebugPassArg, type PassArg } from "./pass";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 
 interface Render3DPassArg extends RenderPassArg {
-  vertexLayoutOptions?: VertexLayoutOptions;
+  target: GPUTexture | HTMLCanvasElement;
   meshs?: Mesh[];
-  lights?: Light[];
   camera: Camera;
+  loadOp?: GPULoadOp;
+  format?: GPUTextureFormat;
+  blend?: boolean;
+  debugMode?: boolean;
 }
 
 export class Render3DPass extends RenderPass {
   meshs: Mesh[];
-  lights: Light[];
   camera: Camera;
-  vertexLayout: VertexLayout;
+  matrixBuffer: WebGPUBuffer;
+  cameraBuffer: WebGPUBuffer;
+  shaderGadgetModule: ShaderGadgetModule;
+  shaderModule: GPUShaderModule;
+  pipeline: GPURenderPipeline;
   protected bindGroupMatrix: GPUBindGroup | null = null;
+  protected bindGroupLight: GPUBindGroup | null = null;
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
-    this.lights = arg.lights??[]
-    this.vertexLayout = vertexLayoutFromWGSL(
-      this.shaderCode,
-      this.vertexEntryPoint,
-      arg.vertexLayoutOptions,
-    );
+    this.shaderGadgetModule = new ShaderGadgetModule();
+    this.shaderModule = this.createShaderModule();
     this.pipeline = this.settingPipeline();
     this.camera = arg.camera;
-
+    this.matrixBuffer = {
+      buffer: this.device.createBuffer({
+        size: 16 * 2 * 4,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+      }),
+    };
+    this.cameraBuffer = {
+      buffer: this.device.createBuffer({
+        size: 4 * 4,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+      }),
+    };
   }
 
-  override settingPipeline(shaderCode?: string): GPURenderPipeline {
-    if (shaderCode) {
-      this.shaderModule = this.device.createShaderModule({
-        code: shaderCode,
-      });
-      this.shaderCode = shaderCode
-    }
+  createShaderModule() {
+    return this.device.createShaderModule({
+      code: this.shaderGadgetModule.getSourceCode(),
+    });
+  }
 
+  settingPipeline(): GPURenderPipeline {
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
-        entryPoint: this.vertexEntryPoint,
+        entryPoint: this.shaderGadgetModule.getVsEntryPoint(),
         module: this.shaderModule,
-        buffers: this.vertexLayout.buffers,
+        buffers: this.shaderGadgetModule.getVertexLayout(),
       },
       fragment: {
-        entryPoint: this.fragmentEntryPoint,
+        entryPoint: this.shaderGadgetModule.getFsEntryPoint(),
         module: this.shaderModule,
         targets: [
           {
@@ -74,8 +87,8 @@ export class Render3DPass extends RenderPass {
       },
       primitive: {
         topology: "triangle-list",
-        frontFace:"ccw",
-        cullMode: "back"
+        frontFace: "ccw",
+        cullMode: "back",
       },
     });
     return pipeline;
@@ -93,13 +106,17 @@ export class Render3DPass extends RenderPass {
     return w / h;
   }
 
-  override encoderWriteCommand(
+  encoderWriteCommand(
     encoder: GPUCommandEncoder,
     renderPassDescriptor: GPURenderPassDescriptor,
   ) {
     const aspect = this.getAspect();
     const [width, height] = this.getTargetSize();
-    if (!this.depthTexture || this.depthWidth !== width || this.depthHeight !== height) {
+    if (
+      !this.depthTexture ||
+      this.depthWidth !== width ||
+      this.depthHeight !== height
+    ) {
       this.depthTexture?.destroy();
       this.depthTexture = this.device.createTexture({
         size: [width, height],
@@ -128,19 +145,32 @@ export class Render3DPass extends RenderPass {
     }
 
     this.meshs.forEach((mesh) => {
-      const matrixBuffer = createMatrix(
-        mesh,
-        this.camera,
-        aspect,
-        this.device,
+      createMatrix(mesh, this.camera, aspect, this.device, this.matrixBuffer);
+      this.device.queue.writeBuffer(
+        this.cameraBuffer.buffer,
+        0,
+        new Float32Array([
+          this.camera.position.x,
+          this.camera.position.y,
+          this.camera.position.z,
+          1
+        ]),
       );
 
       this.bindGroupMatrix = this.device.createBindGroup({
         layout: this.pipeline.getBindGroupLayout(3),
-        entries: [{ binding: 0, resource: { buffer: matrixBuffer.buffer } }],
+        entries: [
+          { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
+          { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+        ],
       });
-
+      this.bindGroupLight = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(4),
+        entries: this.shaderGadgetModule.module.fragment.getBindGroupEntry(),
+      });
       pass.setBindGroup(3, this.bindGroupMatrix);
+
+      
 
       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
       pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint16");
@@ -150,11 +180,36 @@ export class Render3DPass extends RenderPass {
     pass.end();
   }
 
-  override createPass(
-    encoder: GPUCommandEncoder,
-    debugArg?: DebugPassArg,
-  ): OutGPUBuffer[] {
+  // createPass(
+  //   encoder: GPUCommandEncoder,
+  //   debugArg?: DebugPassArg,
+  // ): OutGPUBuffer[] {
+  //   this.ensureBindGroups();
 
-    return super.createPass(encoder);
-  }
+  //   const view = this.context
+  //     ? this.context.getCurrentTexture().createView()
+  //     : (this.target as GPUTexture).createView();
+
+  //   const renderPassDescriptor: GPURenderPassDescriptor = {
+  //     colorAttachments: [
+  //       {
+  //         view: view,
+  //         loadOp: this.loadOp,
+  //         storeOp: "store",
+  //         clearValue: { r: 0, g: 0, b: 0, a: 1 },
+  //       },
+  //     ],
+  //   };
+  //   if (debugArg?.time && this.debugMode) {
+  //     renderPassDescriptor.timestampWrites = {
+  //       querySet: debugArg.querySet,
+  //       beginningOfPassWriteIndex: debugArg.time?.startIndex ?? undefined,
+  //       endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
+  //     };
+  //   }
+
+  //   this.encoderWriteCommand(encoder, renderPassDescriptor);
+
+  //   return super.createPass(encoder);
+  // }
 }

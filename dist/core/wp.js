@@ -3,7 +3,7 @@ import { printDefault } from "../debug/print";
 import { createTimestampQuery, readTimestampLines, resolveTimestampQuery, } from "../debug/timestamp";
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
-import { RenderPass } from "../pass/render_pass";
+import { Render2DPass } from "../pass/render_2d_pass";
 import { loadImageBitmap } from "../util/load_image_bitmap";
 import { DEFAULT_CONFIG } from "./config";
 export class WP {
@@ -114,7 +114,7 @@ export class WP {
         if (typeof time?.startIndex == "number" && typeof time.label == "string") {
             this.timeDebugLabels.push(time.label);
         }
-        const pass = new RenderPass({
+        const pass = new Render2DPass({
             device: this.device,
             vertexEntryPoint: arg.vertexEntryPoint,
             fragmentEntryPoint: arg.fragmentEntryPoint,
@@ -153,22 +153,17 @@ export class WP {
         }
         const pass = new Render3DPass({
             device: this.device,
-            vertexEntryPoint: arg.vertexEntryPoint,
-            fragmentEntryPoint: arg.fragmentEntryPoint,
-            shaderCode: arg.shaderCode,
             label: arg.label,
-            vertexCount: arg.vertexCount,
-            instanceCount: arg.instanceCount,
             loadOp: arg.loadOp,
             time: time,
             encoderCallback,
             preEncoderCallback,
             target: arg.target,
             format: arg.format,
+            blend: arg.blend,
             debugMode: this.config.debugMode,
             camera: arg.camera,
             meshs: arg.meshs,
-            vertexLayoutOptions: arg.vertexLayoutOptions,
         });
         this.passes[index] = pass;
         return pass;

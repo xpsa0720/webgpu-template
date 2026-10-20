@@ -115,7 +115,7 @@ function createProjectionMatrix(camera, aspect) {
     ]);
     return V;
 }
-export function createMatrix(mesh, camera, aspect, device) {
+export function createMatrix(mesh, camera, aspect, device, buffer) {
     const M = createModelMatrix(mesh);
     const V = createViewMatrix(camera);
     const P = createProjectionMatrix(camera, aspect);
@@ -127,12 +127,6 @@ export function createMatrix(mesh, camera, aspect, device) {
     // mat4x4(64bytes)
     const data = new Float32Array(32);
     data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData()], 0);
-    const buffer = {
-        buffer: device.createBuffer({
-            size: 128,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-        }),
-    };
     device.queue.writeBuffer(buffer.buffer, 0, data);
     return buffer;
 }

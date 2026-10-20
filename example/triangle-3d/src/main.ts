@@ -1,14 +1,9 @@
 import {
   WP,
-  Render3DPass,
   Camera,
-  Mesh,
-  Geometry,
-  Vertex,
-  Vector3,
   Cube,
+  Vector3,
 } from "@xpsa0720/webgpu";
-import render3dWGSL from "./shader/render3d.wgsl?raw";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
 
 class App3D {
@@ -32,39 +27,27 @@ class App3D {
 
     const device = this.wp.device!;
 
-    // 카메라: z=3 위치에서 원점을 바라봄
     const camera = new Camera(
-      new Vector3(0, 0, 3), // position
-      new Vector3(0, 0, 0), // target
-      60, // fov
-      0.1, // near
-      100, // far
+      new Vector3(0, 0, 3),
+      new Vector3(0, 0, 0),
+      60,
+      0.1,
+      100,
     );
 
-    // Render3DPass 생성
-    const render3DPass = new Render3DPass({
-      device,
+    const render3DPass = this.wp.createRender3DPass(0, {
       target: this.canvas,
-      shaderCode: render3dWGSL,
-      vertexEntryPoint: "vs",
-      fragmentEntryPoint: "fs",
-      vertexCount: 0,
-      instanceCount: 0,
       camera,
     });
 
-    // Cube 생성
     const cube = new Cube({
       render3DPass,
       location: new Vector3(0, 0, 0),
       rotate: new Vector3(0, 0, 60),
-      scale:new Vector3(1,2,1)
+      scale: new Vector3(1, 2, 1),
     });
 
     render3DPass.meshs.push(cube);
-
-    // WP passes에 등록
-    this.wp.passes[0] = render3DPass;
 
     // 카메라 이동 (WASD/Space/Shift)
     const moveSpeed = 0.05;
@@ -91,7 +74,7 @@ class App3D {
       if (!dragging) return;
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
-      camera.rotate.y = baseRotateY -    dx * sensitivity;
+      camera.rotate.y = baseRotateY - dx * sensitivity;
       camera.rotate.x = baseRotateX - dy * sensitivity;
     });
     window.addEventListener("mouseup", () => {
@@ -102,16 +85,15 @@ class App3D {
     this.wp.animate({
       b: {},
       callBack: () => {
-
         const forward = camera.target.copy().subtract(camera.position);
-        forward.y = 0; // 수평 이동만
+        forward.y = 0;
         const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
         if (len > 0.0001) {
           forward.x /= len;
           forward.z /= len;
         }
         const rotMat = createFowardRotateMatrix(camera.rotate);
-        const rawForward = rotMat.multiplyVec3(forward)
+        const rawForward = rotMat.multiplyVec3(forward);
 
         const right = new Vector3(-rawForward.z, 0, rawForward.x);
 

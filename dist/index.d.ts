@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" preserve="true" />
 export { WP } from "./core/wp";
 export { ComputePass } from "./pass/compute_pass";
-export { RenderPass } from "./pass/render_pass";
+export { Render2DPass as RenderPass } from "./pass/render_2d_pass";
 export { Pass } from "./pass/pass";
 export { ParamsBuffer, GPUSetting, CPUSetting } from "./resource/params_buffer";
 export type { GPUSettingClass, ParamsBufferOptions } from "./resource/params_buffer";

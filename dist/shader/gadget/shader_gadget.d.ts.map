@@ -1,0 +1,1 @@
+{"version":3,"file":"shader_gadget.d.ts","sourceRoot":"","sources":["../../../src/shader/gadget/shader_gadget.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,kBAAkB;IACjC,WAAW,CAAC,EAAE,MAAM,CAAC,MAAM,EAAC,MAAM,CAAC,CAAA;CACpC;AAED,8BAAsB,YAAY;IAChC,WAAW,EAAE,MAAM,CAAC,MAAM,EAAC,MAAM,CAAC,CAAA;gBACtB,EAAC,WAAgB,EAAC,EAAE,kBAAkB;IAIlD,OAAO,CAAC,IAAI,EAAC,MAAM;CAGpB"}

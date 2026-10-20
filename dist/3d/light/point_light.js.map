@@ -1,0 +1,1 @@
+{"version":3,"file":"point_light.js","sourceRoot":"","sources":["../../../src/3d/light/point_light.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,KAAK,EAAE,MAAM,SAAS,CAAC;AAQhC,MAAM,OAAO,UAAW,SAAQ,KAAK;IACnC,QAAQ,CAAU;IAElB,YAAY,EAAC,QAAQ,EAAE,SAAS,EAAE,KAAK,EAAe;QACpD,KAAK,CAAC,EAAC,SAAS,EAAE,KAAK,EAAC,CAAC,CAAA;QACzB,IAAI,CAAC,QAAQ,GAAG,QAAQ,CAAC;IAC3B,CAAC;CACF"}

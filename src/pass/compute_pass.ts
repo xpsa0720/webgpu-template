@@ -8,6 +8,7 @@ export interface ComputePassArg extends PassArg {
   computeTargetCountZ?: number;
   entryPoint: string;
   debugMode?: boolean;
+  shaderCode: string;
 }
 
 export class ComputePass extends Pass {
@@ -15,6 +16,8 @@ export class ComputePass extends Pass {
   workgroupSizeY: number;
   workgroupSizeZ: number;
   autoWorkgroupSize: AxisFlags;
+  shaderCode: string;
+  shaderModule: GPUShaderModule;
   shaderCodeTemplate: string;
   computeTargetCountX: number;
   computeTargetCountY: number;
@@ -30,10 +33,14 @@ export class ComputePass extends Pass {
       arg.entryPoint,
       arg.label ?? "",
     );
-    super({ ...arg, shaderCode: resolved.shaderCode });
+    super({ ...arg});
     if (!arg.device) {
       throw Error("Device not initialized");
     }
+    this.shaderCode = arg.shaderCode;
+    this.shaderModule = this.device.createShaderModule({
+      code: this.shaderCode
+    })
     this.debugMode = arg.debugMode ?? false;
     this.shaderCodeTemplate = arg.shaderCode;
     this.autoWorkgroupSize = resolved.isAuto;
@@ -49,7 +56,7 @@ export class ComputePass extends Pass {
       },
     });
   }
-
+  
   createPass(
     encoder: GPUCommandEncoder,
     debugArg?: DebugPassArg,

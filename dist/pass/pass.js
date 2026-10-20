@@ -2,8 +2,6 @@ export class Pass {
     buffers;
     textures;
     sampler;
-    shaderCode;
-    shaderModule;
     device;
     label;
     time;
@@ -13,14 +11,10 @@ export class Pass {
         if (!arg.device) {
             throw Error("Device not initialized");
         }
-        this.shaderCode = arg.shaderCode;
         this.buffers = [];
         this.textures = [];
         this.sampler = [];
         this.device = arg.device;
-        this.shaderModule = this.device.createShaderModule({
-            code: this.shaderCode,
-        });
         this.label = arg.label ?? "";
         this.time = arg.time;
         this.encoderCallback = arg.encoderCallback;

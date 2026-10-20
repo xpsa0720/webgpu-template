@@ -1,9 +1,18 @@
+import { ShaderGadgetModule } from "../shader/core/shader_module";
 import { createMatrix } from "../util/matrix";
 import { vertexLayoutFromWGSL, } from "../util/vertex_layout";
+import { Pass } from "./pass";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
     meshs;
+    // lights: Light[];
     camera;
+    matrixBuffer;
+    cameraBuffer;
+    shaderGadgetModule;
+    shaderModule;
+    pipeline;
+    // vertexLayout: VertexLayout;
     bindGroupMatrix = null;
     depthTexture = null;
     depthWidth = 0;
@@ -11,20 +20,39 @@ export class Render3DPass extends RenderPass {
     constructor(arg) {
         super(arg);
         this.meshs = arg.meshs ?? [];
-        this.pipeline = this.settingPipeline(arg);
+        // this.lights = arg.lights ?? [];
+        this.shaderGadgetModule = new ShaderGadgetModule();
+        this.shaderModule = this.createShaderModule();
+        this.pipeline = this.settingPipeline();
         this.camera = arg.camera;
+        this.matrixBuffer = {
+            buffer: this.device.createBuffer({
+                size: 16 * 2 * 4,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+            }),
+        };
+        this.cameraBuffer = {
+            buffer: this.device.createBuffer({
+                size: 4 * 4,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+            }),
+        };
     }
-    settingPipeline(arg) {
-        const vertexLayout = vertexLayoutFromWGSL(this.shaderCode, this.vertexEntryPoint, arg.vertexLayoutOptions);
+    createShaderModule() {
+        return this.device.createShaderModule({
+            code: this.shaderGadgetModule.getSourceCode(),
+        });
+    }
+    settingPipeline() {
         const pipeline = this.device.createRenderPipeline({
             layout: "auto",
             vertex: {
-                entryPoint: this.vertexEntryPoint,
+                entryPoint: this.shaderGadgetModule.getVsEntryPoint(),
                 module: this.shaderModule,
-                buffers: vertexLayout.buffers,
+                buffers: this.shaderGadgetModule.getVertexLayout(),
             },
             fragment: {
-                entryPoint: this.fragmentEntryPoint,
+                entryPoint: this.shaderGadgetModule.getFsEntryPoint(),
                 module: this.shaderModule,
                 targets: [
                     {
@@ -41,7 +69,7 @@ export class Render3DPass extends RenderPass {
             primitive: {
                 topology: "triangle-list",
                 frontFace: "ccw",
-                cullMode: "back"
+                cullMode: "back",
             },
         });
         return pipeline;
@@ -59,7 +87,9 @@ export class Render3DPass extends RenderPass {
     encoderWriteCommand(encoder, renderPassDescriptor) {
         const aspect = this.getAspect();
         const [width, height] = this.getTargetSize();
-        if (!this.depthTexture || this.depthWidth !== width || this.depthHeight !== height) {
+        if (!this.depthTexture ||
+            this.depthWidth !== width ||
+            this.depthHeight !== height) {
             this.depthTexture?.destroy();
             this.depthTexture = this.device.createTexture({
                 size: [width, height],
@@ -87,10 +117,19 @@ export class Render3DPass extends RenderPass {
             pass.setBindGroup(2, this.bindGroupSampler);
         }
         this.meshs.forEach((mesh) => {
-            const matrixBuffer = createMatrix(mesh, this.camera, aspect, this.device);
+            createMatrix(mesh, this.camera, aspect, this.device, this.matrixBuffer);
+            this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, new Float32Array([
+                this.camera.position.x,
+                this.camera.position.y,
+                this.camera.position.z,
+                1
+            ]));
             this.bindGroupMatrix = this.device.createBindGroup({
                 layout: this.pipeline.getBindGroupLayout(3),
-                entries: [{ binding: 0, resource: { buffer: matrixBuffer.buffer } }],
+                entries: [
+                    { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
+                    // { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+                ],
             });
             pass.setBindGroup(3, this.bindGroupMatrix);
             pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
@@ -98,9 +137,6 @@ export class Render3DPass extends RenderPass {
             pass.drawIndexed(mesh.geometry.indexs.length);
         });
         pass.end();
-    }
-    createPass(encoder, debugArg) {
-        return super.createPass(encoder);
     }
 }
 //# sourceMappingURL=render_3d_pass.js.map

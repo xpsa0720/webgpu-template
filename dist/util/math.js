@@ -4,6 +4,13 @@ export function normalize(vec) {
     return new Vector3(vec.x / denominator, vec.y / denominator, vec.z / denominator);
 }
 export function toRadian(degree) {
-    return degree * 180 / Math.PI;
+    return (degree * 180) / Math.PI;
+}
+export function shaderHash(code) {
+    let hash = 5381;
+    for (let i = 0; i < code.length; i++) {
+        hash = ((hash << 5) + hash + code.charCodeAt(i)) | 0;
+    }
+    return hash >>> 0;
 }
 //# sourceMappingURL=math.js.map

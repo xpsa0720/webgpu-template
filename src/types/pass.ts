@@ -30,8 +30,12 @@ export interface CreateRenderPassArg {
   format?: GPUTextureFormat;
 }
 
-export interface CreateRender3DPassArg extends CreateRenderPassArg{
-  vertexLayoutOptions?: VertexLayoutOptions;
+export interface CreateRender3DPassArg {
+  target: GPUTexture | HTMLCanvasElement;
+  label?: string;
+  loadOp?: GPULoadOp;
+  format?: GPUTextureFormat;
+  blend?: boolean;
   camera: Camera;
   meshs?: Mesh[];
 }

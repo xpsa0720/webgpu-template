@@ -14,7 +14,7 @@ export declare class Vector4 extends Vector3 {
     w: number;
     constructor(x?: number, y?: number, z?: number, w?: number);
     dot(other: Vector4): number;
-    multiplyMat4(mat: Mat4x4): void;
+    multiplyMat4(mat: Mat4x4): this;
     private getElement;
     copy(): Vector4;
     subtract(A: Vector4): this;

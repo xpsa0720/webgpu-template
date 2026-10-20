@@ -10,6 +10,14 @@ export function normalize(vec: Vector3) {
   );
 }
 
-export function toRadian(degree:number){
-  return degree*180/Math.PI;
+export function toRadian(degree: number) {
+  return (degree * 180) / Math.PI;
+}
+
+export function shaderHash(code: string): number {
+  let hash = 5381;
+  for (let i = 0; i < code.length; i++) {
+    hash = ((hash << 5) + hash + code.charCodeAt(i)) | 0;
+  }
+  return hash >>> 0;
 }

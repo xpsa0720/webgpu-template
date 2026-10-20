@@ -62,6 +62,8 @@ export class Vector4 extends Vector3 {
     this.y = mat.getRow(1).dot(result);
     this.z = mat.getRow(2).dot(result);
     this.w = mat.getRow(3).dot(result);
+
+    return this
   }
 
   private getElement(index: number) {

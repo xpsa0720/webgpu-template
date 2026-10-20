@@ -145,6 +145,7 @@ export function createMatrix(
   camera: Camera,
   aspect: number,
   device: GPUDevice,
+  buffer: WebGPUBuffer
 ) {
   const M = createModelMatrix(mesh);
   const V = createViewMatrix(camera);
@@ -159,13 +160,6 @@ export function createMatrix(
   // mat4x4(64bytes)
   const data = new Float32Array(32);
   data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData()], 0);
-
-  const buffer: WebGPUBuffer = {
-    buffer: device.createBuffer({
-      size: 128,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-    }),
-  };
 
   device.queue.writeBuffer(buffer.buffer, 0, data);
 

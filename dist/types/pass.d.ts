@@ -1,5 +1,4 @@
 import type { Mesh } from "../3d/mesh/mesh";
-import type { VertexLayoutOptions } from "../util/vertex_layout";
 import type { Camera } from "./camera";
 import type { PrintGPUBuffer, PrintType } from "./print";
 export interface CreatePassTimeTag {
@@ -26,8 +25,12 @@ export interface CreateRenderPassArg {
     loadOp?: GPULoadOp;
     format?: GPUTextureFormat;
 }
-export interface CreateRender3DPassArg extends CreateRenderPassArg {
-    vertexLayoutOptions?: VertexLayoutOptions;
+export interface CreateRender3DPassArg {
+    target: GPUTexture | HTMLCanvasElement;
+    label?: string;
+    loadOp?: GPULoadOp;
+    format?: GPUTextureFormat;
+    blend?: boolean;
     camera: Camera;
     meshs?: Mesh[];
 }

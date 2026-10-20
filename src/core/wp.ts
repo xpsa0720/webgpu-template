@@ -8,7 +8,7 @@ import {
 } from "../debug/timestamp";
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
-import { RenderPass } from "../pass/render_pass";
+import { Render2DPass } from "../pass/render_2d_pass";
 import type { PassCallback } from "../types/callback";
 import type {
   CreateComputePassArg,
@@ -40,7 +40,7 @@ export class WP<
   context: GPUCanvasContext;
   adapter: GPUAdapter | null;
   device: GPUDevice | null;
-  passes: Array<ComputePass | RenderPass>;
+  passes: Array<ComputePass | Render2DPass | Render3DPass>;
   config: Required<WPConfig>;
   timeDebugPass: number;
   timeDebugLabels: string[];
@@ -169,7 +169,7 @@ export class WP<
     if (typeof time?.startIndex == "number" && typeof time.label == "string") {
       this.timeDebugLabels.push(time.label);
     }
-    const pass = new RenderPass({
+    const pass = new Render2DPass({
       device: this.device,
       vertexEntryPoint: arg.vertexEntryPoint,
       fragmentEntryPoint: arg.fragmentEntryPoint,
@@ -219,22 +219,17 @@ export class WP<
     }
     const pass = new Render3DPass({
       device: this.device,
-      vertexEntryPoint: arg.vertexEntryPoint,
-      fragmentEntryPoint: arg.fragmentEntryPoint,
-      shaderCode: arg.shaderCode,
       label: arg.label,
-      vertexCount: arg.vertexCount,
-      instanceCount: arg.instanceCount,
       loadOp: arg.loadOp,
       time: time,
       encoderCallback,
       preEncoderCallback,
       target: arg.target,
       format: arg.format,
+      blend: arg.blend,
       debugMode: this.config.debugMode,
       camera: arg.camera,
       meshs: arg.meshs,
-      vertexLayoutOptions: arg.vertexLayoutOptions,
     });
 
     this.passes[index] = pass;
@@ -386,7 +381,7 @@ export class WP<
   }
 
   async run(
-    passes: Array<RenderPass | ComputePass>,
+    passes: Array<Render2DPass | Render3DPass | ComputePass>,
     substep: number,
     buffers: B,
     dt: number,

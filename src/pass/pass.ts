@@ -9,7 +9,6 @@ import type {
 
 export interface PassArg {
   device: GPUDevice;
-  shaderCode: string;
   label?: string;
   time?: CreatePassTimeTag;
   encoderCallback?: EncoderCallback;
@@ -56,12 +55,10 @@ export interface DebugPassArg {
   time?: CreatePassTimeTag;
 }
 
-export class Pass {
+export abstract class Pass {
   buffers: Record<number, PassBuffer>;
   textures: Record<number, PassTexture>;
   sampler: Record<number, PassSampler>;
-  shaderCode: string;
-  shaderModule: GPUShaderModule;
   device: GPUDevice;
   label: string;
   time?: CreatePassTimeTag;
@@ -71,14 +68,10 @@ export class Pass {
     if (!arg.device) {
       throw Error("Device not initialized");
     }
-    this.shaderCode = arg.shaderCode;
     this.buffers = [];
     this.textures = [];
     this.sampler = [];
     this.device = arg.device;
-    this.shaderModule = this.device.createShaderModule({
-      code: this.shaderCode,
-    });
     this.label = arg.label ?? "";
     this.time = arg.time;
     this.encoderCallback = arg.encoderCallback;

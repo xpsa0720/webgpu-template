@@ -5,6 +5,8 @@ export class ComputePass extends Pass {
     workgroupSizeY;
     workgroupSizeZ;
     autoWorkgroupSize;
+    shaderCode;
+    shaderModule;
     shaderCodeTemplate;
     computeTargetCountX;
     computeTargetCountY;
@@ -16,10 +18,14 @@ export class ComputePass extends Pass {
     bindGroupSampler = null;
     constructor(arg) {
         const resolved = resolveWorkgroupSize(arg.shaderCode, arg.entryPoint, arg.label ?? "");
-        super({ ...arg, shaderCode: resolved.shaderCode });
+        super({ ...arg });
         if (!arg.device) {
             throw Error("Device not initialized");
         }
+        this.shaderCode = arg.shaderCode;
+        this.shaderModule = this.device.createShaderModule({
+            code: this.shaderCode
+        });
         this.debugMode = arg.debugMode ?? false;
         this.shaderCodeTemplate = arg.shaderCode;
         this.autoWorkgroupSize = resolved.isAuto;

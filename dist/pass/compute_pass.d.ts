@@ -7,12 +7,15 @@ export interface ComputePassArg extends PassArg {
     computeTargetCountZ?: number;
     entryPoint: string;
     debugMode?: boolean;
+    shaderCode: string;
 }
 export declare class ComputePass extends Pass {
     workgroupSizeX: number;
     workgroupSizeY: number;
     workgroupSizeZ: number;
     autoWorkgroupSize: AxisFlags;
+    shaderCode: string;
+    shaderModule: GPUShaderModule;
     shaderCodeTemplate: string;
     computeTargetCountX: number;
     computeTargetCountY: number;

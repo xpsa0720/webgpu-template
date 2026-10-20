@@ -1,0 +1,1 @@
+{"version":3,"file":"light.d.ts","sourceRoot":"","sources":["../../../../src/shader/gadget/basic/light.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,iBAAiB;IAChC,IAAI,EAAE,SAAS,GAAG,SAAS,GAAG,SAAS,GAAG,SAAS,CAAA;CACpD;AAED,qBAAa,WAAW;CAEvB"}
