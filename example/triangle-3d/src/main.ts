@@ -8,7 +8,9 @@ import {
   AmbientLight,
   Matrial,
   Specular,
+  Mat3x3,
 } from "@xpsa0720/webgpu";
+import { toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
 
 class App3D {
@@ -111,30 +113,34 @@ class App3D {
     window.addEventListener("keydown", (e) => keys.add(e.key.toLowerCase()));
     window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 
-    // 카메라 회전 (마우스 드래그)
+    // 카메라 회전 (Pointer Lock: 캔버스 클릭 시 커서 숨김, ESC로 해제)
     const sensitivity = 0.003 * 0.5;
-    let dragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let baseRotateX = 0;
-    let baseRotateY = 0;
 
-    this.canvas.addEventListener("mousedown", (e) => {
-      dragging = true;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
-      baseRotateX = camera.rotate.x;
-      baseRotateY = camera.rotate.y;
+    this.canvas.addEventListener("click", () => {
+      this.canvas.requestPointerLock();
     });
     window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      camera.rotate.y = baseRotateY - dx * sensitivity;
-      camera.rotate.x = baseRotateX - dy * sensitivity;
-    });
-    window.addEventListener("mouseup", () => {
-      dragging = false;
+      if (document.pointerLockElement !== this.canvas) return;
+
+      //   const forward = camera.target.copy().subtract(camera.position);
+      //   const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
+      //   if (len > 0.0001) {
+      //     forward.x /= len;
+      //     forward.z /= len;
+      //   }
+
+      //   const moveX = e.movementX * Math.cos(camera.rotate.y) + e.movementX *Math.sin(camera.rotate.y)
+      //   const moveY = e.movementY * Math.cos(camera.rotate.x) - e.movementY *Math.sin(camera.rotate.x)
+
+      //   camera.rotate.y -= moveX * sensitivity;
+      //   camera.rotate.x -= moveY * sensitivity;
+      const PITCH_LIMIT = toRadian(85);
+      camera.rotate.y -= e.movementX * sensitivity; // yaw는 제한 없음
+      camera.rotate.x -= e.movementY * sensitivity;
+      camera.rotate.x = Math.max(
+        -PITCH_LIMIT,
+        Math.min(PITCH_LIMIT, camera.rotate.x),
+      );
     });
 
     // 애니메이션 루프
@@ -142,13 +148,13 @@ class App3D {
       b: {},
       callBack: () => {
         const forward = camera.target.copy().subtract(camera.position);
-        forward.y = 0;
+        // forward.y = 0;
         const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
         if (len > 0.0001) {
           forward.x /= len;
           forward.z /= len;
         }
-        const rotMat = createFowardRotateMatrix(camera.rotate);
+        const rotMat = createFowardRotateMatrix(new Vector3(0, camera.rotate.y, 0));
         const rawForward = rotMat.multiplyVec3(forward);
 
         const right = new Vector3(-rawForward.z, 0, rawForward.x);

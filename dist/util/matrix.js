@@ -41,14 +41,14 @@ export function createFowardRotateMatrix(rotate, inverse = false) {
         new Vector3(0, 1, 0),
         new Vector3(Math.sin(rotate_Y), 0, Math.cos(rotate_Y)),
     ]);
-    const Z_Matrix = new Mat3x3([
-        new Vector3(Math.cos(rotate_Z), Math.sin(rotate_Z), 0),
-        new Vector3(-Math.sin(rotate_Z), Math.cos(rotate_Z), 0),
-        new Vector3(0, 0, 1),
-    ]);
-    const XY = Y_Matrix.multiply(X_Matrix);
-    const XYZ = Z_Matrix.multiply(XY);
-    return XYZ;
+    //   const Z_Matrix = new Mat3x3([
+    //     new Vector3(Math.cos(rotate_Z), Math.sin(rotate_Z), 0),
+    //     new Vector3(-Math.sin(rotate_Z), Math.cos(rotate_Z), 0),
+    //     new Vector3(0, 0, 1),
+    //   ]);
+    const YX = X_Matrix.multiply(Y_Matrix);
+    //   const ZYX = Z_Matrix.multiply(YX);
+    return YX;
 }
 function createTranslateMatrix(translate, inverse = false) {
     const X = translate.x * (inverse ? -1 : 1);

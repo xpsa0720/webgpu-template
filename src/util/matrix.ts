@@ -37,7 +37,7 @@ function createRotateMatrix(rotate: Vector3, inverse: boolean = false) {
 export function createFowardRotateMatrix(rotate: Vector3, inverse: boolean = false) {
   const rotate_X = rotate.x * (inverse ? -1 : 1);
   const rotate_Y = rotate.y * (inverse ? -1 : 1);
-  const rotate_Z = rotate.z * (inverse ? -1 : 1);
+//   const rotate_Z = rotate.z * (inverse ? -1 : 1);
   const X_Matrix = new Mat3x3([
     new Vector3(1, 0, 0),
     new Vector3(0, Math.cos(rotate_X), Math.sin(rotate_X)),
@@ -48,16 +48,16 @@ export function createFowardRotateMatrix(rotate: Vector3, inverse: boolean = fal
     new Vector3(0, 1, 0),
     new Vector3(Math.sin(rotate_Y), 0, Math.cos(rotate_Y)),
   ]);
-  const Z_Matrix = new Mat3x3([
-    new Vector3(Math.cos(rotate_Z), Math.sin(rotate_Z), 0),
-    new Vector3(-Math.sin(rotate_Z), Math.cos(rotate_Z), 0),
-    new Vector3(0, 0, 1),
-  ]);
+//   const Z_Matrix = new Mat3x3([
+//     new Vector3(Math.cos(rotate_Z), Math.sin(rotate_Z), 0),
+//     new Vector3(-Math.sin(rotate_Z), Math.cos(rotate_Z), 0),
+//     new Vector3(0, 0, 1),
+//   ]);
 
-  const XY = Y_Matrix.multiply(X_Matrix);
-  const XYZ = Z_Matrix.multiply(XY);
+  const YX = X_Matrix.multiply(Y_Matrix);
+//   const ZYX = Z_Matrix.multiply(YX);
 
-  return XYZ;
+  return YX;
 }
 
 function createTranslateMatrix(translate: Vector3, inverse: boolean = false) {
