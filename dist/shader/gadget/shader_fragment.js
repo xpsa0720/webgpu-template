@@ -1,15 +1,69 @@
-import { AMBIENT_LIGHT_CODE, DIRECTIONAL_LIGHT_CODE, POINT_LIGHT_CODE, SHADER_FRAGMENT_DEFAULT, } from "../template3d";
+import { AMBIENT_LIGHT, DIRECTIONAL_LIHGT, POINT_LIGHT, SHADER_FRAGMENT_DEFAULT, } from "../template3d";
 import { ShaderAmbientLightGadget, ShaderDirectionalLightGadget, ShaderPointLightGadget, } from "./shader_light";
 import { ShaderGadget } from "./shader_gadget";
 export class ShaderFragmentGadget extends ShaderGadget {
-    ambientLight;
-    pointLight;
-    directionalLight;
-    constructor({ placeholder = {} }) {
+    device;
+    shaderLights;
+    onLightChange;
+    constructor({ placeholder = {}, device, onLightChange }) {
         super({ placeholder });
-        this.ambientLight = AMBIENT_LIGHT_CODE;
-        this.pointLight = POINT_LIGHT_CODE;
-        this.directionalLight = DIRECTIONAL_LIGHT_CODE;
+        this.device = device;
+        this.onLightChange = onLightChange;
+        this.shaderLights = this.initLight();
+        this.updatePlaceholder();
+    }
+    wrapLightChange() {
+        return () => {
+            this.updatePlaceholder();
+            this.onLightChange?.();
+        };
+    }
+    initLight() {
+        const result = {};
+        const usedBindings = new Set();
+        const LIGHT_CODE_LIST = [
+            new ShaderPointLightGadget({
+                struct: POINT_LIGHT.struct,
+                define: POINT_LIGHT.define,
+                countPlaceholder: POINT_LIGHT.countPlaceholder,
+                group: 3,
+                binding: 10,
+                code: POINT_LIGHT.code,
+                func: POINT_LIGHT.func,
+                device: this.device,
+                onLightChange: this.wrapLightChange(),
+            }),
+            new ShaderAmbientLightGadget({
+                struct: AMBIENT_LIGHT.struct,
+                define: AMBIENT_LIGHT.define,
+                countPlaceholder: AMBIENT_LIGHT.countPlaceholder,
+                group: 3,
+                binding: 11,
+                code: AMBIENT_LIGHT.code,
+                func: AMBIENT_LIGHT.func,
+                device: this.device,
+                onLightChange: this.wrapLightChange(),
+            }),
+            new ShaderDirectionalLightGadget({
+                struct: DIRECTIONAL_LIHGT.struct,
+                define: DIRECTIONAL_LIHGT.define,
+                countPlaceholder: DIRECTIONAL_LIHGT.countPlaceholder,
+                group: 3,
+                binding: 12,
+                code: DIRECTIONAL_LIHGT.code,
+                func: DIRECTIONAL_LIHGT.func,
+                device: this.device,
+                onLightChange: this.wrapLightChange(),
+            }),
+        ];
+        LIGHT_CODE_LIST.forEach((e, i) => {
+            if (usedBindings.has(e.binding)) {
+                throw new Error(`Light binding 번호 ${e.binding}이 중복됨`);
+            }
+            usedBindings.add(e.binding);
+            result[i] = e;
+        });
+        return result;
     }
     updatePlaceholder() {
         this.placeholder["@LIGHT_STRUCTS_UNIFORMS"] =
@@ -18,7 +72,7 @@ export class ShaderFragmentGadget extends ShaderGadget {
         this.placeholder["@LIGHT_FUNCTIONS"] = this.getFuntionCode();
     }
     get lights() {
-        return [this.ambientLight, this.pointLight, this.directionalLight];
+        return Object.values(this.shaderLights).sort((a, b) => a.binding - b.binding);
     }
     getFuntionCode() {
         let result = "";
@@ -44,6 +98,15 @@ export class ShaderFragmentGadget extends ShaderGadget {
     getCode() {
         let result = SHADER_FRAGMENT_DEFAULT;
         return super.getCode(result);
+    }
+    getBindGroupEntry(device) {
+        const result = [];
+        this.lights.forEach((e) => {
+            if (e.lights.length === 0)
+                return;
+            result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
+        });
+        return result;
     }
 }
 //# sourceMappingURL=shader_fragment.js.map

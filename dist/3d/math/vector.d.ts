@@ -9,6 +9,7 @@ export declare class Vector3 {
     copy(): Vector3;
     add(A: Vector3): this;
     subtract(A: Vector3): this;
+    array(): number[];
 }
 export declare class Vector4 extends Vector3 {
     w: number;
@@ -18,5 +19,6 @@ export declare class Vector4 extends Vector3 {
     private getElement;
     copy(): Vector4;
     subtract(A: Vector4): this;
+    array(): number[];
 }
 //# sourceMappingURL=vector.d.ts.map

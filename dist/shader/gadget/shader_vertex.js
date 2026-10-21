@@ -1,3 +1,4 @@
+import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "../template3d";
 import { ShaderGadget } from "./shader_gadget";
 const SCALAR = {
     f32: { family: "float", bits: 32, suffix: "f" },
@@ -59,24 +60,12 @@ const FORMAT_TABLE = {
 export class ShaderVertexGadget extends ShaderGadget {
     vertexInput;
     constructor({ placeholder = {}, vertexInput }) {
-        placeholder["@VERTEX_INPUT"] =
-            "@location(0) pos: vec3f, @location(1) normal: vec3f";
+        placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
         super({ placeholder });
         this.vertexInput = vertexInput ?? [];
     }
     getCode() {
-        let result = `
-  @vertex
-  fn vs(@VERTEX_INPUT) -> VertexOut {
-  var out:VertexOut;
-
-  out.position = matrix.mvpMatrix * vec4f(pos,1);
-  out.normal = matrix.normalMatrix * vec4f(normal,0);
-  out.color = vec4f(1,1,1,1);
-
-
-  return out;
-}`;
+        let result = SHADER_VERTEX_DEFAULT;
         return super.getCode(result);
     }
     getVertexLayout() {

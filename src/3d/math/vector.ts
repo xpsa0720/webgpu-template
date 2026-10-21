@@ -42,6 +42,10 @@ export class Vector3 {
 
     return this;
   }
+
+  array() {
+    return [this.x, this.y, this.z, 0];
+  }
 }
 
 export class Vector4 extends Vector3 {
@@ -53,7 +57,9 @@ export class Vector4 extends Vector3 {
   }
 
   dot(other: Vector4): number {
-    return this.x * other.x + this.y * other.y + this.z * other.z + this.w * other.w;
+    return (
+      this.x * other.x + this.y * other.y + this.z * other.z + this.w * other.w
+    );
   }
 
   multiplyMat4(mat: Mat4x4) {
@@ -63,7 +69,7 @@ export class Vector4 extends Vector3 {
     this.z = mat.getRow(2).dot(result);
     this.w = mat.getRow(3).dot(result);
 
-    return this
+    return this;
   }
 
   private getElement(index: number) {
@@ -83,7 +89,10 @@ export class Vector4 extends Vector3 {
     this.y -= A.y;
     this.z -= A.z;
     this.w -= A.w;
-    
+
     return this;
+  }
+  array() {
+    return [this.x, this.y, this.z, this.w];
   }
 }

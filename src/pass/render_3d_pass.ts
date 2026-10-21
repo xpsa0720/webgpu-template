@@ -1,5 +1,11 @@
 import type { Mesh } from "../3d/mesh/mesh";
 import { ShaderGadgetModule } from "../shader/core/shader_module";
+import {
+  AmbientLight,
+  DirectionalLight,
+  Light,
+  PointLight,
+} from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
 import type { OutGPUBuffer } from "../types/pass";
 import type { WebGPUBuffer } from "../types/resource";
@@ -30,21 +36,26 @@ export class Render3DPass extends RenderPass {
   shaderGadgetModule: ShaderGadgetModule;
   shaderModule: GPUShaderModule;
   pipeline: GPURenderPipeline;
+
   protected bindGroupMatrix: GPUBindGroup | null = null;
-  protected bindGroupLight: GPUBindGroup | null = null;
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
+  private lihgtUpdate = true;
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
-    this.shaderGadgetModule = new ShaderGadgetModule();
+    this.shaderGadgetModule = new ShaderGadgetModule(this.device, () => {
+      this.lihgtUpdate = true;
+      this.shaderModule =  this.createShaderModule()
+      this.pipeline = this.settingPipeline()
+    });
     this.shaderModule = this.createShaderModule();
     this.pipeline = this.settingPipeline();
     this.camera = arg.camera;
     this.matrixBuffer = {
       buffer: this.device.createBuffer({
-        size: 16 * 2 * 4,
+        size: 16 * 3 * 4,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
@@ -106,6 +117,41 @@ export class Render3DPass extends RenderPass {
     return w / h;
   }
 
+  private get pointLightGadget() {
+    return this.shaderGadgetModule.module.fragment.shaderLights[0];
+  }
+
+  private get ambientLightGadget() {
+    return this.shaderGadgetModule.module.fragment.shaderLights[1];
+  }
+
+  private get directionalLightGadget() {
+    return this.shaderGadgetModule.module.fragment.shaderLights[2];
+  }
+
+  addLight(light: Light) {
+    if (light instanceof PointLight) {
+      this.pointLightGadget.addLight(light);
+    } else if (light instanceof AmbientLight) {
+      this.ambientLightGadget.addLight(light);
+    } else if (light instanceof DirectionalLight) {
+      this.directionalLightGadget.addLight(light);
+    }
+  }
+
+  removeLight(light: Light) {
+    if (light instanceof PointLight) {
+      const idx = this.pointLightGadget.lights.indexOf(light);
+      if (idx !== -1) return this.pointLightGadget.removeLight(idx);
+    } else if (light instanceof AmbientLight) {
+      const idx = this.ambientLightGadget.lights.indexOf(light);
+      if (idx !== -1) return this.ambientLightGadget.removeLight(idx);
+    } else if (light instanceof DirectionalLight) {
+      const idx = this.directionalLightGadget.lights.indexOf(light);
+      if (idx !== -1) return this.directionalLightGadget.removeLight(idx);
+    }
+  }
+
   encoderWriteCommand(
     encoder: GPUCommandEncoder,
     renderPassDescriptor: GPURenderPassDescriptor,
@@ -153,8 +199,12 @@ export class Render3DPass extends RenderPass {
           this.camera.position.x,
           this.camera.position.y,
           this.camera.position.z,
-          1
+          1,
         ]),
+      );
+
+      const lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry(
+        this.device,
       );
 
       this.bindGroupMatrix = this.device.createBindGroup({
@@ -162,15 +212,11 @@ export class Render3DPass extends RenderPass {
         entries: [
           { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
           { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+          ...lightEntries,
         ],
       });
-      this.bindGroupLight = this.device.createBindGroup({
-        layout: this.pipeline.getBindGroupLayout(4),
-        entries: this.shaderGadgetModule.module.fragment.getBindGroupEntry(),
-      });
-      pass.setBindGroup(3, this.bindGroupMatrix);
 
-      
+      pass.setBindGroup(3, this.bindGroupMatrix);
 
       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
       pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint16");
@@ -179,37 +225,4 @@ export class Render3DPass extends RenderPass {
 
     pass.end();
   }
-
-  // createPass(
-  //   encoder: GPUCommandEncoder,
-  //   debugArg?: DebugPassArg,
-  // ): OutGPUBuffer[] {
-  //   this.ensureBindGroups();
-
-  //   const view = this.context
-  //     ? this.context.getCurrentTexture().createView()
-  //     : (this.target as GPUTexture).createView();
-
-  //   const renderPassDescriptor: GPURenderPassDescriptor = {
-  //     colorAttachments: [
-  //       {
-  //         view: view,
-  //         loadOp: this.loadOp,
-  //         storeOp: "store",
-  //         clearValue: { r: 0, g: 0, b: 0, a: 1 },
-  //       },
-  //     ],
-  //   };
-  //   if (debugArg?.time && this.debugMode) {
-  //     renderPassDescriptor.timestampWrites = {
-  //       querySet: debugArg.querySet,
-  //       beginningOfPassWriteIndex: debugArg.time?.startIndex ?? undefined,
-  //       endOfPassWriteIndex: debugArg.time?.endIndex ?? undefined,
-  //     };
-  //   }
-
-  //   this.encoderWriteCommand(encoder, renderPassDescriptor);
-
-  //   return super.createPass(encoder);
-  // }
 }

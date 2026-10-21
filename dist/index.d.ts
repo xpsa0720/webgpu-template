@@ -21,6 +21,7 @@ export { Vertex } from "./3d/mesh/unit/vertex";
 export { Camera } from "./types/camera";
 export { createMatrix } from "./util/matrix";
 export { normalize } from "./util/math";
+export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
 export type { WebGPUBuffer, WebGPUTexture, WebGPUSampler } from "./types/resource";
 export type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "./types/pass_queue";
 export type { PassCallback, PassCallbackArg, EncoderCallback } from "./types/callback";

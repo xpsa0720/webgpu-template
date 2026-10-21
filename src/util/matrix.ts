@@ -158,8 +158,8 @@ export function createMatrix(
   const R = createRotateMatrix(mesh.rotate);
   const NormalMatrix = S_inv.multiply(R);
   // mat4x4(64bytes)
-  const data = new Float32Array(32);
-  data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData()], 0);
+  const data = new Float32Array(48);
+  data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData(), ...M.getArrayData()], 0);
 
   device.queue.writeBuffer(buffer.buffer, 0, data);
 

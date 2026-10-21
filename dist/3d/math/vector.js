@@ -28,6 +28,9 @@ export class Vector3 {
         this.z -= A.z;
         return this;
     }
+    array() {
+        return [this.x, this.y, this.z, 0];
+    }
 }
 export class Vector4 extends Vector3 {
     w;
@@ -36,7 +39,7 @@ export class Vector4 extends Vector3 {
         this.w = w;
     }
     dot(other) {
-        return this.x * other.x + this.y * other.y + this.z * other.z + this.w * other.w;
+        return (this.x * other.x + this.y * other.y + this.z * other.z + this.w * other.w);
     }
     multiplyMat4(mat) {
         const result = this.copy();
@@ -66,6 +69,9 @@ export class Vector4 extends Vector3 {
         this.z -= A.z;
         this.w -= A.w;
         return this;
+    }
+    array() {
+        return [this.x, this.y, this.z, this.w];
     }
 }
 //# sourceMappingURL=vector.js.map

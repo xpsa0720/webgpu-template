@@ -1,4 +1,4 @@
-import { SHADER_MATRIX_UNIFORM, } from "../gadget/basic/bindings";
+import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_MATRIX_UNIFORM, } from "../gadget/basic/bindings";
 import { SHADER_MATRIX_STRUCT, SHADER_VERTEXOUT_STRUCT, } from "../gadget/basic/structs";
 import { ShaderbindingGadget } from "../gadget/shader_binding";
 import { ShaderFragmentGadget } from "../gadget/shader_fragment";
@@ -6,7 +6,7 @@ import { ShaderStructGadget } from "../gadget/shader_struct";
 import { ShaderVertexGadget } from "../gadget/shader_vertex";
 export class ShaderGadgetModule {
     module;
-    constructor() {
+    constructor(device, onLightChange) {
         this.module = {
             structs: [
                 new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
@@ -17,9 +17,13 @@ export class ShaderGadgetModule {
                     define: SHADER_MATRIX_UNIFORM,
                     type: "uniform",
                 }),
+                new ShaderbindingGadget({
+                    define: SHADER_CAMERA_POSITION_UNIFORM,
+                    type: "uniform",
+                }),
             ],
             vertex: new ShaderVertexGadget({}),
-            fragment: new ShaderFragmentGadget({}),
+            fragment: new ShaderFragmentGadget({ device, onLightChange }),
         };
     }
     getSourceCode() {

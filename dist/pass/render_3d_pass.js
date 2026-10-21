@@ -1,33 +1,36 @@
 import { ShaderGadgetModule } from "../shader/core/shader_module";
+import { AmbientLight, DirectionalLight, Light, PointLight, } from "../shader/gadget/shader_light";
 import { createMatrix } from "../util/matrix";
 import { vertexLayoutFromWGSL, } from "../util/vertex_layout";
 import { Pass } from "./pass";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
     meshs;
-    // lights: Light[];
     camera;
     matrixBuffer;
     cameraBuffer;
     shaderGadgetModule;
     shaderModule;
     pipeline;
-    // vertexLayout: VertexLayout;
     bindGroupMatrix = null;
     depthTexture = null;
     depthWidth = 0;
     depthHeight = 0;
+    lihgtUpdate = true;
     constructor(arg) {
         super(arg);
         this.meshs = arg.meshs ?? [];
-        // this.lights = arg.lights ?? [];
-        this.shaderGadgetModule = new ShaderGadgetModule();
+        this.shaderGadgetModule = new ShaderGadgetModule(this.device, () => {
+            this.lihgtUpdate = true;
+            this.shaderModule = this.createShaderModule();
+            this.pipeline = this.settingPipeline();
+        });
         this.shaderModule = this.createShaderModule();
         this.pipeline = this.settingPipeline();
         this.camera = arg.camera;
         this.matrixBuffer = {
             buffer: this.device.createBuffer({
-                size: 16 * 2 * 4,
+                size: 16 * 3 * 4,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
             }),
         };
@@ -84,6 +87,43 @@ export class Render3DPass extends RenderPass {
         const [w, h] = this.getTargetSize();
         return w / h;
     }
+    get pointLightGadget() {
+        return this.shaderGadgetModule.module.fragment.shaderLights[0];
+    }
+    get ambientLightGadget() {
+        return this.shaderGadgetModule.module.fragment.shaderLights[1];
+    }
+    get directionalLightGadget() {
+        return this.shaderGadgetModule.module.fragment.shaderLights[2];
+    }
+    addLight(light) {
+        if (light instanceof PointLight) {
+            this.pointLightGadget.addLight(light);
+        }
+        else if (light instanceof AmbientLight) {
+            this.ambientLightGadget.addLight(light);
+        }
+        else if (light instanceof DirectionalLight) {
+            this.directionalLightGadget.addLight(light);
+        }
+    }
+    removeLight(light) {
+        if (light instanceof PointLight) {
+            const idx = this.pointLightGadget.lights.indexOf(light);
+            if (idx !== -1)
+                return this.pointLightGadget.removeLight(idx);
+        }
+        else if (light instanceof AmbientLight) {
+            const idx = this.ambientLightGadget.lights.indexOf(light);
+            if (idx !== -1)
+                return this.ambientLightGadget.removeLight(idx);
+        }
+        else if (light instanceof DirectionalLight) {
+            const idx = this.directionalLightGadget.lights.indexOf(light);
+            if (idx !== -1)
+                return this.directionalLightGadget.removeLight(idx);
+        }
+    }
     encoderWriteCommand(encoder, renderPassDescriptor) {
         const aspect = this.getAspect();
         const [width, height] = this.getTargetSize();
@@ -122,13 +162,15 @@ export class Render3DPass extends RenderPass {
                 this.camera.position.x,
                 this.camera.position.y,
                 this.camera.position.z,
-                1
+                1,
             ]));
+            const lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry(this.device);
             this.bindGroupMatrix = this.device.createBindGroup({
                 layout: this.pipeline.getBindGroupLayout(3),
                 entries: [
                     { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
-                    // { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+                    { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+                    ...lightEntries,
                 ],
             });
             pass.setBindGroup(3, this.bindGroupMatrix);

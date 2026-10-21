@@ -19,6 +19,7 @@ export { Vertex } from "./3d/mesh/unit/vertex";
 export { Camera } from "./types/camera";
 export { createMatrix } from "./util/matrix";
 export { normalize } from "./util/math";
+export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map

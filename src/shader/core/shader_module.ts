@@ -1,4 +1,5 @@
 import {
+  SHADER_CAMERA_POSITION_UNIFORM,
   SHADER_MATRIX_UNIFORM,
 } from "../gadget/basic/bindings";
 import {
@@ -19,8 +20,8 @@ export interface ShaderModuleStruct {
 
 export class ShaderGadgetModule {
   module: ShaderModuleStruct;
-  
-  constructor() {
+
+  constructor(device: GPUDevice, onLightChange?: () => void) {
     this.module = {
       structs: [
         new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
@@ -31,9 +32,13 @@ export class ShaderGadgetModule {
           define: SHADER_MATRIX_UNIFORM,
           type: "uniform",
         }),
+        new ShaderbindingGadget({
+          define: SHADER_CAMERA_POSITION_UNIFORM,
+          type: "uniform",
+        }),
       ],
       vertex: new ShaderVertexGadget({}),
-      fragment: new ShaderFragmentGadget({}),
+      fragment: new ShaderFragmentGadget({ device, onLightChange }),
     };
   }
 

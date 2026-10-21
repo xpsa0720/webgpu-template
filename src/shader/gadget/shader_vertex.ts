@@ -1,4 +1,5 @@
 import type { VertexLayout } from "../../util/vertex_layout";
+import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "../template3d";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
 type TypeFamily = "float" | "sint" | "uint";
@@ -78,30 +79,18 @@ export interface ShaderVertexGadgetParams extends ShaderGadgetParams {
 export class ShaderVertexGadget extends ShaderGadget {
   vertexInput: VertexInput[];
   constructor({ placeholder = {}, vertexInput }: ShaderVertexGadgetParams) {
-    placeholder["@VERTEX_INPUT"] =
-      "@location(0) pos: vec3f, @location(1) normal: vec3f";
-    super({placeholder});
+    placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
+    super({ placeholder });
     this.vertexInput = vertexInput ?? [];
   }
 
   getCode() {
-    let result = `
-  @vertex
-  fn vs(@VERTEX_INPUT) -> VertexOut {
-  var out:VertexOut;
-
-  out.position = matrix.mvpMatrix * vec4f(pos,1);
-  out.normal = matrix.normalMatrix * vec4f(normal,0);
-  out.color = vec4f(1,1,1,1);
-
-
-  return out;
-}`;
+    let result = SHADER_VERTEX_DEFAULT;
 
     return super.getCode(result);
   }
 
-  getVertexLayout():GPUVertexBufferLayout[] {
+  getVertexLayout(): GPUVertexBufferLayout[] {
     const layout: GPUVertexBufferLayout = {
       arrayStride: roundUp(4, FORMAT_TABLE["float32x3"].byteSize * 2),
       stepMode: "vertex",

@@ -3,6 +3,9 @@ import {
   Camera,
   Cube,
   Vector3,
+  Vector4,
+  PointLight,
+  AmbientLight,
 } from "@xpsa0720/webgpu";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
 
@@ -44,10 +47,40 @@ class App3D {
       render3DPass,
       location: new Vector3(0, 0, 0),
       rotate: new Vector3(0, 0, 60),
-      scale: new Vector3(1, 2, 1),
+      scale: new Vector3(1, 1, 1),
     });
 
     render3DPass.meshs.push(cube);
+
+    // PointLight 추가
+    render3DPass.addLight(new PointLight({ position: new Vector4(-2, 2, 2, 1) }));
+
+    // AmbientLight 추가
+    render3DPass.addLight(new AmbientLight({ intensity: 0.2 }));
+
+    // PointLight 동적 추가/제거 테스트 (1: 추가, 2: 제거)
+    let dynamicLights: PointLight[] = [];
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "1") {
+        const light = new PointLight({
+          position: new Vector4(
+            Math.random() * 6 - 3,
+            Math.random() * 6 - 3,
+            Math.random() * 6 - 3,
+            1,
+          ),
+          color: new Vector4(Math.random(), Math.random(), Math.random(), 1),
+        });
+        render3DPass.addLight(light);
+        dynamicLights.push(light);
+        console.log("PointLight 추가, 총:", dynamicLights.length);
+      }
+      if (e.key === "2" && dynamicLights.length > 0) {
+        const light = dynamicLights.pop()!;
+        render3DPass.removeLight(light);
+        console.log("PointLight 제거, 총:", dynamicLights.length);
+      }
+    });
 
     // 카메라 이동 (WASD/Space/Shift)
     const moveSpeed = 0.05;

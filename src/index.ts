@@ -29,6 +29,7 @@ export { Vertex } from "./3d/mesh/unit/vertex";
 export { Camera } from "./types/camera";
 export { createMatrix } from "./util/matrix";
 export { normalize } from "./util/math";
+export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
 
 // types
 export type { WebGPUBuffer, WebGPUTexture, WebGPUSampler } from "./types/resource";

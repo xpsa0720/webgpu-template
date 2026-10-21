@@ -1,5 +1,6 @@
 import type { Mesh } from "../3d/mesh/mesh";
 import { ShaderGadgetModule } from "../shader/core/shader_module";
+import { Light } from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
 import type { WebGPUBuffer } from "../types/resource";
 import { RenderPass, type RenderPassArg } from "./render_pass";
@@ -24,11 +25,17 @@ export declare class Render3DPass extends RenderPass {
     private depthTexture;
     private depthWidth;
     private depthHeight;
+    private lihgtUpdate;
     constructor(arg: Render3DPassArg);
     createShaderModule(): GPUShaderModule;
     settingPipeline(): GPURenderPipeline;
     private getTargetSize;
     private getAspect;
+    private get pointLightGadget();
+    private get ambientLightGadget();
+    private get directionalLightGadget();
+    addLight(light: Light): void;
+    removeLight(light: Light): any;
     encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
 }
 export {};
