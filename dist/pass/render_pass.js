@@ -53,35 +53,6 @@ export class RenderPass extends Pass {
         this.buffers = [];
         this.entries = [];
     }
-    // {
-    //   if (shaderCode) {
-    //     this.shaderModule = this.device.createShaderModule({
-    //       code: shaderCode,
-    //     });
-    //     this.shaderCode = shaderCode
-    //   }
-    //   const pipeline = this.device.createRenderPipeline({
-    //     layout: "auto",
-    //     vertex: {
-    //       entryPoint: this.vertexEntryPoint,
-    //       module: this.shaderModule,
-    //     },
-    //     fragment: {
-    //       entryPoint: this.fragmentEntryPoint,
-    //       module: this.shaderModule,
-    //       targets: [
-    //         {
-    //           format: this.format,
-    //           blend: this.blendState,
-    //         },
-    //       ],
-    //     },
-    //     primitive: {
-    //       topology: "triangle-list",
-    //     },
-    //   });
-    //   return pipeline;
-    // }
     deleteBuffer(bindigIdx) {
         if (!this.entries[bindigIdx]) {
             throw Error("No buffer at this binding index");
@@ -129,22 +100,6 @@ export class RenderPass extends Pass {
             });
         }
     }
-    // {
-    //   const pass = encoder.beginRenderPass(renderPassDescriptor);
-    //   pass.setPipeline(this.pipeline);
-    //   pass.setBindGroup(0, this.bindGroup);
-    //   if (this.bindGroupTex) {
-    //     pass.setBindGroup(1, this.bindGroupTex);
-    //   }
-    //   if (this.bindGroupSampler) {
-    //     pass.setBindGroup(2, this.bindGroupSampler);
-    //   }
-    //   pass.draw(
-    //     this.vertexCount,
-    //     this.instanceCount == 0 ? 1 : this.instanceCount,
-    //   );
-    //   pass.end();
-    // }
     createPass(encoder, debugArg) {
         this.ensureBindGroups();
         const view = this.context

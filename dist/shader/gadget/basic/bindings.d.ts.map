@@ -1,1 +1,1 @@
-{"version":3,"file":"bindings.d.ts","sourceRoot":"","sources":["../../../../src/shader/gadget/basic/bindings.ts"],"names":[],"mappings":"AAAA,eAAO,MAAM,qBAAqB,uDAAsD,CAAC;AACzF,eAAO,MAAM,8BAA8B,wDAAuD,CAAA"}
+{"version":3,"file":"bindings.d.ts","sourceRoot":"","sources":["../../../../src/shader/gadget/basic/bindings.ts"],"names":[],"mappings":"AAAA,eAAO,MAAM,qBAAqB,uDAAsD,CAAC;AACzF,eAAO,MAAM,8BAA8B,wDAAuD,CAAA;AAClG,eAAO,MAAM,sBAAsB,yDAAwD,CAAA"}

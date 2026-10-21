@@ -99,7 +99,7 @@ export class ShaderFragmentGadget extends ShaderGadget {
         let result = SHADER_FRAGMENT_DEFAULT;
         return super.getCode(result);
     }
-    getBindGroupEntry(device) {
+    getBindGroupEntry() {
         const result = [];
         this.lights.forEach((e) => {
             if (e.lights.length === 0)

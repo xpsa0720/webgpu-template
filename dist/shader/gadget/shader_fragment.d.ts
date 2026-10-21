@@ -17,6 +17,6 @@ export declare class ShaderFragmentGadget extends ShaderGadget {
     getLightStructsUniforms(): string;
     getLightCode(): string;
     getCode(): string;
-    getBindGroupEntry(device: GPUDevice): GPUBindGroupEntry[];
+    getBindGroupEntry(): GPUBindGroupEntry[];
 }
 //# sourceMappingURL=shader_fragment.d.ts.map

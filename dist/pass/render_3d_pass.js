@@ -1,7 +1,8 @@
 import { ShaderGadgetModule } from "../shader/core/shader_module";
+import { SHADER_MATRIAL_STRUCT, SHADER_MATRIX_STRUCT, } from "../shader/gadget/basic/structs";
 import { AmbientLight, DirectionalLight, Light, PointLight, } from "../shader/gadget/shader_light";
+import { wgslStructSize } from "../util/math";
 import { createMatrix } from "../util/matrix";
-import { vertexLayoutFromWGSL, } from "../util/vertex_layout";
 import { Pass } from "./pass";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
@@ -9,6 +10,7 @@ export class Render3DPass extends RenderPass {
     camera;
     matrixBuffer;
     cameraBuffer;
+    matrialBuffer;
     shaderGadgetModule;
     shaderModule;
     pipeline;
@@ -17,6 +19,7 @@ export class Render3DPass extends RenderPass {
     depthWidth = 0;
     depthHeight = 0;
     lihgtUpdate = true;
+    lightEntries = [];
     constructor(arg) {
         super(arg);
         this.meshs = arg.meshs ?? [];
@@ -30,13 +33,19 @@ export class Render3DPass extends RenderPass {
         this.camera = arg.camera;
         this.matrixBuffer = {
             buffer: this.device.createBuffer({
-                size: 16 * 3 * 4,
+                size: wgslStructSize(SHADER_MATRIX_STRUCT),
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
             }),
         };
         this.cameraBuffer = {
             buffer: this.device.createBuffer({
                 size: 4 * 4,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+            }),
+        };
+        this.matrialBuffer = {
+            buffer: this.device.createBuffer({
+                size: wgslStructSize(SHADER_MATRIAL_STRUCT),
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
             }),
         };
@@ -156,6 +165,10 @@ export class Render3DPass extends RenderPass {
         if (this.bindGroupSampler) {
             pass.setBindGroup(2, this.bindGroupSampler);
         }
+        if (this.lihgtUpdate) {
+            this.lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry();
+            this.lihgtUpdate = false;
+        }
         this.meshs.forEach((mesh) => {
             createMatrix(mesh, this.camera, aspect, this.device, this.matrixBuffer);
             this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, new Float32Array([
@@ -164,13 +177,14 @@ export class Render3DPass extends RenderPass {
                 this.camera.position.z,
                 1,
             ]));
-            const lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry(this.device);
+            this.device.queue.writeBuffer(this.matrialBuffer.buffer, 0, new Float32Array(mesh.matrial.getDataArray()));
             this.bindGroupMatrix = this.device.createBindGroup({
                 layout: this.pipeline.getBindGroupLayout(3),
                 entries: [
                     { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
                     { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
-                    ...lightEntries,
+                    { binding: 2, resource: { buffer: this.matrialBuffer.buffer } },
+                    ...this.lightEntries,
                 ],
             });
             pass.setBindGroup(3, this.bindGroupMatrix);

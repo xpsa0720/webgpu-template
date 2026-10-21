@@ -10,10 +10,18 @@ struct VertexOut {
     @location(1) color: vec4f,
     @location(2) world_position: vec4f,
 }
+struct Matrial {
+    baseColor: vec4f,
+}
+@group(3) @binding(2)
+var<uniform> matrial: Matrial;
+
 @group(3) @binding(0)
 var<uniform> matrix: Matrixs;
+
 @group(3) @binding(1)
 var<uniform> cameraPos: vec4f;
+
 
 @vertex
 fn vs(@location(0) pos: vec3f, @location(1) normal: vec3f) -> VertexOut {

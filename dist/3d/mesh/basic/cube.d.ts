@@ -1,5 +1,6 @@
 import type { Render3DPass } from "../../../pass/render_3d_pass";
 import { Vector3 } from "../../math/vector";
+import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
 export interface MeshParams {
     render3DPass: Render3DPass;
@@ -9,8 +10,9 @@ export interface MeshParams {
     width?: number;
     height?: number;
     depth?: number;
+    matrial?: Matrial;
 }
 export declare class Cube extends Mesh {
-    constructor({ location, rotate, scale, render3DPass, width, height, depth, }: MeshParams);
+    constructor({ location, rotate, scale, render3DPass, width, height, depth, matrial, }: MeshParams);
 }
 //# sourceMappingURL=cube.d.ts.map

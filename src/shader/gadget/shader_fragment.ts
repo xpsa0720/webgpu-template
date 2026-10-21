@@ -127,7 +127,7 @@ export class ShaderFragmentGadget extends ShaderGadget {
     return super.getCode(result);
   }
 
-  getBindGroupEntry(device: GPUDevice): GPUBindGroupEntry[] {
+  getBindGroupEntry(): GPUBindGroupEntry[] {
     const result: GPUBindGroupEntry[] = [];
 
     this.lights.forEach((e) => {

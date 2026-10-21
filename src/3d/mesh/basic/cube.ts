@@ -1,6 +1,7 @@
 import type { Render3DPass } from "../../../pass/render_3d_pass";
 import { Vector3 } from "../../math/vector";
 import { Geometry } from "../geometry/geometry";
+import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
 import { Vertex } from "../unit/vertex";
 export interface MeshParams {
@@ -11,6 +12,7 @@ export interface MeshParams {
   width?: number;
   height?: number;
   depth?: number;
+  matrial?: Matrial;
 }
 
 export class Cube extends Mesh {
@@ -22,6 +24,7 @@ export class Cube extends Mesh {
     width = 1,
     height = 1,
     depth = 1,
+    matrial = new Matrial({ color: new Vector3(1, 1, 1) }),
   }: MeshParams) {
     const vertex: Vertex[] = [
       //정면
@@ -96,6 +99,6 @@ export class Cube extends Mesh {
     ];
     const geometry = new Geometry(render3DPass, vertex, index);
 
-    super({ location, rotate, scale, geometry, render3DPass });
+    super({ location, rotate, scale, geometry, render3DPass, matrial });
   }
 }

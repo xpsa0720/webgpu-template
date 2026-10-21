@@ -1,5 +1,5 @@
-import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_MATRIX_UNIFORM, } from "../gadget/basic/bindings";
-import { SHADER_MATRIX_STRUCT, SHADER_VERTEXOUT_STRUCT, } from "../gadget/basic/structs";
+import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_MATRIAL_UNIFORM, SHADER_MATRIX_UNIFORM, } from "../gadget/basic/bindings";
+import { SHADER_MATRIAL_STRUCT, SHADER_MATRIX_STRUCT, SHADER_VERTEXOUT_STRUCT, } from "../gadget/basic/structs";
 import { ShaderbindingGadget } from "../gadget/shader_binding";
 import { ShaderFragmentGadget } from "../gadget/shader_fragment";
 import { ShaderStructGadget } from "../gadget/shader_struct";
@@ -11,6 +11,7 @@ export class ShaderGadgetModule {
             structs: [
                 new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
                 new ShaderStructGadget({ struct: SHADER_VERTEXOUT_STRUCT }),
+                new ShaderStructGadget({ struct: SHADER_MATRIAL_STRUCT }),
             ],
             bindings: [
                 new ShaderbindingGadget({
@@ -19,6 +20,10 @@ export class ShaderGadgetModule {
                 }),
                 new ShaderbindingGadget({
                     define: SHADER_CAMERA_POSITION_UNIFORM,
+                    type: "uniform",
+                }),
+                new ShaderbindingGadget({
+                    define: SHADER_MATRIAL_UNIFORM,
                     type: "uniform",
                 }),
             ],

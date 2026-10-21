@@ -1,9 +1,10 @@
 import { Vector3 } from "../../math/vector";
 import { Geometry } from "../geometry/geometry";
+import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
 import { Vertex } from "../unit/vertex";
 export class Cube extends Mesh {
-    constructor({ location, rotate, scale, render3DPass, width = 1, height = 1, depth = 1, }) {
+    constructor({ location, rotate, scale, render3DPass, width = 1, height = 1, depth = 1, matrial = new Matrial({ color: new Vector3(1, 1, 1) }), }) {
         const vertex = [
             //정면
             new Vertex({ location: new Vector3(-width / 2, -height / 2, depth / 2) }), //  3
@@ -63,7 +64,7 @@ export class Cube extends Mesh {
             20, 23, 21 //후면
         ];
         const geometry = new Geometry(render3DPass, vertex, index);
-        super({ location, rotate, scale, geometry, render3DPass });
+        super({ location, rotate, scale, geometry, render3DPass, matrial });
     }
 }
 //# sourceMappingURL=cube.js.map

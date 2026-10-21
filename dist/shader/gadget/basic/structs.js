@@ -11,4 +11,11 @@ struct VertexOut{
   @location(1) color:vec4f,
   @location(2) world_position:vec4f,
 }`;
+export const SHADER_MATRIAL_STRUCT = `
+struct Matrial {
+  baseColor: vec4f,
+  specualrColor: vec4f,
+  specualrStrength: f32,
+  specualrShininess: f32,
+}`;
 //# sourceMappingURL=structs.js.map

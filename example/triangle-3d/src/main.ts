@@ -6,6 +6,8 @@ import {
   Vector4,
   PointLight,
   AmbientLight,
+  Matrial,
+  Specular,
 } from "@xpsa0720/webgpu";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
 
@@ -41,6 +43,7 @@ class App3D {
     const render3DPass = this.wp.createRender3DPass(0, {
       target: this.canvas,
       camera,
+      blend: true,
     });
 
     const cube = new Cube({
@@ -48,15 +51,35 @@ class App3D {
       location: new Vector3(0, 0, 0),
       rotate: new Vector3(0, 0, 60),
       scale: new Vector3(1, 1, 1),
+      matrial: new Matrial({
+        color: new Vector3(0.2, 0.5, 1),
+        specular: new Specular({ strength: 0.8, shininess: 2 }),
+      }),
     });
 
     render3DPass.meshs.push(cube);
 
     // PointLight 추가
-    render3DPass.addLight(new PointLight({ position: new Vector4(-2, 2, 2, 1) }));
+    render3DPass.addLight(
+      new PointLight({ position: new Vector4(-2, 2, 2, 1), intensity: 10 }),
+    );
 
     // AmbientLight 추가
     render3DPass.addLight(new AmbientLight({ intensity: 0.2 }));
+
+    // 마우스 휠로 opacity 조절
+    this.canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        cube.matrial.opacity = Math.max(
+          0,
+          Math.min(1, cube.matrial.opacity - e.deltaY * 0.001),
+        );
+        console.log("opacity:", cube.matrial.opacity.toFixed(2));
+      },
+      { passive: false },
+    );
 
     // PointLight 동적 추가/제거 테스트 (1: 추가, 2: 제거)
     let dynamicLights: PointLight[] = [];

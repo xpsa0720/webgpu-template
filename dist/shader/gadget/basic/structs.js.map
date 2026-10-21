@@ -1,1 +1,1 @@
-{"version":3,"file":"structs.js","sourceRoot":"","sources":["../../../../src/shader/gadget/basic/structs.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,oBAAoB,GAAE;;;;;EAKjC,CAAC;AAEH,MAAM,CAAC,MAAM,uBAAuB,GACpC;;;;;;EAME,CAAA"}
+{"version":3,"file":"structs.js","sourceRoot":"","sources":["../../../../src/shader/gadget/basic/structs.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,oBAAoB,GAAG;;;;;EAKlC,CAAC;AAEH,MAAM,CAAC,MAAM,uBAAuB,GAAG;;;;;;EAMrC,CAAC;AAEH,MAAM,CAAC,MAAM,qBAAqB,GAAG;;;;;;EAMnC,CAAC"}

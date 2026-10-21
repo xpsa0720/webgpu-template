@@ -6,10 +6,12 @@ export class Mesh {
     rotate; // 방향 벡터가 아닌 각 축의 각도 기준 (0~360)
     scale;
     geometry;
-    constructor({ location, rotate, scale, geometry, render3DPass }) {
+    matrial;
+    constructor({ location, rotate, scale, geometry, render3DPass, matrial }) {
         this.render3DPass = render3DPass;
         this.location = location;
         this.geometry = geometry;
+        this.matrial = matrial;
         this.rotate = rotate ?? new Vector3(0);
         this.scale = scale ?? new Vector3(1, 1, 1);
     }

@@ -20,6 +20,8 @@ export { Camera } from "./types/camera";
 export { createMatrix } from "./util/matrix";
 export { normalize } from "./util/math";
 export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
+export { Matrial } from "./3d/mesh/matrial/matrial";
+export { Specular } from "./3d/mesh/matrial/specular";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map

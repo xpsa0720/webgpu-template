@@ -6,7 +6,7 @@ export const SHADER_VERTEX_DEFAULT = `
 
   out.position = matrix.mvpMatrix * vec4f(pos,1);
   out.normal = normalize(matrix.normalMatrix * vec4f(normal,0));
-  out.color = vec4f(1,1,1,1);
+  out.color = matrial.baseColor;
   out.world_position = matrix.modelMatrix * vec4f(pos,1);
 
   return out;
@@ -16,6 +16,14 @@ export const SHADER_FRAGMENT_DEFAULT = `
 
 @LIGHT_FUNCTIONS
 
+fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f) -> vec4f{
+  var specualr = pow(max(dot(r.xyz,v.xyz), 0), matrial.specualrShininess) * matrial.specualrStrength;
+  var color = lightColor.xyz;
+  var specualrColor = matrial.specualrColor.xyz;
+  var result = color*specualr * specualrColor;
+  return vec4f(result,1);
+}
+
 @fragment
 fn fs(out: VertexOut) -> @location(0) vec4f {
   var finalColor=vec4f();
@@ -23,6 +31,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
 
   @LIGHT_CODES
 
+  finalColor.a = out.color.a;
   return finalColor;
 }`;
 export const POINT_LIGHT = {
@@ -35,19 +44,21 @@ export const POINT_LIGHT = {
     countPlaceholder: "@POINT_LIGHT_COUNT",
     code: `
     for(var i=0; i< @POINT_LIGHT_COUNT; i++){
-      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, out.color,pointLight[i].color);
+      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, out.color,pointLight[i].color, pointLight[i].intensity);
     }
     `,
     func: `
-    fn PointLight_(lightPosition:vec4f, p:vec4f, normal: vec4f, baseColor: vec4f, lightColor:vec4f) -> vec4f{
+    fn PointLight_(lightPosition:vec4f, p:vec4f, normal: vec4f, baseColor: vec4f, lightColor:vec4f, intensity:f32) -> vec4f{
     let l = normalize(lightPosition - p);
     let v = normalize(cameraPos - p);
     let r = 2*dot(normal, l)*normal - l;
-    let d = abs(lightPosition - p);
+    let dist = length(lightPosition.xyz - p.xyz);
+    let attenuation = intensity / (dist * dist);
   
     let diffuse = max(dot(normal, l), 0);
-  
-    return (baseColor * diffuse * lightColor) * (1/d*d);
+    let diffuseColor = baseColor * diffuse * lightColor;
+    let specularColor = Speculer(l,r,v,normal, lightColor);
+    return (specularColor + diffuseColor) * attenuation;
   }`,
 };
 export const AMBIENT_LIGHT = {
