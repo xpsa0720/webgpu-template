@@ -11,24 +11,30 @@ import { AMBIENT_LIGHT, DIRECTIONAL_LIGHT, POINT_LIGHT, SHADER_FRAGMENT_DEFAULT 
 export interface ShaderFragmentGadgetParams extends ShaderGadgetParams {
   device: GPUDevice;
   onLightChange?: () => void;
+  code?: string;
 }
 
 export class ShaderFragmentGadget extends ShaderGadget {
   device: GPUDevice;
   shaderLights: Record<number, ShaderLightGadget<any>>;
+  bindGroupEntry!:GPUBindGroupEntry[];
+  code: string;
   private onLightChange?: () => void;
-  constructor({ placeholder = {}, device, onLightChange }: ShaderFragmentGadgetParams) {
+  constructor({ placeholder = {}, device, onLightChange, code }: ShaderFragmentGadgetParams) {
     super({ placeholder });
     this.device = device;
+    this.code = code ?? SHADER_FRAGMENT_DEFAULT;
     this.onLightChange = onLightChange;
     this.shaderLights = this.initLight();
     this.updatePlaceholder();
+    this.updateBindGroupEntray();
   }
 
   private wrapLightChange(): () => void {
     return () => {
       this.updatePlaceholder();
       this.onLightChange?.();
+    this.updateBindGroupEntray();
     };
   }
 
@@ -119,11 +125,11 @@ export class ShaderFragmentGadget extends ShaderGadget {
   }
 
   getCode() {
-    let result = SHADER_FRAGMENT_DEFAULT;
+    let result = this.code;
     return super.getCode(result);
   }
 
-  getBindGroupEntry(): GPUBindGroupEntry[] {
+  updateBindGroupEntray(){
     const result: GPUBindGroupEntry[] = [];
 
     this.lights.forEach((e) => {
@@ -131,6 +137,6 @@ export class ShaderFragmentGadget extends ShaderGadget {
       result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
     });
 
-    return result;
+    this.bindGroupEntry =result;
   }
 }

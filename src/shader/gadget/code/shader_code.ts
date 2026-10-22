@@ -31,30 +31,26 @@ struct Matrial {
 }`;
 
 
-
 export const SHADER_MATRIX_UNIFORM =`@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM =`@group(3) @binding(1) var<uniform> cameraPos:vec4f;`
-export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial;`
-export const SHADER_INSTANCE_FLAG_UNIFORM =`@group(3) @binding(3) var<uniform> instanceFlage: u32`
-
-export const SHADER_INSTANCE_MATRIX_UNIFORM =`@group(3) @binding(20) var<storage, read> instanceMvpMatrix: array<mat4x4<f32>>;`
-export const SHADER_INSTANCE_MATRIAL_UNIFORM =`@group(3) @binding(21) var<storage, read> instanceMatrial: array<Matrial>;`
-
-
+export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial`
+export const SHADER_INSTANCE_FLAG_UNIFORM =`@group(3) @binding(3) var<uniform> instanceFlag: u32`
 
 
 export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f`;
-export const SHADER_BUILTIN_INPUT = `@builtin(instance_index) instance_index : u32`;
 
 export const SHADER_VERTEX_DEFAULT = `
   @vertex
-  fn vs(@VERTEX_INPUT, @BUILTIN_INPUT) -> VertexOut {
+  fn vs(@VERTEX_INPUT) -> VertexOut {
   var out:VertexOut;
-
-  out.position = matrix.mvpMatrix * vec4f(pos,1);
-  out.normal = normalize(matrix.normalMatrix * vec4f(normal,0));
-  out.color = matrial.baseColor;
-  out.world_position = matrix.modelMatrix * vec4f(pos,1);
+  var mvp = matrix.mvpMatrix;
+  var normalizeNormal = matrix.normalMatrix;
+  var color = matrial.baseColor;
+  var world_position = matrix.modelMatrix;
+    out.position = mvp * vec4f(pos,1);
+    out.normal = normalize(normalizeNormal * vec4f(normal,0));;
+    out.color = color;
+    out.world_position = world_position * vec4f(pos,1);
 
   return out;
 }`;

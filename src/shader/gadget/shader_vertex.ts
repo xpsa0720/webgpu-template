@@ -1,6 +1,8 @@
-import type { Instance, InstanceMesh } from "../../3d/mesh/instance";
+import type { InstanceMesh } from "../../3d/mesh/instance";
+import { gpuBufferSizeFormat } from "../../util/math";
 import type { VertexLayout } from "../../util/vertex_layout";
-import { SHADER_BUILTIN_INPUT, SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
+import {  SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
+import { SHADER_BUILTIN_INPUT } from "./code/shader_instance";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
 type TypeFamily = "float" | "sint" | "uint";
@@ -77,30 +79,35 @@ export interface ShaderVertexGadgetParams extends ShaderGadgetParams {
   device: GPUDevice;
   vertexInput?: VertexInput[];
   instanceMesh?: InstanceMesh[];
+  code?: string;
 }
 
 export class ShaderVertexGadget extends ShaderGadget {
   device: GPUDevice;
   vertexInput: VertexInput[];
   instanceMesh: InstanceMesh[];
-  constructor({ placeholder = {}, device, vertexInput, instanceMesh }: ShaderVertexGadgetParams) {
+  code: string;
+  bindGroupEntry!:GPUBindGroupEntry[];
+  constructor({ placeholder = {}, device, vertexInput, instanceMesh, code }: ShaderVertexGadgetParams) {
     placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
     placeholder["@BUILTIN_INPUT"] = SHADER_BUILTIN_INPUT;
     super({ placeholder });
     this.device = device;
     this.vertexInput = vertexInput ?? [];
     this.instanceMesh = instanceMesh ?? [];
+    this.code = code ?? SHADER_VERTEX_DEFAULT;
+    this.updateBindGroupEntray();
   }
 
   getCode() {
-    let result = SHADER_VERTEX_DEFAULT;
+    let result = this.code;
 
     return super.getCode(result);
   }
 
   getVertexLayout(): GPUVertexBufferLayout[] {
     const layout: GPUVertexBufferLayout = {
-      arrayStride: roundUp(4, FORMAT_TABLE["float32x3"].byteSize * 2),
+      arrayStride: gpuBufferSizeFormat(FORMAT_TABLE["float32x3"].byteSize * 2),
       stepMode: "vertex",
       attributes: [
         { shaderLocation: 0, offset: 0, format: "float32x3" },
@@ -110,8 +117,15 @@ export class ShaderVertexGadget extends ShaderGadget {
 
     return [layout];
   }
-}
 
-function roundUp(k: number, n: number): number {
-  return Math.ceil(n / k) * k;
+  updateBindGroupEntray(){
+    const result: GPUBindGroupEntry[] = [];
+
+    this.lights.forEach((e) => {
+      if (e.lights.length === 0) return;
+      result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
+    });
+
+    this.bindGroupEntry =result;
+  }
 }

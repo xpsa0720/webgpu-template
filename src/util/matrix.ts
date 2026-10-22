@@ -90,7 +90,9 @@ function createScaleMatrix(scale: Vector3, inverse: boolean = false) {
   return Matrix;
 }
 
-function createModelMatrix(mesh: Mesh) {
+type Transform = Pick<Mesh, "location" | "rotate" | "scale">;
+
+function createModelMatrix(mesh: Transform) {
   const S = createScaleMatrix(mesh.scale);
   const R = createRotateMatrix(mesh.rotate);
   const T = createTranslateMatrix(mesh.location);
@@ -140,6 +142,25 @@ export function createProjectionMatrix(camera: Camera, aspect: number) {
   return V;
 }
 
+export function createViewProjectionMatrix(camera: Camera, aspect: number) {
+  return createViewMatrix(camera).multiply(createProjectionMatrix(camera, aspect));
+}
+
+export function createMatrixData(transform: Transform, viewProjection: Mat4x4) {
+  const M = createModelMatrix(transform);
+
+  // M.multiply(VP) → P * V * M (읽는 순서 = 적용 순서)
+  const MVP = M.multiply(viewProjection);
+
+  const S_inv = createScaleMatrix(transform.scale, true);
+  const R = createRotateMatrix(transform.rotate);
+  const NormalMatrix = S_inv.multiply(R);
+  const data = new Float32Array(48);
+  data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData(), ...M.getArrayData()], 0);
+
+  return data;
+}
+
 export function createMatrix(
   mesh: Mesh,
   camera: Camera,
@@ -147,20 +168,7 @@ export function createMatrix(
   device: GPUDevice,
   buffer: WebGPUBuffer
 ) {
-  const M = createModelMatrix(mesh);
-  const V = createViewMatrix(camera);
-  const P = createProjectionMatrix(camera, aspect);
-
-  // M.multiply(V).multiply(P) → P * V * M (읽는 순서 = 적용 순서)
-  const MVP = M.multiply(V).multiply(P);
-  
-  const S_inv = createScaleMatrix(mesh.scale, true);
-  const R = createRotateMatrix(mesh.rotate);
-  const NormalMatrix = S_inv.multiply(R);
-  // mat4x4(64bytes)
-  const data = new Float32Array(48);
-  data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData(), ...M.getArrayData()], 0);
-
+  const data = createMatrixData(mesh, createViewProjectionMatrix(camera, aspect));
   device.queue.writeBuffer(buffer.buffer, 0, data);
 
   return buffer;

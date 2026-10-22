@@ -1,5 +1,6 @@
 
-import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_INSTANCE_FLAG_UNIFORM, SHADER_MATRIAL_STRUCT, SHADER_MATRIAL_UNIFORM, SHADER_MATRIX_STRUCT, SHADER_MATRIX_UNIFORM, SHADER_VERTEXOUT_STRUCT } from "../gadget/code/shader_code";
+import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_INSTANCE_FLAG_UNIFORM,  SHADER_MATRIAL_STRUCT, SHADER_MATRIAL_UNIFORM, SHADER_MATRIX_STRUCT, SHADER_MATRIX_UNIFORM, SHADER_VERTEXOUT_STRUCT } from "../gadget/code/shader_code";
+import { SHADER_INSTANCE_MATRIX_STORAGE } from "../gadget/code/shader_instance";
 import { ShaderbindingGadget } from "../gadget/shader_binding";
 import { ShaderFragmentGadget } from "../gadget/shader_fragment";
 import { ShaderStructGadget } from "../gadget/shader_struct";
@@ -12,11 +13,27 @@ export interface ShaderModuleStruct {
   fragment: ShaderFragmentGadget;
 }
 
+export interface ShaderGadgetModuleParams {
+  device: GPUDevice;
+  onLightChange?: () => void;
+  viewShaderCode?: boolean;
+  bindings?: ShaderbindingGadget[];
+  vertexCode?: string;
+  fragmentCode?: string;
+}
+
 export class ShaderGadgetModule {
   module: ShaderModuleStruct;
   private viewShaderCode: boolean;
 
-  constructor(device: GPUDevice, onLightChange?: () => void, viewShaderCode = false) {
+  constructor({
+    device,
+    onLightChange,
+    viewShaderCode = false,
+    bindings = [],
+    vertexCode,
+    fragmentCode,
+  }: ShaderGadgetModuleParams) {
     this.viewShaderCode = viewShaderCode;
     this.module = {
       structs: [
@@ -26,24 +43,13 @@ export class ShaderGadgetModule {
       ],
       bindings: [
         new ShaderbindingGadget({
-          define: SHADER_MATRIX_UNIFORM,
-          type: "uniform",
-        }),
-        new ShaderbindingGadget({
           define: SHADER_CAMERA_POSITION_UNIFORM,
           type: "uniform",
         }),
-        new ShaderbindingGadget({
-          define: SHADER_MATRIAL_UNIFORM,
-          type: "uniform",
-        }),
-        new ShaderbindingGadget({
-          define: SHADER_INSTANCE_FLAG_UNIFORM,
-          type: "uniform",
-        }),
+        ...bindings,
       ],
-      vertex: new ShaderVertexGadget({ device }),
-      fragment: new ShaderFragmentGadget({ device, onLightChange }),
+      vertex: new ShaderVertexGadget({ device, code: vertexCode }),
+      fragment: new ShaderFragmentGadget({ device, onLightChange, code: fragmentCode }),
     };
   }
 

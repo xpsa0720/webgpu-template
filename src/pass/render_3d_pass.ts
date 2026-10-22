@@ -1,5 +1,13 @@
+import type { InstanceMesh } from "../3d/mesh/instance";
 import type { Mesh } from "../3d/mesh/mesh";
 import { ShaderGadgetModule } from "../shader/core/shader_module";
+import {
+  SHADER_CAMERA_POSITION_UNIFORM,
+  SHADER_MATRIAL_UNIFORM,
+  SHADER_MATRIX_UNIFORM,
+} from "../shader/gadget/code/shader_code";
+import { SHADER_INSTANCE_MATRIAL_STORAGE, SHADER_INSTANCE_MATRIX_STORAGE, SHADER_INSTANCE_VERTEX } from "../shader/gadget/code/shader_instance";
+import { ShaderbindingGadget } from "../shader/gadget/shader_binding";
 import {
   AmbientLight,
   DirectionalLight,
@@ -15,6 +23,7 @@ import { RenderPass, type RenderPassArg } from "./render_pass";
 interface Render3DPassArg extends RenderPassArg {
   target: GPUTexture | HTMLCanvasElement;
   meshs?: Mesh[];
+  instanceMesh?: InstanceMesh[];
   camera: Camera;
   loadOp?: GPULoadOp;
   format?: GPUTextureFormat;
@@ -24,9 +33,11 @@ interface Render3DPassArg extends RenderPassArg {
 
 export class Render3DPass extends RenderPass {
   meshs: Mesh[];
+  instanceMesh: InstanceMesh[];
   camera: Camera;
   cameraBuffer: WebGPUBuffer;
-  shaderGadgetModule: ShaderGadgetModule;
+  shaderMeshRenderGadgetModule: ShaderGadgetModule;
+  shaderInstanceRenderGadgetModule: ShaderGadgetModule;
   shaderModule: GPUShaderModule;
   pipeline: GPURenderPipeline;
 
@@ -34,17 +45,47 @@ export class Render3DPass extends RenderPass {
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
-  private lightUpdate = true;
-  private lightEntries: GPUBindGroupEntry[] = [];
-  private instanceEntries: GPUBindGroupEntry[] = [];
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
-    this.shaderGadgetModule = new ShaderGadgetModule(this.device, () => {
-      this.lightUpdate = true;
-      this.shaderModule = this.createShaderModule();
-      this.pipeline = this.settingPipeline();
-    }, arg.debugMode);
+    this.instanceMesh = arg.instanceMesh ??[];
+    this.shaderMeshRenderGadgetModule = new ShaderGadgetModule({
+      device: this.device,
+      onLightChange: () => {
+        this.shaderModule = this.createShaderModule();
+        this.pipeline = this.settingPipeline();
+      },
+      viewShaderCode: arg.debugMode,
+      bindings: [
+        new ShaderbindingGadget({
+          define: SHADER_MATRIX_UNIFORM,
+          type: "uniform",
+        }),
+        new ShaderbindingGadget({
+          define: SHADER_MATRIAL_UNIFORM,
+          type: "uniform",
+        }),
+      ],
+    });
+    this.shaderInstanceRenderGadgetModule = new ShaderGadgetModule({
+      device: this.device,
+      onLightChange: () => {
+        this.shaderModule = this.createShaderModule();
+        this.pipeline = this.settingPipeline();
+      },
+      viewShaderCode: arg.debugMode,
+      bindings: [
+        new ShaderbindingGadget({
+          define: SHADER_INSTANCE_MATRIX_STORAGE,
+          type: "storage",
+        }),
+        new ShaderbindingGadget({
+          define: SHADER_INSTANCE_MATRIAL_STORAGE,
+          type: "storage",
+        }),
+      ],
+      vertexCode: SHADER_INSTANCE_VERTEX
+    });
     this.shaderModule = this.createShaderModule();
     this.pipeline = this.settingPipeline();
     this.camera = arg.camera;
@@ -58,7 +99,7 @@ export class Render3DPass extends RenderPass {
 
   createShaderModule() {
     return this.device.createShaderModule({
-      code: this.shaderGadgetModule.getSourceCode(),
+      code: this.shaderMeshRenderGadgetModule.getSourceCode(),
     });
   }
 
@@ -66,12 +107,12 @@ export class Render3DPass extends RenderPass {
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
-        entryPoint: this.shaderGadgetModule.getVsEntryPoint(),
+        entryPoint: this.shaderMeshRenderGadgetModule.getVsEntryPoint(),
         module: this.shaderModule,
-        buffers: this.shaderGadgetModule.getVertexLayout(),
+        buffers: this.shaderMeshRenderGadgetModule.getVertexLayout(),
       },
       fragment: {
-        entryPoint: this.shaderGadgetModule.getFsEntryPoint(),
+        entryPoint: this.shaderMeshRenderGadgetModule.getFsEntryPoint(),
         module: this.shaderModule,
         targets: [
           {
@@ -107,15 +148,15 @@ export class Render3DPass extends RenderPass {
   }
 
   private get pointLightGadget() {
-    return this.shaderGadgetModule.module.fragment.shaderLights[0];
+    return this.shaderMeshRenderGadgetModule.module.fragment.shaderLights[0];
   }
 
   private get ambientLightGadget() {
-    return this.shaderGadgetModule.module.fragment.shaderLights[1];
+    return this.shaderMeshRenderGadgetModule.module.fragment.shaderLights[1];
   }
 
   private get directionalLightGadget() {
-    return this.shaderGadgetModule.module.fragment.shaderLights[2];
+    return this.shaderMeshRenderGadgetModule.module.fragment.shaderLights[2];
   }
 
   addLight(light: Light) {
@@ -179,12 +220,6 @@ export class Render3DPass extends RenderPass {
       pass.setBindGroup(2, this.bindGroupSampler);
     }
 
-    if (this.lightUpdate) {
-      this.lightEntries =
-        this.shaderGadgetModule.module.fragment.getBindGroupEntry();
-      this.lightUpdate = false;
-    }
-
     this.device.queue.writeBuffer(
       this.cameraBuffer.buffer,
       0,
@@ -215,15 +250,35 @@ export class Render3DPass extends RenderPass {
           { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
           { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
           { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
-          ...this.lightEntries,
+            ...this.shaderMeshRenderGadgetModule.module.fragment.bindGroupEntry
         ],
       });
 
       pass.setBindGroup(3, this.bindGroupMatrix);
-
       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
       pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint16");
       pass.drawIndexed(mesh.geometry.indexs.length);
+    });
+
+
+    this.instanceMesh.forEach((instanceMesh) => {
+      // 나중에 구현해야됨
+      // if (isView(mesh)) {
+
+      // }
+
+      this.bindGroupMatrix = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(3),
+        entries: [
+          { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+            ...this.shaderInstanceRenderGadgetModule.module.vertex.bindGroupEntry
+        ],
+      });
+
+      pass.setBindGroup(3, this.bindGroupMatrix);
+      pass.setVertexBuffer(0, instanceMesh.geometry.vertexBuffer.buffer);
+      pass.setIndexBuffer(instanceMesh.geometry.indexBuffer.buffer, "uint16");
+      pass.drawIndexed(instanceMesh.geometry.indexs.length, instanceMesh.count);
     });
 
     pass.end();
