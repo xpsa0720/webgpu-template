@@ -1,4 +1,4 @@
-import { SHADER_MATRIAL_STRUCT } from "../../../shader/gadget/basic/structs";
+import { SHADER_MATRIAL_STRUCT } from "../../../shader/gadget/code/shader_code";
 import { uniformData } from "../../../util/uniform";
 import { Vector4 } from "../../math/vector";
 import { Specular } from "./specular";

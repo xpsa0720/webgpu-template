@@ -10,7 +10,8 @@ export interface ShaderModuleStruct {
 }
 export declare class ShaderGadgetModule {
     module: ShaderModuleStruct;
-    constructor(device: GPUDevice, onLightChange?: () => void);
+    private viewShaderCode;
+    constructor(device: GPUDevice, onLightChange?: () => void, viewShaderCode?: boolean);
     getSourceCode(): string;
     getVsEntryPoint(): string;
     getFsEntryPoint(): string;

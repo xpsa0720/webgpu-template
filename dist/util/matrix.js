@@ -30,7 +30,7 @@ function createRotateMatrix(rotate, inverse = false) {
 export function createFowardRotateMatrix(rotate, inverse = false) {
     const rotate_X = rotate.x * (inverse ? -1 : 1);
     const rotate_Y = rotate.y * (inverse ? -1 : 1);
-    const rotate_Z = rotate.z * (inverse ? -1 : 1);
+    //   const rotate_Z = rotate.z * (inverse ? -1 : 1);
     const X_Matrix = new Mat3x3([
         new Vector3(1, 0, 0),
         new Vector3(0, Math.cos(rotate_X), Math.sin(rotate_X)),
@@ -82,7 +82,7 @@ function createModelMatrix(mesh) {
     const TRS = S.multiply(R).multiply(T);
     return TRS;
 }
-function createViewMatrix(camera) {
+export function createViewMatrix(camera) {
     // forward 방향에 카메라 회전 적용
     const rotMat = createFowardRotateMatrix(camera.rotate);
     const rawF = normalize(camera.target.copy().subtract(camera.position));
@@ -99,7 +99,7 @@ function createViewMatrix(camera) {
     ]);
     return V;
 }
-function createProjectionMatrix(camera, aspect) {
+export function createProjectionMatrix(camera, aspect) {
     const f = camera.far;
     const n = camera.near;
     const d = 1 / Math.tan(toRadian(camera.fov) / 2);

@@ -1,9 +1,54 @@
-export const SHADER_VERTEX_INPUT = 
-`@location(0) pos: vec3f, @location(1) normal: vec3f`;
+/**
+ * group(3) binding 할당 범위
+ *
+ * 0~9    : 기본 (matrix, camera, material 등)
+ * 10~19  : Light (pointLight, ambientLight, directionalLight)
+ * 20~29  : 인스턴싱 (예정)
+ * 30~    : 예약
+ */
+
+export const SHADER_MATRIX_STRUCT = `
+struct Matrixs{
+  mvpMatrix: mat4x4<f32>,
+  normalMatrix: mat4x4<f32>,
+  modelMatrix: mat4x4<f32>
+}`;
+
+export const SHADER_VERTEXOUT_STRUCT = `
+struct VertexOut{
+  @builtin(position) position:vec4f,
+  @location(0) normal:vec4f,
+  @location(1) color:vec4f,
+  @location(2) world_position:vec4f,
+}`;
+
+export const SHADER_MATRIAL_STRUCT = `
+struct Matrial {
+  baseColor: vec4f,
+  specualrColor: vec4f,
+  specualrStrength: f32,
+  specualrShininess: f32,
+}`;
+
+
+
+export const SHADER_MATRIX_UNIFORM =`@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
+export const SHADER_CAMERA_POSITION_UNIFORM =`@group(3) @binding(1) var<uniform> cameraPos:vec4f;`
+export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial;`
+export const SHADER_INSTANCE_FLAG_UNIFORM =`@group(3) @binding(3) var<uniform> instanceFlage: u32`
+
+export const SHADER_INSTANCE_MATRIX_UNIFORM =`@group(3) @binding(20) var<storage, read> instanceMvpMatrix: array<mat4x4<f32>>;`
+export const SHADER_INSTANCE_MATRIAL_UNIFORM =`@group(3) @binding(21) var<storage, read> instanceMatrial: array<Matrial>;`
+
+
+
+
+export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f`;
+export const SHADER_BUILTIN_INPUT = `@builtin(instance_index) instance_index : u32`;
 
 export const SHADER_VERTEX_DEFAULT = `
   @vertex
-  fn vs(@VERTEX_INPUT) -> VertexOut {
+  fn vs(@VERTEX_INPUT, @BUILTIN_INPUT) -> VertexOut {
   var out:VertexOut;
 
   out.position = matrix.mvpMatrix * vec4f(pos,1);
@@ -92,7 +137,7 @@ export const AMBIENT_LIGHT: ShaderLightGadgetTemplate = {
   `,
 };
 
-export const DIRECTIONAL_LIHGT: ShaderLightGadgetTemplate = {
+export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate = {
   struct: `struct DirectionalLight{
     directional: vec4f,
     intensity: f32,

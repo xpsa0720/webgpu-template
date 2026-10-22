@@ -1,9 +1,4 @@
-import {
-  AMBIENT_LIGHT,
-  DIRECTIONAL_LIHGT,
-  POINT_LIGHT,
-  SHADER_FRAGMENT_DEFAULT,
-} from "../template3d";
+
 import type { ShaderLightGadget } from "./shader_light";
 import {
   ShaderAmbientLightGadget,
@@ -11,6 +6,7 @@ import {
   ShaderPointLightGadget,
 } from "./shader_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
+import { AMBIENT_LIGHT, DIRECTIONAL_LIGHT, POINT_LIGHT, SHADER_FRAGMENT_DEFAULT } from "./code/shader_code";
 
 export interface ShaderFragmentGadgetParams extends ShaderGadgetParams {
   device: GPUDevice;
@@ -64,13 +60,13 @@ export class ShaderFragmentGadget extends ShaderGadget {
         onLightChange: this.wrapLightChange(),
       }),
       new ShaderDirectionalLightGadget({
-        struct: DIRECTIONAL_LIHGT.struct,
-        define: DIRECTIONAL_LIHGT.define,
-        countPlaceholder: DIRECTIONAL_LIHGT.countPlaceholder,
+        struct: DIRECTIONAL_LIGHT.struct,
+        define: DIRECTIONAL_LIGHT.define,
+        countPlaceholder: DIRECTIONAL_LIGHT.countPlaceholder,
         group: 3,
         binding: 12,
-        code: DIRECTIONAL_LIHGT.code,
-        func: DIRECTIONAL_LIHGT.func,
+        code: DIRECTIONAL_LIGHT.code,
+        func: DIRECTIONAL_LIGHT.func,
         device: this.device,
         onLightChange: this.wrapLightChange(),
       }),

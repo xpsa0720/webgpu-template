@@ -1,4 +1,5 @@
 import type { Render3DPass } from "../../pass/render_3d_pass";
+import type { WebGPUBuffer } from "../../types/resource";
 import { Vector3 } from "../math/vector";
 import { Geometry } from "./geometry/geometry";
 import type { Matrial } from "./matrial/matrial";
@@ -17,6 +18,11 @@ export declare class Mesh {
     scale: Vector3;
     geometry: Geometry;
     matrial: Matrial;
-    constructor({ location, rotate, scale, geometry, render3DPass, matrial }: MeshParams);
+    matrixBuffer: WebGPUBuffer;
+    matrialBuffer: WebGPUBuffer;
+    AabbCenter: Vector3;
+    AabbRadius: number;
+    constructor({ location, rotate, scale, geometry, render3DPass, matrial, }: MeshParams);
+    private AABB;
 }
 //# sourceMappingURL=mesh.d.ts.map

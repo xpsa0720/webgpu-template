@@ -1,13 +1,5 @@
-import {
-  SHADER_CAMERA_POSITION_UNIFORM,
-  SHADER_MATRIAL_UNIFORM,
-  SHADER_MATRIX_UNIFORM,
-} from "../gadget/basic/bindings";
-import {
-  SHADER_MATRIAL_STRUCT,
-  SHADER_MATRIX_STRUCT,
-  SHADER_VERTEXOUT_STRUCT,
-} from "../gadget/basic/structs";
+
+import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_INSTANCE_FLAG_UNIFORM, SHADER_MATRIAL_STRUCT, SHADER_MATRIAL_UNIFORM, SHADER_MATRIX_STRUCT, SHADER_MATRIX_UNIFORM, SHADER_VERTEXOUT_STRUCT } from "../gadget/code/shader_code";
 import { ShaderbindingGadget } from "../gadget/shader_binding";
 import { ShaderFragmentGadget } from "../gadget/shader_fragment";
 import { ShaderStructGadget } from "../gadget/shader_struct";
@@ -22,8 +14,10 @@ export interface ShaderModuleStruct {
 
 export class ShaderGadgetModule {
   module: ShaderModuleStruct;
+  private viewShaderCode: boolean;
 
-  constructor(device: GPUDevice, onLightChange?: () => void) {
+  constructor(device: GPUDevice, onLightChange?: () => void, viewShaderCode = false) {
+    this.viewShaderCode = viewShaderCode;
     this.module = {
       structs: [
         new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
@@ -43,8 +37,12 @@ export class ShaderGadgetModule {
           define: SHADER_MATRIAL_UNIFORM,
           type: "uniform",
         }),
+        new ShaderbindingGadget({
+          define: SHADER_INSTANCE_FLAG_UNIFORM,
+          type: "uniform",
+        }),
       ],
-      vertex: new ShaderVertexGadget({}),
+      vertex: new ShaderVertexGadget({ device }),
       fragment: new ShaderFragmentGadget({ device, onLightChange }),
     };
   }
@@ -63,7 +61,9 @@ export class ShaderGadgetModule {
     result += this.module.vertex.getCode();
     result += this.module.fragment.getCode();
 
-    console.log(result)
+    if (this.viewShaderCode) {
+      console.log(result);
+    }
 
     return result;
   }

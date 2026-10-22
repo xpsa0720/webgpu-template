@@ -1,21 +1,15 @@
 import type { Mesh } from "../3d/mesh/mesh";
 import { ShaderGadgetModule } from "../shader/core/shader_module";
 import {
-  SHADER_MATRIAL_STRUCT,
-  SHADER_MATRIX_STRUCT,
-} from "../shader/gadget/basic/structs";
-import {
   AmbientLight,
   DirectionalLight,
   Light,
   PointLight,
 } from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
-import type { OutGPUBuffer } from "../types/pass";
 import type { WebGPUBuffer } from "../types/resource";
-import { wgslStructSize } from "../util/math";
+import { isView } from "../util/math";
 import { createMatrix } from "../util/matrix";
-import { Pass, type DebugPassArg, type PassArg } from "./pass";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 
 interface Render3DPassArg extends RenderPassArg {
@@ -31,9 +25,7 @@ interface Render3DPassArg extends RenderPassArg {
 export class Render3DPass extends RenderPass {
   meshs: Mesh[];
   camera: Camera;
-  matrixBuffer: WebGPUBuffer;
   cameraBuffer: WebGPUBuffer;
-  matrialBuffer: WebGPUBuffer;
   shaderGadgetModule: ShaderGadgetModule;
   shaderModule: GPUShaderModule;
   pipeline: GPURenderPipeline;
@@ -42,34 +34,23 @@ export class Render3DPass extends RenderPass {
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
-  private lihgtUpdate = true;
+  private lightUpdate = true;
   private lightEntries: GPUBindGroupEntry[] = [];
+  private instanceEntries: GPUBindGroupEntry[] = [];
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
     this.shaderGadgetModule = new ShaderGadgetModule(this.device, () => {
-      this.lihgtUpdate = true;
+      this.lightUpdate = true;
       this.shaderModule = this.createShaderModule();
       this.pipeline = this.settingPipeline();
-    });
+    }, arg.debugMode);
     this.shaderModule = this.createShaderModule();
     this.pipeline = this.settingPipeline();
     this.camera = arg.camera;
-    this.matrixBuffer = {
-      buffer: this.device.createBuffer({
-        size: wgslStructSize(SHADER_MATRIX_STRUCT),
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-      }),
-    };
     this.cameraBuffer = {
       buffer: this.device.createBuffer({
         size: 4 * 4,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-      }),
-    };
-    this.matrialBuffer = {
-      buffer: this.device.createBuffer({
-        size: wgslStructSize(SHADER_MATRIAL_STRUCT),
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
@@ -198,26 +179,32 @@ export class Render3DPass extends RenderPass {
       pass.setBindGroup(2, this.bindGroupSampler);
     }
 
-    if (this.lihgtUpdate) {
-      this.lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry();
-      this.lihgtUpdate = false;
+    if (this.lightUpdate) {
+      this.lightEntries =
+        this.shaderGadgetModule.module.fragment.getBindGroupEntry();
+      this.lightUpdate = false;
     }
 
+    this.device.queue.writeBuffer(
+      this.cameraBuffer.buffer,
+      0,
+      new Float32Array([
+        this.camera.position.x,
+        this.camera.position.y,
+        this.camera.position.z,
+        1,
+      ]),
+    );
+
     this.meshs.forEach((mesh) => {
-      createMatrix(mesh, this.camera, aspect, this.device, this.matrixBuffer);
-      this.device.queue.writeBuffer(
-        this.cameraBuffer.buffer,
-        0,
-        new Float32Array([
-          this.camera.position.x,
-          this.camera.position.y,
-          this.camera.position.z,
-          1,
-        ]),
-      );
+      // 나중에 구현해야됨
+      // if (isView(mesh)) {
+
+      // }
+      createMatrix(mesh, this.camera, aspect, this.device, mesh.matrixBuffer);
 
       this.device.queue.writeBuffer(
-        this.matrialBuffer.buffer,
+        mesh.matrialBuffer.buffer,
         0,
         new Float32Array(mesh.matrial.getDataArray()),
       );
@@ -225,9 +212,9 @@ export class Render3DPass extends RenderPass {
       this.bindGroupMatrix = this.device.createBindGroup({
         layout: this.pipeline.getBindGroupLayout(3),
         entries: [
-          { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
+          { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
           { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
-          { binding: 2, resource: { buffer: this.matrialBuffer.buffer } },
+          { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
           ...this.lightEntries,
         ],
       });

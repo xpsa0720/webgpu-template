@@ -10,6 +10,8 @@ export declare class Vector3 {
     add(A: Vector3): this;
     subtract(A: Vector3): this;
     array(): number[];
+    static min(a: Vector3, b: Vector3): Vector3;
+    static max(a: Vector3, b: Vector3): Vector3;
 }
 export declare class Vector4 extends Vector3 {
     w: number;
@@ -20,5 +22,6 @@ export declare class Vector4 extends Vector3 {
     copy(): Vector4;
     subtract(A: Vector4): this;
     array(): number[];
+    toVector3(): Vector3;
 }
 //# sourceMappingURL=vector.d.ts.map

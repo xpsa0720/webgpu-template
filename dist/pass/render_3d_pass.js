@@ -1,16 +1,12 @@
 import { ShaderGadgetModule } from "../shader/core/shader_module";
-import { SHADER_MATRIAL_STRUCT, SHADER_MATRIX_STRUCT, } from "../shader/gadget/basic/structs";
 import { AmbientLight, DirectionalLight, Light, PointLight, } from "../shader/gadget/shader_light";
-import { wgslStructSize } from "../util/math";
+import { isView } from "../util/math";
 import { createMatrix } from "../util/matrix";
-import { Pass } from "./pass";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
     meshs;
     camera;
-    matrixBuffer;
     cameraBuffer;
-    matrialBuffer;
     shaderGadgetModule;
     shaderModule;
     pipeline;
@@ -18,34 +14,23 @@ export class Render3DPass extends RenderPass {
     depthTexture = null;
     depthWidth = 0;
     depthHeight = 0;
-    lihgtUpdate = true;
+    lightUpdate = true;
     lightEntries = [];
+    instanceEntries = [];
     constructor(arg) {
         super(arg);
         this.meshs = arg.meshs ?? [];
         this.shaderGadgetModule = new ShaderGadgetModule(this.device, () => {
-            this.lihgtUpdate = true;
+            this.lightUpdate = true;
             this.shaderModule = this.createShaderModule();
             this.pipeline = this.settingPipeline();
-        });
+        }, arg.debugMode);
         this.shaderModule = this.createShaderModule();
         this.pipeline = this.settingPipeline();
         this.camera = arg.camera;
-        this.matrixBuffer = {
-            buffer: this.device.createBuffer({
-                size: wgslStructSize(SHADER_MATRIX_STRUCT),
-                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-            }),
-        };
         this.cameraBuffer = {
             buffer: this.device.createBuffer({
                 size: 4 * 4,
-                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-            }),
-        };
-        this.matrialBuffer = {
-            buffer: this.device.createBuffer({
-                size: wgslStructSize(SHADER_MATRIAL_STRUCT),
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
             }),
         };
@@ -165,25 +150,29 @@ export class Render3DPass extends RenderPass {
         if (this.bindGroupSampler) {
             pass.setBindGroup(2, this.bindGroupSampler);
         }
-        if (this.lihgtUpdate) {
-            this.lightEntries = this.shaderGadgetModule.module.fragment.getBindGroupEntry();
-            this.lihgtUpdate = false;
+        if (this.lightUpdate) {
+            this.lightEntries =
+                this.shaderGadgetModule.module.fragment.getBindGroupEntry();
+            this.lightUpdate = false;
         }
+        this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, new Float32Array([
+            this.camera.position.x,
+            this.camera.position.y,
+            this.camera.position.z,
+            1,
+        ]));
         this.meshs.forEach((mesh) => {
-            createMatrix(mesh, this.camera, aspect, this.device, this.matrixBuffer);
-            this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, new Float32Array([
-                this.camera.position.x,
-                this.camera.position.y,
-                this.camera.position.z,
-                1,
-            ]));
-            this.device.queue.writeBuffer(this.matrialBuffer.buffer, 0, new Float32Array(mesh.matrial.getDataArray()));
+            // 나중에 구현해야됨
+            // if (isView(mesh)) {
+            // }
+            createMatrix(mesh, this.camera, aspect, this.device, mesh.matrixBuffer);
+            this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, new Float32Array(mesh.matrial.getDataArray()));
             this.bindGroupMatrix = this.device.createBindGroup({
                 layout: this.pipeline.getBindGroupLayout(3),
                 entries: [
-                    { binding: 0, resource: { buffer: this.matrixBuffer.buffer } },
+                    { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
                     { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
-                    { binding: 2, resource: { buffer: this.matrialBuffer.buffer } },
+                    { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
                     ...this.lightEntries,
                 ],
             });

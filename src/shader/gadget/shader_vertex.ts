@@ -1,5 +1,6 @@
+import type { Instance, InstanceMesh } from "../../3d/mesh/instance";
 import type { VertexLayout } from "../../util/vertex_layout";
-import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "../template3d";
+import { SHADER_BUILTIN_INPUT, SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
 type TypeFamily = "float" | "sint" | "uint";
@@ -73,15 +74,22 @@ interface VertexInput {
 }
 
 export interface ShaderVertexGadgetParams extends ShaderGadgetParams {
+  device: GPUDevice;
   vertexInput?: VertexInput[];
+  instanceMesh?: InstanceMesh[];
 }
 
 export class ShaderVertexGadget extends ShaderGadget {
+  device: GPUDevice;
   vertexInput: VertexInput[];
-  constructor({ placeholder = {}, vertexInput }: ShaderVertexGadgetParams) {
+  instanceMesh: InstanceMesh[];
+  constructor({ placeholder = {}, device, vertexInput, instanceMesh }: ShaderVertexGadgetParams) {
     placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
+    placeholder["@BUILTIN_INPUT"] = SHADER_BUILTIN_INPUT;
     super({ placeholder });
+    this.device = device;
     this.vertexInput = vertexInput ?? [];
+    this.instanceMesh = instanceMesh ?? [];
   }
 
   getCode() {

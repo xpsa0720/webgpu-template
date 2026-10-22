@@ -4,7 +4,7 @@ import { Geometry } from "../geometry/geometry";
 import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
 import { Vertex } from "../unit/vertex";
-export interface MeshParams {
+interface MeshParams {
   render3DPass: Render3DPass;
   location: Vector3;
   rotate?: Vector3;
@@ -14,7 +14,6 @@ export interface MeshParams {
   depth?: number;
   matrial?: Matrial;
 }
-
 export class Cube extends Mesh {
   constructor({
     location,

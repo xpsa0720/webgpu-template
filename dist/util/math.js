@@ -1,4 +1,5 @@
 import { Vector3 } from "../3d/math/vector";
+import { createProjectionMatrix, createViewMatrix } from "./matrix";
 export function normalize(vec) {
     const denominator = Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
     return new Vector3(vec.x / denominator, vec.y / denominator, vec.z / denominator);
@@ -92,5 +93,24 @@ export function wgslStructSize(structCode) {
     }
     // 최종 크기를 struct alignment의 배수로 올림
     return Math.ceil(offset / structAlignment) * structAlignment;
+}
+// 나중에 구현해야됨 
+export function isView(mesh, camera, aspect) {
+    const V = createViewMatrix(camera);
+    const P = createProjectionMatrix(camera, aspect);
+    const O = mesh.AabbCenter.copy().add(mesh.location);
+    const r = mesh.AabbRadius;
+    const PV = P.multiply(V);
+    const left = PV.getRow(3).add(PV.getRow(0)).toVector3();
+    const right = PV.getRow(3).subtract(PV.getRow(0)).toVector3();
+    const bottom = PV.getRow(3).add(PV.getRow(1)).toVector3();
+    const top = PV.getRow(3).subtract(PV.getRow(1)).toVector3();
+    const near = PV.getRow(3).add(PV.getRow(2)).toVector3();
+    const far = PV.getRow(3).subtract(PV.getRow(2)).toVector3();
+    return true;
+}
+export function distance(a, b) {
+    const diff = a.copy().subtract(b);
+    return Math.sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
 }
 //# sourceMappingURL=math.js.map

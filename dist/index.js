@@ -14,6 +14,7 @@ export { Vector3, Vector4 } from "./3d/math/vector";
 export { Mat3x3, Mat4x4 } from "./3d/math/matrix";
 export { Mesh } from "./3d/mesh/mesh";
 export { Cube } from "./3d/mesh/basic/cube";
+export { Sphere } from "./3d/mesh/basic/sphere";
 export { Geometry } from "./3d/mesh/geometry/geometry";
 export { Vertex } from "./3d/mesh/unit/vertex";
 export { Camera } from "./types/camera";

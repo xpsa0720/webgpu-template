@@ -5,6 +5,7 @@ export const DEFAULT_CONFIG = {
     debugPrint: false,
     debugPassTimestamp: false,
     debugSampleInterval: 60,
+    debugViewShaderCode: false,
     fps: true,
 };
 //# sourceMappingURL=config.js.map

@@ -161,7 +161,7 @@ export class WP {
             target: arg.target,
             format: arg.format,
             blend: arg.blend,
-            debugMode: this.config.debugMode,
+            debugMode: arg.debugMode ?? this.config.debugMode,
             camera: arg.camera,
             meshs: arg.meshs,
         });

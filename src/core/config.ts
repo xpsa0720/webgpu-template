@@ -5,6 +5,7 @@ export interface WPConfig {
   debugPrint?: boolean;
   debugPassTimestamp?: boolean;
   debugSampleInterval?: number;
+  debugViewShaderCode?: boolean;
   fps?: boolean;
 }
 
@@ -15,5 +16,6 @@ export const DEFAULT_CONFIG: Required<WPConfig> = {
   debugPrint: false,
   debugPassTimestamp: false,
   debugSampleInterval: 60,
+  debugViewShaderCode: false,
   fps: true,
 };

@@ -31,6 +31,18 @@ export class Vector3 {
     array() {
         return [this.x, this.y, this.z, 0];
     }
+    static min(a, b) {
+        const x = Math.min(a.x, b.x);
+        const y = Math.min(a.y, b.y);
+        const z = Math.min(a.z, b.z);
+        return new Vector3(x, y, z);
+    }
+    static max(a, b) {
+        const x = Math.max(a.x, b.x);
+        const y = Math.max(a.y, b.y);
+        const z = Math.max(a.z, b.z);
+        return new Vector3(x, y, z);
+    }
 }
 export class Vector4 extends Vector3 {
     w;
@@ -72,6 +84,9 @@ export class Vector4 extends Vector3 {
     }
     array() {
         return [this.x, this.y, this.z, this.w];
+    }
+    toVector3() {
+        return new Vector3(this.x, this.y, this.z);
     }
 }
 //# sourceMappingURL=vector.js.map

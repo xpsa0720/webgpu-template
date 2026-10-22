@@ -16,9 +16,7 @@ interface Render3DPassArg extends RenderPassArg {
 export declare class Render3DPass extends RenderPass {
     meshs: Mesh[];
     camera: Camera;
-    matrixBuffer: WebGPUBuffer;
     cameraBuffer: WebGPUBuffer;
-    matrialBuffer: WebGPUBuffer;
     shaderGadgetModule: ShaderGadgetModule;
     shaderModule: GPUShaderModule;
     pipeline: GPURenderPipeline;
@@ -26,8 +24,9 @@ export declare class Render3DPass extends RenderPass {
     private depthTexture;
     private depthWidth;
     private depthHeight;
-    private lihgtUpdate;
+    private lightUpdate;
     private lightEntries;
+    private instanceEntries;
     constructor(arg: Render3DPassArg);
     createShaderModule(): GPUShaderModule;
     settingPipeline(): GPURenderPipeline;

@@ -2,6 +2,7 @@ import {
   WP,
   Camera,
   Cube,
+  Sphere,
   Vector3,
   Vector4,
   PointLight,
@@ -46,11 +47,13 @@ class App3D {
       target: this.canvas,
       camera,
       blend: true,
+      debugMode: true,
+      
     });
 
     const cube = new Cube({
       render3DPass,
-      location: new Vector3(0, 0, 0),
+      location: new Vector3(2, 0, 0),
       rotate: new Vector3(0, 0, 60),
       scale: new Vector3(1, 1, 1),
       matrial: new Matrial({
@@ -59,7 +62,17 @@ class App3D {
       }),
     });
 
+    const sphere = new Sphere({
+      render3DPass,
+      location: new Vector3(2, 5, 0),
+      matrial: new Matrial({
+        color: new Vector3(1, 0.3, 0.3),
+        specular: new Specular({ strength: 0.8, shininess: 4 }),
+      }),
+    });
+
     render3DPass.meshs.push(cube);
+    render3DPass.meshs.push(sphere);
 
     // PointLight 추가
     render3DPass.addLight(

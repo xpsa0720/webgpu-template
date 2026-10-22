@@ -101,7 +101,7 @@ function createModelMatrix(mesh: Mesh) {
   return TRS;
 }
 
-function createViewMatrix(camera: Camera) {
+export function createViewMatrix(camera: Camera) {
   // forward 방향에 카메라 회전 적용
   const rotMat = createFowardRotateMatrix(camera.rotate);
   const rawF = normalize(camera.target.copy().subtract(camera.position));
@@ -121,7 +121,7 @@ function createViewMatrix(camera: Camera) {
   return V;
 }
 
-function createProjectionMatrix(camera: Camera, aspect: number) {
+export function createProjectionMatrix(camera: Camera, aspect: number) {
   const f = camera.far;
   const n = camera.near;
   const d = 1 / Math.tan(toRadian(camera.fov) / 2);
