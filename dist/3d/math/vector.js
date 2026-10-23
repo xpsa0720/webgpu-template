@@ -1,3 +1,40 @@
+export class Vector2 {
+    x;
+    y;
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+    dot(other) {
+        return this.x * other.x + this.y * other.y;
+    }
+    copy() {
+        return new Vector2(this.x, this.y);
+    }
+    add(A) {
+        this.x += A.x;
+        this.y += A.y;
+        return this;
+    }
+    subtract(A) {
+        this.x -= A.x;
+        this.y -= A.y;
+        return this;
+    }
+    array() {
+        return [this.x, this.y];
+    }
+    static min(a, b) {
+        const x = Math.min(a.x, b.x);
+        const y = Math.min(a.y, b.y);
+        return new Vector2(x, y);
+    }
+    static max(a, b) {
+        const x = Math.max(a.x, b.x);
+        const y = Math.max(a.y, b.y);
+        return new Vector2(x, y);
+    }
+}
 export class Vector3 {
     x;
     y;

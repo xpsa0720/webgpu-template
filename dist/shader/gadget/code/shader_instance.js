@@ -46,7 +46,8 @@ export const SHADER_INSTANCE_VERTEX = `
   out.color = color;
   out.world_position = model * vec4f(pos,1);
   out.instance_index = instance_index;
-
+  out.uv = uv;
+  
   return out;
 }`;
 //# sourceMappingURL=shader_instance.js.map

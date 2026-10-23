@@ -21,6 +21,7 @@ struct VertexOut{
   @location(1) color:vec4f,
   @location(2) world_position:vec4f,
   @location(3) @interpolate(flat) instance_index:u32,
+  @location(4) uv:vec2f,
 }`;
 
 export const SHADER_MATRIAL_STRUCT = `
@@ -38,7 +39,7 @@ export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial
 export const SHADER_INSTANCE_FLAG_UNIFORM =`@group(3) @binding(3) var<uniform> instanceFlag: u32`
 
 
-export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f`;
+export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f`;
 
 export const SHADER_VERTEX_DEFAULT = `
   @vertex
@@ -54,6 +55,7 @@ export const SHADER_VERTEX_DEFAULT = `
   out.color = color;
   out.world_position = world_position * vec4f(pos,1);
   out.instance_index = instance_index;
+  out.uv = uv;
 
   return out;
 }`;

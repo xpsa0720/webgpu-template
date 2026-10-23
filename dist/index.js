@@ -24,6 +24,8 @@ export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadg
 export { Matrial } from "./3d/mesh/matrial/matrial";
 export { Specular } from "./3d/mesh/matrial/specular";
 export { InstanceMesh } from "./3d/mesh/instance";
+export { Vector2 } from "./3d/math/vector";
+export { loadModel, loadOBJ, loadGLTF } from "./3d/loader/index";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map

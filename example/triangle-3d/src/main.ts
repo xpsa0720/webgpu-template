@@ -11,6 +11,11 @@ import {
   Specular,
   Mat3x3,
   InstanceMesh,
+  Geometry,
+  Mesh,
+  loadModel,
+  loadOBJ,
+  loadGLTF,
 } from "@xpsa0720/webgpu";
 import { toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
@@ -75,6 +80,56 @@ class App3D {
     render3DPass.meshs.push(cube);
     render3DPass.meshs.push(sphere);
 
+    // === OBJ 로더 테스트: public/test_cube.obj 로드 ===
+    try {
+      const objResult = await loadOBJ("/test_cube.obj");
+      console.log(`OBJ 로드 성공: vertices=${objResult.vertices.length}, indices=${objResult.indices.length}`);
+      const objGeometry = new Geometry(render3DPass, objResult.vertices, objResult.indices);
+      const objMesh = new Mesh({
+        render3DPass,
+        geometry: objGeometry,
+        location: new Vector3(-2, 0, 0),
+        matrial: new Matrial({
+          color: new Vector3(0.2, 1, 0.5),
+          specular: new Specular({ strength: 0.8, shininess: 4 }),
+        }),
+      });
+      render3DPass.meshs.push(objMesh);
+      console.log("OBJ 메시 렌더링 등록 완료");
+    } catch (e) {
+      console.error("OBJ 로드 실패:", e);
+    }
+
+    // === 파일 드래그 앤 드롭으로 3D 모델 로드 (OBJ/glTF/GLB) ===
+    this.canvas.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+    this.canvas.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      console.log(`파일 드롭: ${Array.from(files).map(f => f.name).join(", ")}`);
+      try {
+        // FileList 전체 전달 (.gltf + .bin 등 동반 파일 지원)
+        const result = await loadModel(files);
+        console.log(`모델 로드 성공: vertices=${result.vertices.length}, indices=${result.indices.length}`);
+        const geometry = new Geometry(render3DPass, result.vertices, result.indices);
+        const mesh = new Mesh({
+          render3DPass,
+          geometry,
+          location: new Vector3(0, 0, 0),
+          matrial: new Matrial({
+            color: new Vector3(0.8, 0.6, 0.2),
+            specular: new Specular({ strength: 0.8, shininess: 4 }),
+          }),
+        });
+        render3DPass.meshs.push(mesh);
+        console.log("드롭된 모델 렌더링 등록 완료");
+      } catch (err) {
+        console.error("모델 로드 실패:", err);
+      }
+    });
+
     // InstanceMesh 테스트: 큐브 10000개 랜덤 배치
     const templateCube = new Cube({
       render3DPass,
@@ -82,18 +137,18 @@ class App3D {
       scale: new Vector3(0.1,0.1,0.1)
     });
 
-    const instanceCubes = new InstanceMesh({
-      render3DPass,
-      geometry: templateCube.geometry,
-      instanceInfo: InstanceMesh.randomInstanceInfo(
-        100000,
-        new Matrial({
-          color: new Vector3(0.3, 1, 0.3),
-          specular: new Specular({ strength: 0.5, shininess: 2 }),
-        }),
-      ),
-    });
-    render3DPass.instanceMesh.push(instanceCubes);
+    // const instanceCubes = new InstanceMesh({
+    //   render3DPass,
+    //   geometry: templateCube.geometry,
+    //   instanceInfo: InstanceMesh.randomInstanceInfo(
+    //     100000,
+    //     new Matrial({
+    //       color: new Vector3(0.3, 1, 0.3),
+    //       specular: new Specular({ strength: 0.5, shininess: 2 }),
+    //     }), 
+    //   ),
+    // });
+    // render3DPass.instanceMesh.push(instanceCubes);
 
     // PointLight 추가
     render3DPass.addLight(

@@ -33,19 +33,21 @@ export class Geometry {
     updateVertexBuffer() {
         const buffer = {
             buffer: this.device.createBuffer({
-                size: this._vertex.length * 6 * 4,
+                size: this._vertex.length * 8 * 4,
                 usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             }),
         };
-        const data = new Float32Array(this._vertex.length * 6);
+        const data = new Float32Array(this._vertex.length * 8);
         this._vertex.forEach((vertex, i) => {
-            const idx = i * 6;
+            const idx = i * 8;
             data[idx] = vertex.location.x;
             data[idx + 1] = vertex.location.y;
             data[idx + 2] = vertex.location.z;
             data[idx + 3] = vertex.normal.x;
             data[idx + 4] = vertex.normal.y;
             data[idx + 5] = vertex.normal.z;
+            data[idx + 6] = vertex.uv.x;
+            data[idx + 7] = vertex.uv.y;
         });
         this.device.queue.writeBuffer(buffer.buffer, 0, data);
         return buffer;
@@ -53,12 +55,11 @@ export class Geometry {
     updateIndexBuffer() {
         const buffer = {
             buffer: this.device.createBuffer({
-                size: Math.ceil((this.indexs.length * 2) / 4) * 4,
+                size: this.indexs.length * 4,
                 usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
             }),
         };
-        const alignedLen = Math.ceil((this.indexs.length * 2) / 4) * 2;
-        const data = new Uint16Array(alignedLen);
+        const data = new Uint32Array(this.indexs.length);
         this.indexs.forEach((index, i) => {
             data[i] = index;
         });

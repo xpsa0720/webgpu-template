@@ -1,4 +1,16 @@
 import type { Mat4x4 } from "./matrix";
+export declare class Vector2 {
+    x: number;
+    y: number;
+    constructor(x?: number, y?: number);
+    dot(other: Vector2): number;
+    copy(): Vector2;
+    add(A: Vector3): this;
+    subtract(A: Vector3): this;
+    array(): number[];
+    static min(a: Vector2, b: Vector2): Vector2;
+    static max(a: Vector2, b: Vector2): Vector2;
+}
 export declare class Vector3 {
     x: number;
     y: number;

@@ -20,6 +20,8 @@
     "url": "https://github.com/xpsa0720/webgpu-template.git"
   },
   "dependencies": {
+    "@gltf-transform/core": "^4.1.1",
+    "@gltf-transform/extensions": "^4.5.1",
     "@webgpu/types": "^0.1.72"
   },
   "devDependencies": {

@@ -15,7 +15,7 @@ export declare class ShaderVertexGadget extends ShaderGadget {
     vertexInput: VertexInput[];
     instanceMesh: InstanceMesh[];
     code: string;
-    constructor({ placeholder, device, vertexInput, instanceMesh, code }: ShaderVertexGadgetParams);
+    constructor({ placeholder, device, vertexInput, instanceMesh, code, }: ShaderVertexGadgetParams);
     getCode(): string;
     getVertexLayout(): GPUVertexBufferLayout[];
 }

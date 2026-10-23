@@ -404,7 +404,7 @@ export class Render3DPass extends RenderPass {
 
       pass.setBindGroup(3, mesh.cachedBindGroup);
       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
-      pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint16");
+      pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint32");
       pass.drawIndexed(mesh.geometry.indexs.length);
     });
 
@@ -436,7 +436,7 @@ export class Render3DPass extends RenderPass {
 
         pass.setBindGroup(3, instanceMesh.cachedBindGroup);
         pass.setVertexBuffer(0, instanceMesh.geometry.vertexBuffer.buffer);
-        pass.setIndexBuffer(instanceMesh.geometry.indexBuffer.buffer, "uint16");
+        pass.setIndexBuffer(instanceMesh.geometry.indexBuffer.buffer, "uint32");
         pass.drawIndexed(instanceMesh.geometry.indexs.length, instanceMesh.renderCount);
       });
     }

@@ -1,7 +1,7 @@
 import type { InstanceMesh } from "../../3d/mesh/instance";
 import { gpuBufferSizeFormat } from "../../util/math";
 import type { VertexLayout } from "../../util/vertex_layout";
-import {  SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
+import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
 import { SHADER_BUILTIN_INPUT } from "./code/shader_instance";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
@@ -87,7 +87,13 @@ export class ShaderVertexGadget extends ShaderGadget {
   vertexInput: VertexInput[];
   instanceMesh: InstanceMesh[];
   code: string;
-  constructor({ placeholder = {}, device, vertexInput, instanceMesh, code }: ShaderVertexGadgetParams) {
+  constructor({
+    placeholder = {},
+    device,
+    vertexInput,
+    instanceMesh,
+    code,
+  }: ShaderVertexGadgetParams) {
     placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
     placeholder["@BUILTIN_INPUT"] = SHADER_BUILTIN_INPUT;
     super({ placeholder });
@@ -105,15 +111,18 @@ export class ShaderVertexGadget extends ShaderGadget {
 
   getVertexLayout(): GPUVertexBufferLayout[] {
     const layout: GPUVertexBufferLayout = {
-      arrayStride: gpuBufferSizeFormat(FORMAT_TABLE["float32x3"].byteSize * 2),
+      arrayStride: gpuBufferSizeFormat(
+        FORMAT_TABLE["float32x3"].byteSize * 2 +
+          FORMAT_TABLE["float32x2"].byteSize,
+      ),
       stepMode: "vertex",
       attributes: [
         { shaderLocation: 0, offset: 0, format: "float32x3" },
         { shaderLocation: 1, offset: 12, format: "float32x3" },
+        { shaderLocation: 2, offset: 24, format: "float32x2" },
       ],
     };
 
     return [layout];
   }
-
 }

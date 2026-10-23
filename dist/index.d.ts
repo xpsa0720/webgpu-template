@@ -26,6 +26,9 @@ export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadg
 export { Matrial } from "./3d/mesh/matrial/matrial";
 export { Specular } from "./3d/mesh/matrial/specular";
 export { InstanceMesh } from "./3d/mesh/instance";
+export { Vector2 } from "./3d/math/vector";
+export { loadModel, loadOBJ, loadGLTF } from "./3d/loader/index";
+export type { LoadResult } from "./3d/loader/index";
 export type { WebGPUBuffer, WebGPUTexture, WebGPUSampler } from "./types/resource";
 export type { PassQueue, PassQueueArg, PassRenderQueue, PassRenderQueueArg } from "./types/pass_queue";
 export type { PassCallback, PassCallbackArg, EncoderCallback } from "./types/callback";
