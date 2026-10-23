@@ -1,7 +1,9 @@
 import { Vector4 } from "../../3d/math/vector";
 import { gpuBufferSizeFormat, wgslStructSize } from "../../util/math";
 import { parseStructLayout, uniformData, uniformDataArray } from "../../util/uniform";
+import { roundUp } from "../../util/vertex_layout";
 import { ShaderGadget } from "./shader_gadget";
+export const formatLightCount = 8;
 export class ShaderLightGadget extends ShaderGadget {
     struct;
     define;
@@ -41,7 +43,7 @@ export class ShaderLightGadget extends ShaderGadget {
     createBuffer() {
         const buffer = this.device.createBuffer({
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-            size: this.structSize * Math.max(1, this._lights.length),
+            size: this.structSize * Math.max(1, roundUp(formatLightCount, this._lights.length)),
         });
         const data = uniformDataArray(this.struct, this.lights);
         this.device.queue.writeBuffer(buffer, 0, data);
@@ -72,7 +74,7 @@ export class ShaderLightGadget extends ShaderGadget {
         return removed;
     }
     updateCount() {
-        this.placeholder[this.countPlaceholder] = String(Math.max(1, this._lights.length));
+        this.placeholder[this.countPlaceholder] = String(Math.max(1, roundUp(formatLightCount, this._lights.length)));
     }
     updateLight(index) {
         const data = uniformData(this.struct, this.lights[index]);

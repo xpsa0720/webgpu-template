@@ -20,6 +20,7 @@ export declare class Vector4 extends Vector3 {
     multiplyMat4(mat: Mat4x4): this;
     private getElement;
     copy(): Vector4;
+    add(A: Vector4): this;
     subtract(A: Vector4): this;
     array(): number[];
     toVector3(): Vector3;

@@ -139,8 +139,8 @@ export function createModelMatrixData(transform) {
     data.set([...M.getArrayData(), ...NormalMatrix.getArrayData()], 0);
     return data;
 }
-export function createMatrix(mesh, camera, aspect, device, buffer) {
-    const data = createMatrixData(mesh, createViewProjectionMatrix(camera, aspect));
+export function createMatrix(mesh, vpMatrix, device, buffer) {
+    const data = createMatrixData(mesh, vpMatrix);
     device.queue.writeBuffer(buffer.buffer, 0, data);
     return buffer;
 }

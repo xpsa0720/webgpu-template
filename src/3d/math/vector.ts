@@ -99,6 +99,15 @@ export class Vector4 extends Vector3 {
     return new Vector4(this.x, this.y, this.z, this.w);
   }
 
+  add(A: Vector4) {
+    this.x += A.x;
+    this.y += A.y;
+    this.z += A.z;
+    this.w += A.w;
+
+    return this;
+  }
+
   subtract(A: Vector4) {
     this.x -= A.x;
     this.y -= A.y;

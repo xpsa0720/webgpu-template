@@ -374,7 +374,7 @@ function mergeInputs(perEntry, label) {
     }
     return [...byLocation.values()].map((v) => v.input);
 }
-function roundUp(k, n) {
+export function roundUp(k, n) {
     return Math.ceil(n / k) * k;
 }
 //# sourceMappingURL=vertex_layout.js.map

@@ -177,12 +177,11 @@ export function createModelMatrixData(transform: Transform) {
 
 export function createMatrix(
   mesh: Mesh,
-  camera: Camera,
-  aspect: number,
+  vpMatrix: Mat4x4,
   device: GPUDevice,
   buffer: WebGPUBuffer
 ) {
-  const data = createMatrixData(mesh, createViewProjectionMatrix(camera, aspect));
+  const data = createMatrixData(mesh, vpMatrix);
   device.queue.writeBuffer(buffer.buffer, 0, data);
 
   return buffer;

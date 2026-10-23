@@ -4,9 +4,10 @@ import { ShaderGadgetModule } from "../shader/core/shader_module";
 import { AMBIENT_LIGHT, DIRECTIONAL_LIGHT, POINT_LIGHT, SHADER_CAMERA_POSITION_UNIFORM, SHADER_MATRIAL_UNIFORM, SHADER_MATRIX_UNIFORM, } from "../shader/gadget/code/shader_code";
 import { SHADER_INSTANCE_MATRIAL_STORAGE, SHADER_INSTANCE_MATRIX_STORAGE, SHADER_INSTANCE_VERTEX, } from "../shader/gadget/code/shader_instance";
 import { ShaderbindingGadget } from "../shader/gadget/shader_binding";
-import { AmbientLight, DirectionalLight, Light, PointLight, ShaderAmbientLightGadget, ShaderDirectionalLightGadget, ShaderLightGadget, ShaderPointLightGadget, } from "../shader/gadget/shader_light";
+import { AmbientLight, DirectionalLight, formatLightCount, Light, PointLight, ShaderAmbientLightGadget, ShaderDirectionalLightGadget, ShaderLightGadget, ShaderPointLightGadget, } from "../shader/gadget/shader_light";
 import { isView } from "../util/math";
 import { createMatrix, createViewProjectionMatrix } from "../util/matrix";
+import { roundUp } from "../util/vertex_layout";
 import { RenderPass } from "./render_pass";
 export class Render3DPass extends RenderPass {
     meshs;
@@ -23,10 +24,12 @@ export class Render3DPass extends RenderPass {
     // meshRenderShaderPipeline!: GPURenderPipeline;
     instnaceMeshRenderShaderModule;
     instnaceMeshRenderShaderPipeline;
-    bindGroupMatrix = null;
     depthTexture = null;
     depthWidth = 0;
     depthHeight = 0;
+    // 매 프레임 재사용할 Float32Array
+    cameraPosData = new Float32Array(4);
+    vpData = new Float32Array(16);
     constructor(arg) {
         super(arg);
         this.meshs = arg.meshs ?? [];
@@ -210,11 +213,20 @@ export class Render3DPass extends RenderPass {
     }
     compile() {
         this.updateBindGroupEntray();
+        this.invalidateAllBindGroups();
         this.createShaderModule();
         this.settingPipeline();
     }
+    invalidateAllBindGroups() {
+        this.meshs.forEach((mesh) => { mesh.cachedBindGroup = null; });
+        this.instanceMesh.forEach((im) => { im.cachedBindGroup = null; });
+    }
     update() { }
+    getLightCountSnapshot() {
+        return Object.values(this.shaderLights).map((g) => roundUp(formatLightCount, g.lights.length));
+    }
     addLight(light) {
+        const before = this.getLightCountSnapshot();
         if (light instanceof PointLight) {
             this.pointLightGadget.addLight(light);
         }
@@ -224,25 +236,40 @@ export class Render3DPass extends RenderPass {
         else if (light instanceof DirectionalLight) {
             this.directionalLightGadget.addLight(light);
         }
-        this.compile();
+        const after = this.getLightCountSnapshot();
+        if (before.some((v, i) => v !== after[i])) {
+            this.compile();
+        }
+        else {
+            this.updateBindGroupEntray();
+            this.invalidateAllBindGroups();
+        }
     }
     removeLight(light) {
+        const before = this.getLightCountSnapshot();
         if (light instanceof PointLight) {
             const idx = this.pointLightGadget.lights.indexOf(light);
             if (idx !== -1)
-                return this.pointLightGadget.removeLight(idx);
+                this.pointLightGadget.removeLight(idx);
         }
         else if (light instanceof AmbientLight) {
             const idx = this.ambientLightGadget.lights.indexOf(light);
             if (idx !== -1)
-                return this.ambientLightGadget.removeLight(idx);
+                this.ambientLightGadget.removeLight(idx);
         }
         else if (light instanceof DirectionalLight) {
             const idx = this.directionalLightGadget.lights.indexOf(light);
             if (idx !== -1)
-                return this.directionalLightGadget.removeLight(idx);
+                this.directionalLightGadget.removeLight(idx);
         }
-        this.compile();
+        const after = this.getLightCountSnapshot();
+        if (before.some((v, i) => v !== after[i])) {
+            this.compile();
+        }
+        else {
+            this.updateBindGroupEntray();
+            this.invalidateAllBindGroups();
+        }
     }
     encoderWriteCommand(encoder, renderPassDescriptor) {
         const aspect = this.getAspect();
@@ -276,54 +303,62 @@ export class Render3DPass extends RenderPass {
         if (this.bindGroupSampler) {
             pass.setBindGroup(2, this.bindGroupSampler);
         }
-        this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, new Float32Array([
-            this.camera.position.x,
-            this.camera.position.y,
-            this.camera.position.z,
-            1,
-        ]));
+        this.cameraPosData[0] = this.camera.position.x;
+        this.cameraPosData[1] = this.camera.position.y;
+        this.cameraPosData[2] = this.camera.position.z;
+        this.cameraPosData[3] = 1;
+        this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, this.cameraPosData);
+        const vpMatrix = createViewProjectionMatrix(this.camera, aspect);
         this.meshs.forEach((mesh) => {
-            // 나중에 구현해야됨
-            // if (isView(mesh)) {
-            // }
-            createMatrix(mesh, this.camera, aspect, this.device, mesh.matrixBuffer);
-            this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, new Float32Array(mesh.matrial.getDataArray()));
-            this.bindGroupMatrix = this.device.createBindGroup({
-                layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
-                entries: [
-                    { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-                    { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
-                    { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
-                    // ...this.shaderMeshRenderGadgetModule.bindGroupEntry,
-                    ...this.lightBindGroupEntry,
-                ],
-            });
-            pass.setBindGroup(3, this.bindGroupMatrix);
+            if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, mesh.location))
+                return;
+            createMatrix(mesh, vpMatrix, this.device, mesh.matrixBuffer);
+            this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, mesh.matrial.getDataArray());
+            if (!mesh.cachedBindGroup) {
+                mesh.cachedBindGroup = this.device.createBindGroup({
+                    layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
+                    entries: [
+                        { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
+                        { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+                        { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
+                        ...this.lightBindGroupEntry,
+                    ],
+                });
+            }
+            pass.setBindGroup(3, mesh.cachedBindGroup);
             pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
             pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint16");
             pass.drawIndexed(mesh.geometry.indexs.length);
         });
         if (this.instanceMesh.length > 0) {
             pass.setPipeline(this.instnaceMeshRenderShaderPipeline);
-            // VP 행렬을 매 프레임 한 번만 계산해서 uniform에 기록
-            const vpMatrix = createViewProjectionMatrix(this.camera, aspect);
-            this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, new Float32Array(vpMatrix.getArrayData()));
+            // VP 행렬을 위에서 한 번 계산한 것 재사용
+            this.vpData.set(vpMatrix.getArrayData());
+            this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
             this.instanceMesh.forEach((instanceMesh) => {
                 instanceMesh.update();
-                this.bindGroupMatrix = this.device.createBindGroup({
-                    layout: this.instnaceMeshRenderShaderPipeline.getBindGroupLayout(3),
-                    entries: [
-                        { binding: 0, resource: { buffer: this.vpBuffer.buffer } },
-                        { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
-                        ...this.lightBindGroupEntry,
-                        { binding: 20, resource: { buffer: instanceMesh.matrixBuffer.buffer } },
-                        { binding: 21, resource: { buffer: instanceMesh.matrialBuffer.buffer } },
-                    ],
-                });
-                pass.setBindGroup(3, this.bindGroupMatrix);
+                const t0 = performance.now();
+                instanceMesh.frustumCull(vpMatrix);
+                const t1 = performance.now();
+                console.log(`frustumCull: ${(t1 - t0).toFixed(1)}ms, visible: ${instanceMesh.renderCount}/${instanceMesh.count}`);
+                if (instanceMesh.renderCount === 0)
+                    return;
+                if (!instanceMesh.cachedBindGroup) {
+                    instanceMesh.cachedBindGroup = this.device.createBindGroup({
+                        layout: this.instnaceMeshRenderShaderPipeline.getBindGroupLayout(3),
+                        entries: [
+                            { binding: 0, resource: { buffer: this.vpBuffer.buffer } },
+                            { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+                            ...this.lightBindGroupEntry,
+                            { binding: 20, resource: { buffer: instanceMesh.matrixBuffer.buffer } },
+                            { binding: 21, resource: { buffer: instanceMesh.matrialBuffer.buffer } },
+                        ],
+                    });
+                }
+                pass.setBindGroup(3, instanceMesh.cachedBindGroup);
                 pass.setVertexBuffer(0, instanceMesh.geometry.vertexBuffer.buffer);
                 pass.setIndexBuffer(instanceMesh.geometry.indexBuffer.buffer, "uint16");
-                pass.drawIndexed(instanceMesh.geometry.indexs.length, instanceMesh.count);
+                pass.drawIndexed(instanceMesh.geometry.indexs.length, instanceMesh.renderCount);
             });
         }
         pass.end();

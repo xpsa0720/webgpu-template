@@ -20,6 +20,7 @@ export declare class Mesh {
     matrial: Matrial;
     matrixBuffer: WebGPUBuffer;
     matrialBuffer: WebGPUBuffer;
+    cachedBindGroup: GPUBindGroup | null;
     AabbCenter: Vector3;
     AabbRadius: number;
     constructor({ location, rotate, scale, geometry, render3DPass, matrial, }: MeshParams);

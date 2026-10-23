@@ -40,4 +40,5 @@ export interface VertexLayout {
  */
 export declare function vertexLayoutFromWGSL(shaderCode: string, entryPoint?: string | string[], options?: VertexLayoutOptions): VertexLayout;
 export declare function checkVertexLayout(layout: VertexLayout, shaderCode: string, entryPoint?: string): void;
+export declare function roundUp(k: number, n: number): number;
 //# sourceMappingURL=vertex_layout.d.ts.map

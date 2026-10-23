@@ -11,6 +11,7 @@ export class Mesh {
     matrial;
     matrixBuffer;
     matrialBuffer;
+    cachedBindGroup = null;
     AabbCenter;
     AabbRadius;
     constructor({ location, rotate, scale, geometry, render3DPass, matrial, }) {

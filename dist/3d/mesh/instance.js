@@ -1,31 +1,111 @@
 import { SHADER_MATRIAL_STRUCT } from "../../shader/gadget/code/shader_code";
 import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../shader/gadget/code/shader_instance";
-import { distance, wgslStructSize } from "../../util/math";
+import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize } from "../../util/math";
 import { createModelMatrixData } from "../../util/matrix";
 import { Vector3 } from "../math/vector";
 const RANDOM_RANGE = 100;
+const MATRIX_STRIDE = wgslStructSize(SHADER_INSTANCE_MATRIX_STRUCT) / 4;
+const MATRIAL_STRIDE = wgslStructSize(SHADER_MATRIAL_STRUCT) / 4;
 export class InstanceMesh {
     render3DPass;
     count;
+    renderCount;
     instanceInfo;
     geometry;
     matrixBuffer;
     matrialBuffer;
-    dirty = true;
+    cachedBindGroup = null;
     AabbCenter;
     AabbRadius;
-    constructor({ instanceInfo = [], geometry, render3DPass, }) {
+    // 인스턴스별 미리 계산된 데이터 캐시
+    cachedMatrixData;
+    cachedMatrialData;
+    // frustumCull용 평탄화된 위치 배열 (x,y,z,x,y,z,...)
+    positions;
+    // 인덱스 배열: swap 시 실제 데이터 대신 인덱스만 교환
+    indices;
+    dirty = true;
+    constructor({ instanceInfo = [], geometry, render3DPass }) {
         this.render3DPass = render3DPass;
         this.instanceInfo = instanceInfo;
         this.count = instanceInfo.length;
         this.geometry = geometry;
+        this.renderCount = 0;
         this.AABB();
         this.matrixBuffer = this.createBuffer(SHADER_INSTANCE_MATRIX_STRUCT);
         this.matrialBuffer = this.createBuffer(SHADER_MATRIAL_STRUCT);
-        this.writeBuffers();
+        this.buildCache();
     }
     markDirty() {
         this.dirty = true;
+    }
+    // 캐시 배열 생성: 인스턴스별 matrix/material 데이터를 미리 계산
+    buildCache() {
+        this.cachedMatrixData = new Array(this.count);
+        this.cachedMatrialData = new Array(this.count);
+        this.positions = new Float64Array(this.count * 3);
+        this.indices = new Uint32Array(this.count);
+        for (let i = 0; i < this.count; i++) {
+            this.cachedMatrixData[i] = createModelMatrixData(this.instanceInfo[i]);
+            this.cachedMatrialData[i] = this.instanceInfo[i].matrial.getDataArray();
+            const loc = this.instanceInfo[i].location;
+            this.positions[i * 3] = loc.x;
+            this.positions[i * 3 + 1] = loc.y;
+            this.positions[i * 3 + 2] = loc.z;
+            this.indices[i] = i;
+        }
+        this.dirty = false;
+    }
+    frustumCull(PV) {
+        if (this.dirty)
+            this.buildCache();
+        const planes = extractFrustumPlanes(PV);
+        const cx = this.AabbCenter.x;
+        const cy = this.AabbCenter.y;
+        const cz = this.AabbCenter.z;
+        const r = this.AabbRadius;
+        const pos = this.positions;
+        const idx = this.indices;
+        let visible = 0;
+        for (let i = 0; i < this.count; i++) {
+            const ii = idx[i];
+            const o = ii * 3;
+            if (!isOutsideFrustum(planes, cx + pos[o], cy + pos[o + 1], cz + pos[o + 2], r)) {
+                if (i !== visible) {
+                    // 인덱스만 swap
+                    const tmp = idx[visible];
+                    idx[visible] = idx[i];
+                    idx[i] = tmp;
+                }
+                visible++;
+            }
+        }
+        this.renderCount = visible;
+        this.writeVisibleBuffers();
+    }
+    writeAll() {
+        if (this.dirty)
+            this.buildCache();
+        this.renderCount = this.count;
+        // indices를 순서대로 복원
+        for (let i = 0; i < this.count; i++)
+            this.indices[i] = i;
+        this.writeVisibleBuffers();
+    }
+    writeVisibleBuffers() {
+        if (this.renderCount === 0)
+            return;
+        const matrixData = new Float32Array(MATRIX_STRIDE * this.renderCount);
+        const matrialData = new Float32Array(MATRIAL_STRIDE * this.renderCount);
+        const idx = this.indices;
+        for (let i = 0; i < this.renderCount; i++) {
+            const ii = idx[i];
+            matrixData.set(this.cachedMatrixData[ii], i * MATRIX_STRIDE);
+            matrialData.set(this.cachedMatrialData[ii], i * MATRIAL_STRIDE);
+        }
+        const queue = this.render3DPass.device.queue;
+        queue.writeBuffer(this.matrixBuffer.buffer, 0, matrixData);
+        queue.writeBuffer(this.matrialBuffer.buffer, 0, matrialData);
     }
     update() {
         if (this.count !== this.instanceInfo.length) {
@@ -34,27 +114,9 @@ export class InstanceMesh {
             this.count = this.instanceInfo.length;
             this.matrixBuffer = this.createBuffer(SHADER_INSTANCE_MATRIX_STRUCT);
             this.matrialBuffer = this.createBuffer(SHADER_MATRIAL_STRUCT);
+            this.cachedBindGroup = null;
             this.dirty = true;
         }
-        if (!this.dirty || this.count === 0)
-            return;
-        this.writeBuffers();
-        this.dirty = false;
-    }
-    writeBuffers() {
-        if (this.count === 0)
-            return;
-        const matrixStride = wgslStructSize(SHADER_INSTANCE_MATRIX_STRUCT) / 4;
-        const matrialStride = wgslStructSize(SHADER_MATRIAL_STRUCT) / 4;
-        const matrixData = new Float32Array(matrixStride * this.count);
-        const matrialData = new Float32Array(matrialStride * this.count);
-        this.instanceInfo.forEach((info, i) => {
-            matrixData.set(createModelMatrixData(info), i * matrixStride);
-            matrialData.set(info.matrial.getDataArray(), i * matrialStride);
-        });
-        const queue = this.render3DPass.device.queue;
-        queue.writeBuffer(this.matrixBuffer.buffer, 0, matrixData);
-        queue.writeBuffer(this.matrialBuffer.buffer, 0, matrialData);
     }
     createBuffer(struct) {
         return {
@@ -69,7 +131,7 @@ export class InstanceMesh {
         return Array.from({ length: count }, () => ({
             location: new Vector3(random(), random(), random()),
             rotate: new Vector3(0, 0, 0),
-            scale: new Vector3(1, 1, 1),
+            scale: new Vector3(0.1, 0.1, 0.1),
             matrial,
         }));
     }

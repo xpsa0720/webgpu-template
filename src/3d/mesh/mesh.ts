@@ -27,6 +27,7 @@ export class Mesh {
   matrial: Matrial;
   matrixBuffer: WebGPUBuffer;
   matrialBuffer: WebGPUBuffer;
+  cachedBindGroup: GPUBindGroup | null = null;
   AabbCenter!: Vector3;
   AabbRadius!: number;
 

@@ -31,10 +31,11 @@ export declare class Render3DPass extends RenderPass {
     meshRenderShaderModule: GPUShaderModule;
     instnaceMeshRenderShaderModule: GPUShaderModule;
     instnaceMeshRenderShaderPipeline: GPURenderPipeline;
-    protected bindGroupMatrix: GPUBindGroup | null;
     private depthTexture;
     private depthWidth;
     private depthHeight;
+    private cameraPosData;
+    private vpData;
     constructor(arg: Render3DPassArg);
     private initLight;
     createShaderModule(): void;
@@ -45,9 +46,11 @@ export declare class Render3DPass extends RenderPass {
     private get ambientLightGadget();
     private get directionalLightGadget();
     compile(): void;
+    private invalidateAllBindGroups;
     update(): void;
+    private getLightCountSnapshot;
     addLight(light: Light): void;
-    removeLight(light: Light): any;
+    removeLight(light: Light): void;
     encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
     updateBindGroupEntray(): void;
 }

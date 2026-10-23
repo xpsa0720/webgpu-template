@@ -472,6 +472,6 @@ function mergeInputs(
   return [...byLocation.values()].map((v) => v.input);
 }
 
-function roundUp(k: number, n: number): number {
+export function roundUp(k: number, n: number): number {
   return Math.ceil(n / k) * k;
 }

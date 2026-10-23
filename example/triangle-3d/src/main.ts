@@ -48,7 +48,7 @@ class App3D {
       target: this.canvas,
       camera,
       blend: true,
-      debugMode: true,
+      debugMode: false,
       
     });
 
@@ -86,7 +86,7 @@ class App3D {
       render3DPass,
       geometry: templateCube.geometry,
       instanceInfo: InstanceMesh.randomInstanceInfo(
-        10000,
+        1000000,
         new Matrial({
           color: new Vector3(0.3, 1, 0.3),
           specular: new Specular({ strength: 0.5, shininess: 2 }),
@@ -138,6 +138,22 @@ class App3D {
         const light = dynamicLights.pop()!;
         render3DPass.removeLight(light);
         console.log("PointLight 제거, 총:", dynamicLights.length);
+      }
+    });
+
+    // P키: 인스턴스 범위 경계에서 바깥을 바라봄 (일부만 보이는 상황)
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "p" || e.key === "P") {
+        camera.position.x = 90;
+        camera.position.y = 0;
+        camera.position.z = 0;
+        camera.target.x = 100;
+        camera.target.y = 0;
+        camera.target.z = 0;
+        camera.rotate.x = 0;
+        camera.rotate.y = 0;
+        camera.rotate.z = 0;
+        console.log("카메라 이동: 경계 (90,0,0) → 바깥 바라봄");
       }
     });
 

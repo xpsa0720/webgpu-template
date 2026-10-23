@@ -13,6 +13,7 @@ export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetPa
     countPlaceholder: string;
     onLightChange?: () => void;
 }
+export declare const formatLightCount = 8;
 export declare abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     struct: string;
     define: string;

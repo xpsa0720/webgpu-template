@@ -2,6 +2,7 @@ import { Vector4 } from "../../3d/math/vector";
 import type { WebGPUBuffer } from "../../types/resource";
 import { gpuBufferSizeFormat, wgslStructSize } from "../../util/math";
 import { parseStructLayout, uniformData, uniformDataArray } from "../../util/uniform";
+import { roundUp } from "../../util/vertex_layout";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
 export interface ShaderLightGadgetParams<
@@ -20,6 +21,8 @@ export interface ShaderLightGadgetParams<
   countPlaceholder: string;
   onLightChange?: () => void;
 }
+
+export const formatLightCount = 8
 
 export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
   struct: string;
@@ -74,7 +77,7 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
   private createBuffer(): WebGPUBuffer {
     const buffer = this.device.createBuffer({
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-      size: this.structSize * Math.max(1, this._lights.length),
+      size: this.structSize * Math.max(1, roundUp(formatLightCount, this._lights.length)),
     });
 
     const data = uniformDataArray<T>(this.struct,this.lights)
@@ -115,7 +118,7 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
 
   private updateCount() {
     this.placeholder[this.countPlaceholder] = String(
-      Math.max(1, this._lights.length),
+      Math.max(1, roundUp(formatLightCount, this._lights.length)),
     );
   }
 

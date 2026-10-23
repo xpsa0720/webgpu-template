@@ -10,6 +10,6 @@ export declare function createProjectionMatrix(camera: Camera, aspect: number): 
 export declare function createViewProjectionMatrix(camera: Camera, aspect: number): Mat4x4;
 export declare function createMatrixData(transform: Transform, viewProjection: Mat4x4): Float32Array<ArrayBuffer>;
 export declare function createModelMatrixData(transform: Transform): Float32Array<ArrayBuffer>;
-export declare function createMatrix(mesh: Mesh, camera: Camera, aspect: number, device: GPUDevice, buffer: WebGPUBuffer): WebGPUBuffer;
+export declare function createMatrix(mesh: Mesh, vpMatrix: Mat4x4, device: GPUDevice, buffer: WebGPUBuffer): WebGPUBuffer;
 export {};
 //# sourceMappingURL=matrix.d.ts.map

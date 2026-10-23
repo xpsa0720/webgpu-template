@@ -75,6 +75,13 @@ export class Vector4 extends Vector3 {
     copy() {
         return new Vector4(this.x, this.y, this.z, this.w);
     }
+    add(A) {
+        this.x += A.x;
+        this.y += A.y;
+        this.z += A.z;
+        this.w += A.w;
+        return this;
+    }
     subtract(A) {
         this.x -= A.x;
         this.y -= A.y;
