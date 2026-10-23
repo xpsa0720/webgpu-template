@@ -3,13 +3,13 @@ import { Pass } from "./pass";
 export class RenderPass extends Pass {
     target;
     context;
-    pipeline;
     entries;
     device;
     // vertexEntryPoint: string;
     // fragmentEntryPoint: string;
     // vertexCount: GPUSize32;
     // instanceCount: GPUSize32;
+    meshRenderShaderPipeline;
     loadOp;
     format;
     blendState;
@@ -69,7 +69,7 @@ export class RenderPass extends Pass {
                 });
             }
             this.bindGroup = this.device.createBindGroup({
-                layout: this.pipeline.getBindGroupLayout(0),
+                layout: this.meshRenderShaderPipeline.getBindGroupLayout(0),
                 entries: entries,
             });
         }
@@ -82,7 +82,7 @@ export class RenderPass extends Pass {
                 });
             }
             this.bindGroupTex = this.device.createBindGroup({
-                layout: this.pipeline.getBindGroupLayout(1),
+                layout: this.meshRenderShaderPipeline.getBindGroupLayout(1),
                 entries: entries_tex,
             });
         }
@@ -95,7 +95,7 @@ export class RenderPass extends Pass {
                 });
             }
             this.bindGroupSampler = this.device.createBindGroup({
-                layout: this.pipeline.getBindGroupLayout(2),
+                layout: this.meshRenderShaderPipeline.getBindGroupLayout(2),
                 entries: entries_sampler,
             });
         }

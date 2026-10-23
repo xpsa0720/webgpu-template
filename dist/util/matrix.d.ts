@@ -4,7 +4,12 @@ import type { Mesh } from "../3d/mesh/mesh";
 import type { Camera } from "../types/camera";
 import type { WebGPUBuffer } from "../types/resource";
 export declare function createFowardRotateMatrix(rotate: Vector3, inverse?: boolean): Mat3x3;
+type Transform = Pick<Mesh, "location" | "rotate" | "scale">;
 export declare function createViewMatrix(camera: Camera): Mat4x4;
 export declare function createProjectionMatrix(camera: Camera, aspect: number): Mat4x4;
+export declare function createViewProjectionMatrix(camera: Camera, aspect: number): Mat4x4;
+export declare function createMatrixData(transform: Transform, viewProjection: Mat4x4): Float32Array<ArrayBuffer>;
+export declare function createModelMatrixData(transform: Transform): Float32Array<ArrayBuffer>;
 export declare function createMatrix(mesh: Mesh, camera: Camera, aspect: number, device: GPUDevice, buffer: WebGPUBuffer): WebGPUBuffer;
+export {};
 //# sourceMappingURL=matrix.d.ts.map

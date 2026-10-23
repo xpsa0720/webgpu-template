@@ -22,7 +22,7 @@ export class Render2DPass extends RenderPass {
         this.shaderModule = this.device.createShaderModule({
             code: this.shaderCode,
         });
-        this.pipeline = this.settingPipeline();
+        this.meshRenderShaderPipeline = this.settingPipeline();
     }
     settingPipeline(shaderCode) {
         if (shaderCode) {
@@ -61,7 +61,7 @@ export class Render2DPass extends RenderPass {
     }
     encoderWriteCommand(encoder, renderPassDescriptor) {
         const pass = encoder.beginRenderPass(renderPassDescriptor);
-        pass.setPipeline(this.pipeline);
+        pass.setPipeline(this.meshRenderShaderPipeline);
         pass.setBindGroup(0, this.bindGroup);
         if (this.bindGroupTex) {
             pass.setBindGroup(1, this.bindGroupTex);

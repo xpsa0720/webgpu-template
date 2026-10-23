@@ -10,9 +10,9 @@ export interface RenderPassArg extends PassArg {
 export declare abstract class RenderPass extends Pass {
     target: GPUTexture | HTMLCanvasElement;
     context: GPUCanvasContext | null;
-    pipeline: GPURenderPipeline;
     entries: Record<number, GPUBindingResource>;
     device: GPUDevice;
+    meshRenderShaderPipeline: GPURenderPipeline;
     loadOp: GPULoadOp;
     format: GPUTextureFormat;
     blendState: GPUBlendState | undefined;
@@ -21,7 +21,7 @@ export declare abstract class RenderPass extends Pass {
     protected bindGroupTex: GPUBindGroup | null;
     protected bindGroupSampler: GPUBindGroup | null;
     constructor(arg: RenderPassArg);
-    abstract settingPipeline(shaderCode?: string): GPURenderPipeline;
+    abstract settingPipeline(shaderCode?: string): any;
     deleteBuffer(bindigIdx: number): void;
     ensureBindGroups(): void;
     abstract encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;

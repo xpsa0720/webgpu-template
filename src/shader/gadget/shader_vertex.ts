@@ -87,7 +87,6 @@ export class ShaderVertexGadget extends ShaderGadget {
   vertexInput: VertexInput[];
   instanceMesh: InstanceMesh[];
   code: string;
-  bindGroupEntry!:GPUBindGroupEntry[];
   constructor({ placeholder = {}, device, vertexInput, instanceMesh, code }: ShaderVertexGadgetParams) {
     placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
     placeholder["@BUILTIN_INPUT"] = SHADER_BUILTIN_INPUT;
@@ -96,7 +95,6 @@ export class ShaderVertexGadget extends ShaderGadget {
     this.vertexInput = vertexInput ?? [];
     this.instanceMesh = instanceMesh ?? [];
     this.code = code ?? SHADER_VERTEX_DEFAULT;
-    this.updateBindGroupEntray();
   }
 
   getCode() {
@@ -118,14 +116,4 @@ export class ShaderVertexGadget extends ShaderGadget {
     return [layout];
   }
 
-  updateBindGroupEntray(){
-    const result: GPUBindGroupEntry[] = [];
-
-    this.lights.forEach((e) => {
-      if (e.lights.length === 0) return;
-      result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
-    });
-
-    this.bindGroupEntry =result;
-  }
 }

@@ -115,18 +115,32 @@ export function createProjectionMatrix(camera, aspect) {
     ]);
     return V;
 }
-export function createMatrix(mesh, camera, aspect, device, buffer) {
-    const M = createModelMatrix(mesh);
-    const V = createViewMatrix(camera);
-    const P = createProjectionMatrix(camera, aspect);
-    // M.multiply(V).multiply(P) → P * V * M (읽는 순서 = 적용 순서)
-    const MVP = M.multiply(V).multiply(P);
-    const S_inv = createScaleMatrix(mesh.scale, true);
-    const R = createRotateMatrix(mesh.rotate);
+export function createViewProjectionMatrix(camera, aspect) {
+    return createViewMatrix(camera).multiply(createProjectionMatrix(camera, aspect));
+}
+export function createMatrixData(transform, viewProjection) {
+    const M = createModelMatrix(transform);
+    // M.multiply(VP) → P * V * M (읽는 순서 = 적용 순서)
+    const MVP = M.multiply(viewProjection);
+    const S_inv = createScaleMatrix(transform.scale, true);
+    const R = createRotateMatrix(transform.rotate);
     const NormalMatrix = S_inv.multiply(R);
-    // mat4x4(64bytes)
     const data = new Float32Array(48);
     data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData(), ...M.getArrayData()], 0);
+    return data;
+}
+// 인스턴싱용: modelMatrix + normalMatrix만 반환 (VP는 uniform으로 따로 전달)
+export function createModelMatrixData(transform) {
+    const M = createModelMatrix(transform);
+    const S_inv = createScaleMatrix(transform.scale, true);
+    const R = createRotateMatrix(transform.rotate);
+    const NormalMatrix = S_inv.multiply(R);
+    const data = new Float32Array(32);
+    data.set([...M.getArrayData(), ...NormalMatrix.getArrayData()], 0);
+    return data;
+}
+export function createMatrix(mesh, camera, aspect, device, buffer) {
+    const data = createMatrixData(mesh, createViewProjectionMatrix(camera, aspect));
     device.queue.writeBuffer(buffer.buffer, 0, data);
     return buffer;
 }

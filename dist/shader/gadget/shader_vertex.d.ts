@@ -5,13 +5,17 @@ interface VertexInput {
     name: string;
 }
 export interface ShaderVertexGadgetParams extends ShaderGadgetParams {
+    device: GPUDevice;
     vertexInput?: VertexInput[];
-    instanceMesh: InstanceMesh[];
+    instanceMesh?: InstanceMesh[];
+    code?: string;
 }
 export declare class ShaderVertexGadget extends ShaderGadget {
+    device: GPUDevice;
     vertexInput: VertexInput[];
     instanceMesh: InstanceMesh[];
-    constructor({ placeholder, vertexInput, instanceMesh }: ShaderVertexGadgetParams);
+    code: string;
+    constructor({ placeholder, device, vertexInput, instanceMesh, code }: ShaderVertexGadgetParams);
     getCode(): string;
     getVertexLayout(): GPUVertexBufferLayout[];
 }

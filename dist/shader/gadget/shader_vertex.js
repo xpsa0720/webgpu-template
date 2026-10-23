@@ -1,4 +1,6 @@
+import { gpuBufferSizeFormat } from "../../util/math";
 import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";
+import { SHADER_BUILTIN_INPUT } from "./code/shader_instance";
 import { ShaderGadget } from "./shader_gadget";
 const SCALAR = {
     f32: { family: "float", bits: 32, suffix: "f" },
@@ -58,21 +60,26 @@ const FORMAT_TABLE = {
     "unorm8x4-bgra": { byteSize: 4, family: "float" },
 };
 export class ShaderVertexGadget extends ShaderGadget {
+    device;
     vertexInput;
     instanceMesh;
-    constructor({ placeholder = {}, vertexInput, instanceMesh }) {
+    code;
+    constructor({ placeholder = {}, device, vertexInput, instanceMesh, code }) {
         placeholder["@VERTEX_INPUT"] = SHADER_VERTEX_INPUT;
+        placeholder["@BUILTIN_INPUT"] = SHADER_BUILTIN_INPUT;
         super({ placeholder });
+        this.device = device;
         this.vertexInput = vertexInput ?? [];
         this.instanceMesh = instanceMesh ?? [];
+        this.code = code ?? SHADER_VERTEX_DEFAULT;
     }
     getCode() {
-        let result = SHADER_VERTEX_DEFAULT;
+        let result = this.code;
         return super.getCode(result);
     }
     getVertexLayout() {
         const layout = {
-            arrayStride: roundUp(4, FORMAT_TABLE["float32x3"].byteSize * 2),
+            arrayStride: gpuBufferSizeFormat(FORMAT_TABLE["float32x3"].byteSize * 2),
             stepMode: "vertex",
             attributes: [
                 { shaderLocation: 0, offset: 0, format: "float32x3" },
@@ -81,8 +88,5 @@ export class ShaderVertexGadget extends ShaderGadget {
         };
         return [layout];
     }
-}
-function roundUp(k, n) {
-    return Math.ceil(n / k) * k;
 }
 //# sourceMappingURL=shader_vertex.js.map

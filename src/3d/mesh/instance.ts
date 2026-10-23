@@ -1,14 +1,14 @@
 import type { Render3DPass } from "../../pass/render_3d_pass";
-import { SHADER_MATRIAL_STRUCT, SHADER_MATRIX_STRUCT } from "../../shader/gadget/code/shader_code";
-import type { Camera } from "../../types/camera";
+import { SHADER_MATRIAL_STRUCT } from "../../shader/gadget/code/shader_code";
+import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../shader/gadget/code/shader_instance";
 import type { WebGPUBuffer } from "../../types/resource";
 import { distance, wgslStructSize } from "../../util/math";
-import { createMatrixData, createViewProjectionMatrix } from "../../util/matrix";
+import { createModelMatrixData } from "../../util/matrix";
 import { Vector3 } from "../math/vector";
 import type { Geometry } from "./geometry/geometry";
 import type { Matrial } from "./matrial/matrial";
 
-const RANDOM_RANGE = 10;
+const RANDOM_RANGE = 100;
 
 export interface MeshParams {
   render3DPass: Render3DPass;
@@ -25,11 +25,12 @@ interface InstanceMeshInfo{
 
 export class InstanceMesh{
   render3DPass: Render3DPass;
-  count: number; // 현재 matrixBuffer, matrialBuffer가 담을 수 있는 인스턴스 개수
+  count: number;
   instanceInfo : InstanceMeshInfo[];
   geometry: Geometry;
   matrixBuffer: WebGPUBuffer;
   matrialBuffer: WebGPUBuffer;
+  private dirty = true;
   AabbCenter!: Vector3;
   AabbRadius!: number;
     constructor({
@@ -43,28 +44,40 @@ export class InstanceMesh{
       this.geometry = geometry;
       this.AABB();
 
-      this.matrixBuffer = this.createBuffer(SHADER_MATRIX_STRUCT);
+      this.matrixBuffer = this.createBuffer(SHADER_INSTANCE_MATRIX_STRUCT);
       this.matrialBuffer = this.createBuffer(SHADER_MATRIAL_STRUCT);
+      this.writeBuffers();
     }
 
-    update(camera: Camera, aspect: number) {
+    markDirty() {
+      this.dirty = true;
+    }
+
+    update() {
       if (this.count !== this.instanceInfo.length) {
         this.matrixBuffer.buffer.destroy();
         this.matrialBuffer.buffer.destroy();
         this.count = this.instanceInfo.length;
-        this.matrixBuffer = this.createBuffer(SHADER_MATRIX_STRUCT);
+        this.matrixBuffer = this.createBuffer(SHADER_INSTANCE_MATRIX_STRUCT);
         this.matrialBuffer = this.createBuffer(SHADER_MATRIAL_STRUCT);
+        this.dirty = true;
       }
+      if (!this.dirty || this.count === 0) return;
+
+      this.writeBuffers();
+      this.dirty = false;
+    }
+
+    private writeBuffers() {
       if (this.count === 0) return;
 
-      const viewProjection = createViewProjectionMatrix(camera, aspect);
-      const matrixStride = wgslStructSize(SHADER_MATRIX_STRUCT) / 4;
+      const matrixStride = wgslStructSize(SHADER_INSTANCE_MATRIX_STRUCT) / 4;
       const matrialStride = wgslStructSize(SHADER_MATRIAL_STRUCT) / 4;
       const matrixData = new Float32Array(matrixStride * this.count);
       const matrialData = new Float32Array(matrialStride * this.count);
 
       this.instanceInfo.forEach((info, i) => {
-        matrixData.set(createMatrixData(info, viewProjection), i * matrixStride);
+        matrixData.set(createModelMatrixData(info), i * matrixStride);
         matrialData.set(info.matrial.getDataArray(), i * matrialStride);
       });
 

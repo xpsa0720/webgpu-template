@@ -161,6 +161,20 @@ export function createMatrixData(transform: Transform, viewProjection: Mat4x4) {
   return data;
 }
 
+// 인스턴싱용: modelMatrix + normalMatrix만 반환 (VP는 uniform으로 따로 전달)
+export function createModelMatrixData(transform: Transform) {
+  const M = createModelMatrix(transform);
+
+  const S_inv = createScaleMatrix(transform.scale, true);
+  const R = createRotateMatrix(transform.rotate);
+  const NormalMatrix = S_inv.multiply(R);
+
+  const data = new Float32Array(32);
+  data.set([...M.getArrayData(), ...NormalMatrix.getArrayData()], 0);
+
+  return data;
+}
+
 export function createMatrix(
   mesh: Mesh,
   camera: Camera,

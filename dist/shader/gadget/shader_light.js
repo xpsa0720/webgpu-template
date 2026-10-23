@@ -8,6 +8,8 @@ export class ShaderLightGadget extends ShaderGadget {
     group;
     structSize;
     func;
+    // instanceFunc: string;
+    // instanceCode: string;
     device;
     code;
     binding;
@@ -15,7 +17,10 @@ export class ShaderLightGadget extends ShaderGadget {
     countPlaceholder;
     _lights;
     onLightChange;
-    constructor({ struct, define, placeholder, binding, group, code, device, func, lights = [], countPlaceholder, onLightChange, }) {
+    constructor({ struct, define, placeholder, binding, group, code, device, func, 
+    // instanceFunc,
+    // instanceCode,
+    lights = [], countPlaceholder, onLightChange, }) {
         super({ placeholder: { [countPlaceholder]: "0", ...placeholder } });
         this.struct = struct;
         this.define = define;
@@ -24,6 +29,8 @@ export class ShaderLightGadget extends ShaderGadget {
         this.code = code;
         this.device = device;
         this.func = func;
+        // this.instanceFunc = instanceFunc;
+        // this.instanceCode = instanceCode;
         this.binding = binding;
         this._lights = lights;
         this.countPlaceholder = countPlaceholder;
@@ -87,6 +94,14 @@ export class ShaderLightGadget extends ShaderGadget {
             return "";
         return super.getCode(this.func);
     }
+    // getInstanceCode() {
+    //   if (this._lights.length === 0) return "";
+    //   return super.getCode(this.instanceCode);
+    // }
+    // getInstanceFunctionCode() {
+    //   if (this._lights.length === 0) return "";
+    //   return super.getCode(this.instanceFunc);
+    // }
     getStructUniformCode() {
         if (this._lights.length === 0)
             return "";

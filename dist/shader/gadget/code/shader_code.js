@@ -18,6 +18,7 @@ struct VertexOut{
   @location(0) normal:vec4f,
   @location(1) color:vec4f,
   @location(2) world_position:vec4f,
+  @location(3) @interpolate(flat) instance_index:u32,
 }`;
 export const SHADER_MATRIAL_STRUCT = `
 struct Matrial {
@@ -29,18 +30,22 @@ struct Matrial {
 export const SHADER_MATRIX_UNIFORM = `@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM = `@group(3) @binding(1) var<uniform> cameraPos:vec4f;`;
 export const SHADER_MATRIAL_UNIFORM = `@group(3) @binding(2) var<uniform> matrial: Matrial;`;
-export const SHADER_INSTANCE_MATRIX_UNIFORM = `@group(3) @binding(20) var<storage, read> instanceMvpMatrix: array<mat4x4<f32>>;`;
-export const SHADER_INSTANCE_MATRIAL_UNIFORM = `@group(3) @binding(21) var<storage, read> instanceMatrial: array<Matrial>;`;
+export const SHADER_INSTANCE_FLAG_UNIFORM = `@group(3) @binding(3) var<uniform> instanceFlag: u32`;
 export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f`;
 export const SHADER_VERTEX_DEFAULT = `
   @vertex
-  fn vs(@VERTEX_INPUT) -> VertexOut {
+  fn vs(@VERTEX_INPUT, @BUILTIN_INPUT) -> VertexOut {
   var out:VertexOut;
+  var mvp = matrix.mvpMatrix;
+  var normalizeNormal = matrix.normalMatrix;
+  var color = matrial.baseColor;
+  var world_position = matrix.modelMatrix;
 
-  out.position = matrix.mvpMatrix * vec4f(pos,1);
-  out.normal = normalize(matrix.normalMatrix * vec4f(normal,0));
-  out.color = matrial.baseColor;
-  out.world_position = matrix.modelMatrix * vec4f(pos,1);
+  out.position = mvp * vec4f(pos,1);
+  out.normal = normalize(normalizeNormal * vec4f(normal,0));;
+  out.color = color;
+  out.world_position = world_position * vec4f(pos,1);
+  out.instance_index = instance_index;
 
   return out;
 }`;
@@ -49,10 +54,9 @@ export const SHADER_FRAGMENT_DEFAULT = `
 
 @LIGHT_FUNCTIONS
 
-fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f) -> vec4f{
-  var specualr = pow(max(dot(r.xyz,v.xyz), 0), matrial.specualrShininess) * matrial.specualrStrength;
+fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f, specualrShininess:f32, specualrStrength:f32, specualrColor:vec3f) -> vec4f{
+  var specualr = pow(max(dot(r.xyz,v.xyz), 0), specualrShininess) * specualrStrength;
   var color = lightColor.xyz;
-  var specualrColor = matrial.specualrColor.xyz;
   var result = color*specualr * specualrColor;
   return vec4f(result,1);
 }
@@ -61,6 +65,11 @@ fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f) -> vec4f{
 fn fs(out: VertexOut) -> @location(0) vec4f {
   var finalColor=vec4f();
   var x = cameraPos.x;
+
+  var specualrShininess= matrial.specualrShininess;
+  var specualrStrength= matrial.specualrStrength;
+  var specualrColor= matrial.specualrColor.xyz;
+
 
   @LIGHT_CODES
 
@@ -77,11 +86,11 @@ export const POINT_LIGHT = {
     countPlaceholder: "@POINT_LIGHT_COUNT",
     code: `
     for(var i=0; i< @POINT_LIGHT_COUNT; i++){
-      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, out.color,pointLight[i].color, pointLight[i].intensity);
+      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, out.color,pointLight[i].color, pointLight[i].intensity,specualrShininess,specualrStrength,specualrColor);
     }
     `,
     func: `
-    fn PointLight_(lightPosition:vec4f, p:vec4f, normal: vec4f, baseColor: vec4f, lightColor:vec4f, intensity:f32) -> vec4f{
+    fn PointLight_(lightPosition:vec4f, p:vec4f, normal: vec4f, baseColor: vec4f, lightColor:vec4f, intensity:f32, specualrShininess:f32, specualrStrength:f32, specualrColor:vec3f) -> vec4f{
     let l = normalize(lightPosition - p);
     let v = normalize(cameraPos - p);
     let r = 2*dot(normal, l)*normal - l;
@@ -90,7 +99,7 @@ export const POINT_LIGHT = {
   
     let diffuse = max(dot(normal, l), 0);
     let diffuseColor = baseColor * diffuse * lightColor;
-    let specularColor = Speculer(l,r,v,normal, lightColor);
+    let specularColor = Speculer(l,r,v,normal, lightColor,specualrShininess,specualrStrength,specualrColor);
     return (specularColor + diffuseColor) * attenuation;
   }`,
 };

@@ -13,6 +13,8 @@ export interface ShaderLightGadgetParams<
   binding: number;
   func: string;
   code: string;
+  // instanceFunc: string;
+  // instanceCode: string;
   device: GPUDevice;
   lights?: T[];
   countPlaceholder: string;
@@ -25,6 +27,8 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
   group: number;
   structSize: number;
   func: string;
+  // instanceFunc: string;
+  // instanceCode: string;
   device!: GPUDevice;
   code: string;
   binding: number;
@@ -42,6 +46,8 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     code,
     device,
     func,
+    // instanceFunc,
+    // instanceCode,
     lights = [],
     countPlaceholder,
     onLightChange,
@@ -54,6 +60,8 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     this.code = code;
     this.device = device;
     this.func = func;
+    // this.instanceFunc = instanceFunc;
+    // this.instanceCode = instanceCode;
     this.binding = binding;
     this._lights = lights;
     this.countPlaceholder = countPlaceholder;
@@ -132,6 +140,16 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     if (this._lights.length === 0) return "";
     return super.getCode(this.func);
   }
+
+  // getInstanceCode() {
+  //   if (this._lights.length === 0) return "";
+  //   return super.getCode(this.instanceCode);
+  // }
+
+  // getInstanceFunctionCode() {
+  //   if (this._lights.length === 0) return "";
+  //   return super.getCode(this.instanceFunc);
+  // }
 
   getStructUniformCode() {
     if (this._lights.length === 0) return "";

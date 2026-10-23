@@ -1,11 +1,11 @@
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 export interface ShaderbindingGadgetParams extends ShaderGadgetParams {
     define: string;
-    type: 'texture' | 'uniform' | 'stoarge' | 'sampler';
+    type: 'texture' | 'uniform' | 'storage' | 'sampler';
 }
 export declare class ShaderbindingGadget extends ShaderGadget {
     define: string;
-    type: 'texture' | 'uniform' | 'stoarge' | 'sampler';
+    type: 'texture' | 'uniform' | 'storage' | 'sampler';
     constructor({ define, placeholder, type }: ShaderbindingGadgetParams);
     getCode(): string;
 }

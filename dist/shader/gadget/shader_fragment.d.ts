@@ -1,22 +1,16 @@
-import type { ShaderLightGadget } from "./shader_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 export interface ShaderFragmentGadgetParams extends ShaderGadgetParams {
     device: GPUDevice;
-    onLightChange?: () => void;
+    code?: string;
 }
 export declare class ShaderFragmentGadget extends ShaderGadget {
     device: GPUDevice;
-    shaderLights: Record<number, ShaderLightGadget<any>>;
-    private onLightChange?;
-    constructor({ placeholder, device, onLightChange }: ShaderFragmentGadgetParams);
-    private wrapLightChange;
-    private initLight;
-    updatePlaceholder(): void;
-    private get lights();
-    getFuntionCode(): string;
-    getLightStructsUniforms(): string;
-    getLightCode(): string;
-    getCode(): string;
-    getBindGroupEntry(): GPUBindGroupEntry[];
+    code: string;
+    constructor({ placeholder, device, code }: ShaderFragmentGadgetParams);
+    buildCode(arg: {
+        lightStructsUniforms: string;
+        lightCode: string;
+        funtionCode: string;
+    }): string;
 }
 //# sourceMappingURL=shader_fragment.d.ts.map

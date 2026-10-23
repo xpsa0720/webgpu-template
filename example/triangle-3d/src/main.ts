@@ -10,6 +10,7 @@ import {
   Matrial,
   Specular,
   Mat3x3,
+  InstanceMesh,
 } from "@xpsa0720/webgpu";
 import { toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
@@ -73,6 +74,26 @@ class App3D {
 
     render3DPass.meshs.push(cube);
     render3DPass.meshs.push(sphere);
+
+    // InstanceMesh 테스트: 큐브 10000개 랜덤 배치
+    const templateCube = new Cube({
+      render3DPass,
+      location: new Vector3(0, 0, 0),
+      scale: new Vector3(0.1,0.1,0.1)
+    });
+
+    const instanceCubes = new InstanceMesh({
+      render3DPass,
+      geometry: templateCube.geometry,
+      instanceInfo: InstanceMesh.randomInstanceInfo(
+        10000,
+        new Matrial({
+          color: new Vector3(0.3, 1, 0.3),
+          specular: new Specular({ strength: 0.5, shininess: 2 }),
+        }),
+      ),
+    });
+    render3DPass.instanceMesh.push(instanceCubes);
 
     // PointLight 추가
     render3DPass.addLight(

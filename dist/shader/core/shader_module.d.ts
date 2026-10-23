@@ -8,13 +8,22 @@ export interface ShaderModuleStruct {
     vertex: ShaderVertexGadget;
     fragment: ShaderFragmentGadget;
 }
-export declare class ShaderGadgetModule {
+export interface ShaderGadgetModuleParams {
+    device: GPUDevice;
+    viewShaderCode?: boolean;
+}
+export declare abstract class ShaderGadgetModule {
     module: ShaderModuleStruct;
     private viewShaderCode;
-    constructor(device: GPUDevice, onLightChange?: () => void, viewShaderCode?: boolean);
-    getSourceCode(): string;
+    constructor({ device, viewShaderCode, }: ShaderGadgetModuleParams);
+    getSourceCode(lightArg?: {
+        lightStructsUniforms: string;
+        lightCode: string;
+        funtionCode: string;
+    }): string;
     getVsEntryPoint(): string;
     getFsEntryPoint(): string;
     getVertexLayout(): GPUVertexBufferLayout[];
+    abstract createShaderModule(device: GPUDevice): ShaderModuleStruct;
 }
 //# sourceMappingURL=shader_module.d.ts.map

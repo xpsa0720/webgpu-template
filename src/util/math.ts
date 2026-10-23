@@ -123,14 +123,14 @@ export function isView(mesh:Mesh, camera:Camera, aspect: number): boolean{
   const r = mesh.AabbRadius;
   const PV = P.multiply(V)
 
-  const left = PV.getRow(3).add(PV.getRow(0)).toVector3()
-  const right = PV.getRow(3).subtract(PV.getRow(0)).toVector3()
+  const left = PV.getRow(3).add(PV.getRow(0))
+  const right = PV.getRow(3).subtract(PV.getRow(0))
+  const bottom = PV.getRow(3).add(PV.getRow(1))
+  const top = PV.getRow(3).subtract(PV.getRow(1))
+  const near = PV.getRow(3).add(PV.getRow(2))
+  const far = PV.getRow(3).subtract(PV.getRow(2))
 
-  const bottom = PV.getRow(3).add(PV.getRow(1)).toVector3()
-  const top = PV.getRow(3).subtract(PV.getRow(1)).toVector3()
-
-  const near = PV.getRow(3).add(PV.getRow(2)).toVector3()
-  const far = PV.getRow(3).subtract(PV.getRow(2)).toVector3()
+  left.x
 
   return true;
 }

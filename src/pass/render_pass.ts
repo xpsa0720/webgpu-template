@@ -16,13 +16,13 @@ export interface RenderPassArg extends PassArg {
 export abstract class RenderPass extends Pass {
   target: GPUTexture | HTMLCanvasElement;
   context: GPUCanvasContext | null;
-  pipeline!: GPURenderPipeline;
   entries: Record<number, GPUBindingResource>;
   device: GPUDevice;
   // vertexEntryPoint: string;
   // fragmentEntryPoint: string;
   // vertexCount: GPUSize32;
   // instanceCount: GPUSize32;
+  meshRenderShaderPipeline!: GPURenderPipeline;
   loadOp: GPULoadOp;
   format: GPUTextureFormat;
   blendState: GPUBlendState | undefined;
@@ -69,7 +69,7 @@ export abstract class RenderPass extends Pass {
     this.entries = [];
   }
 
-  abstract settingPipeline(shaderCode?: string): GPURenderPipeline 
+  abstract settingPipeline(shaderCode?: string) :any;
 
   deleteBuffer(bindigIdx: number) {
     if (!this.entries[bindigIdx]) {
@@ -87,7 +87,7 @@ export abstract class RenderPass extends Pass {
         });
       }
       this.bindGroup = this.device.createBindGroup({
-        layout: this.pipeline.getBindGroupLayout(0),
+        layout: this.meshRenderShaderPipeline.getBindGroupLayout(0),
         entries: entries,
       });
     }
@@ -100,7 +100,7 @@ export abstract class RenderPass extends Pass {
         });
       }
       this.bindGroupTex = this.device.createBindGroup({
-        layout: this.pipeline.getBindGroupLayout(1),
+        layout: this.meshRenderShaderPipeline.getBindGroupLayout(1),
         entries: entries_tex,
       });
     }
@@ -113,7 +113,7 @@ export abstract class RenderPass extends Pass {
         });
       }
       this.bindGroupSampler = this.device.createBindGroup({
-        layout: this.pipeline.getBindGroupLayout(2),
+        layout: this.meshRenderShaderPipeline.getBindGroupLayout(2),
         entries: entries_sampler,
       });
     }

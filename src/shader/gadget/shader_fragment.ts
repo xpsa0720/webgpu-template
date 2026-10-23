@@ -1,4 +1,3 @@
-
 import type { ShaderLightGadget } from "./shader_light";
 import {
   ShaderAmbientLightGadget,
@@ -6,137 +5,46 @@ import {
   ShaderPointLightGadget,
 } from "./shader_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
-import { AMBIENT_LIGHT, DIRECTIONAL_LIGHT, POINT_LIGHT, SHADER_FRAGMENT_DEFAULT } from "./code/shader_code";
+import {
+  AMBIENT_LIGHT,
+  DIRECTIONAL_LIGHT,
+  POINT_LIGHT,
+  SHADER_FRAGMENT_DEFAULT,
+} from "./code/shader_code";
 
 export interface ShaderFragmentGadgetParams extends ShaderGadgetParams {
   device: GPUDevice;
-  onLightChange?: () => void;
   code?: string;
 }
 
 export class ShaderFragmentGadget extends ShaderGadget {
   device: GPUDevice;
-  shaderLights: Record<number, ShaderLightGadget<any>>;
-  bindGroupEntry!:GPUBindGroupEntry[];
   code: string;
-  private onLightChange?: () => void;
-  constructor({ placeholder = {}, device, onLightChange, code }: ShaderFragmentGadgetParams) {
+  constructor({ placeholder = {}, device, code }: ShaderFragmentGadgetParams) {
     super({ placeholder });
     this.device = device;
     this.code = code ?? SHADER_FRAGMENT_DEFAULT;
-    this.onLightChange = onLightChange;
-    this.shaderLights = this.initLight();
-    this.updatePlaceholder();
-    this.updateBindGroupEntray();
+    // this.updatePlaceholder();
+    // this.updateBindGroupEntray();
   }
 
-  private wrapLightChange(): () => void {
-    return () => {
-      this.updatePlaceholder();
-      this.onLightChange?.();
-    this.updateBindGroupEntray();
-    };
-  }
+  // private wrapLightChange(): () => void {
+  //   return () => {
+  //     // this.updatePlaceholder();
+  //     this.onLightChange?.();
+  //   // this.updateBindGroupEntray();
+  //   };
+  // }
 
-  private initLight() {
-    const result: Record<number, ShaderLightGadget<any>> = {};
-    const usedBindings = new Set<number>();
-
-    const LIGHT_CODE_LIST = [
-      new ShaderPointLightGadget({
-        struct: POINT_LIGHT.struct,
-        define: POINT_LIGHT.define,
-        countPlaceholder: POINT_LIGHT.countPlaceholder,
-        group: 3,
-        binding: 10,
-        code: POINT_LIGHT.code,
-        func: POINT_LIGHT.func,
-        device: this.device,
-        onLightChange: this.wrapLightChange(),
-      }),
-      new ShaderAmbientLightGadget({
-        struct: AMBIENT_LIGHT.struct,
-        define: AMBIENT_LIGHT.define,
-        countPlaceholder: AMBIENT_LIGHT.countPlaceholder,
-        group: 3,
-        binding: 11,
-        code: AMBIENT_LIGHT.code,
-        func: AMBIENT_LIGHT.func,
-        device: this.device,
-        onLightChange: this.wrapLightChange(),
-      }),
-      new ShaderDirectionalLightGadget({
-        struct: DIRECTIONAL_LIGHT.struct,
-        define: DIRECTIONAL_LIGHT.define,
-        countPlaceholder: DIRECTIONAL_LIGHT.countPlaceholder,
-        group: 3,
-        binding: 12,
-        code: DIRECTIONAL_LIGHT.code,
-        func: DIRECTIONAL_LIGHT.func,
-        device: this.device,
-        onLightChange: this.wrapLightChange(),
-      }),
-    ];
-    LIGHT_CODE_LIST.forEach((e, i) => {
-      if (usedBindings.has(e.binding)) {
-        throw new Error(`Light binding 번호 ${e.binding}이 중복됨`);
-      }
-      usedBindings.add(e.binding);
-      result[i] = e;
-    });
-    return result;
-  }
-
-  updatePlaceholder() {
-    this.placeholder["@LIGHT_STRUCTS_UNIFORMS"] =
-      this.getLightStructsUniforms();
-    this.placeholder["@LIGHT_CODES"] = this.getLightCode();
-    this.placeholder["@LIGHT_FUNCTIONS"] = this.getFuntionCode();
-  }
-
-  private get lights() {
-    return Object.values(this.shaderLights).sort(
-      (a, b) => a.binding - b.binding,
-    );
-  }
-
-  getFuntionCode() {
-    let result = "";
-    this.lights.forEach((e) => {
-      result += e.getFunctionCode() + "\n";
-    });
-    return result;
-  }
-
-  getLightStructsUniforms() {
-    let result = "";
-    this.lights.forEach((e) => {
-      result += e.getStructUniformCode() + "\n";
-    });
-    return result;
-  }
-
-  getLightCode() {
-    let result = "";
-    this.lights.forEach((e) => {
-      result += e.getCode() + "\n";
-    });
-    return result;
-  }
-
-  getCode() {
+  buildCode(arg: {
+    lightStructsUniforms: string;
+    lightCode: string;
+    funtionCode: string;
+  }) {
+    this.placeholder["@LIGHT_STRUCTS_UNIFORMS"] = arg.lightStructsUniforms;
+    this.placeholder["@LIGHT_CODES"] = arg.lightCode;
+    this.placeholder["@LIGHT_FUNCTIONS"] = arg.funtionCode;
     let result = this.code;
     return super.getCode(result);
-  }
-
-  updateBindGroupEntray(){
-    const result: GPUBindGroupEntry[] = [];
-
-    this.lights.forEach((e) => {
-      if (e.lights.length === 0) return;
-      result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
-    });
-
-    this.bindGroupEntry =result;
   }
 }

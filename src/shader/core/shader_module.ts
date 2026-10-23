@@ -15,45 +15,44 @@ export interface ShaderModuleStruct {
 
 export interface ShaderGadgetModuleParams {
   device: GPUDevice;
-  onLightChange?: () => void;
   viewShaderCode?: boolean;
-  bindings?: ShaderbindingGadget[];
-  vertexCode?: string;
-  fragmentCode?: string;
 }
 
-export class ShaderGadgetModule {
+export abstract class ShaderGadgetModule {
   module: ShaderModuleStruct;
+  // bindGroupEntry!:GPUBindGroupEntry[];
   private viewShaderCode: boolean;
 
   constructor({
     device,
-    onLightChange,
     viewShaderCode = false,
-    bindings = [],
-    vertexCode,
-    fragmentCode,
   }: ShaderGadgetModuleParams) {
     this.viewShaderCode = viewShaderCode;
-    this.module = {
-      structs: [
-        new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
-        new ShaderStructGadget({ struct: SHADER_VERTEXOUT_STRUCT }),
-        new ShaderStructGadget({ struct: SHADER_MATRIAL_STRUCT }),
-      ],
-      bindings: [
-        new ShaderbindingGadget({
-          define: SHADER_CAMERA_POSITION_UNIFORM,
-          type: "uniform",
-        }),
-        ...bindings,
-      ],
-      vertex: new ShaderVertexGadget({ device, code: vertexCode }),
-      fragment: new ShaderFragmentGadget({ device, onLightChange, code: fragmentCode }),
-    };
+    this.module = this.createShaderModule(device)
+    // this.bindGroupEntry = this.updateBindGroupEntray()
+    // {
+    //   structs: [
+    //     new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
+    //     new ShaderStructGadget({ struct: SHADER_VERTEXOUT_STRUCT }),
+    //     new ShaderStructGadget({ struct: SHADER_MATRIAL_STRUCT }),
+    //   ],
+    //   bindings: [
+    //     new ShaderbindingGadget({
+    //       define: SHADER_CAMERA_POSITION_UNIFORM,
+    //       type: "uniform",
+    //     }),
+    //     ...bindings,
+    //   ],
+    //   vertex: new ShaderVertexGadget({ device, code: vertexCode }),
+    //   fragment: new ShaderFragmentGadget({ device, code: fragmentCode }),
+    // };
   }
 
-  getSourceCode(): string {
+  getSourceCode(lightArg?: {
+    lightStructsUniforms: string;
+    lightCode: string;
+    funtionCode: string;
+  }): string {
     let result = "";
 
     this.module.structs.forEach((e, i) => {
@@ -65,7 +64,11 @@ export class ShaderGadgetModule {
     });
 
     result += this.module.vertex.getCode();
-    result += this.module.fragment.getCode();
+    result += this.module.fragment.buildCode(lightArg ?? {
+      lightStructsUniforms: "",
+      lightCode: "",
+      funtionCode: "",
+    });
 
     if (this.viewShaderCode) {
       console.log(result);
@@ -85,4 +88,18 @@ export class ShaderGadgetModule {
   getVertexLayout(): GPUVertexBufferLayout[] {
     return this.module.vertex.getVertexLayout();
   }
+
+
+  // abstract updateBindGroupEntray():GPUBindGroupEntry[]
+  abstract createShaderModule(device:GPUDevice):ShaderModuleStruct
+  // {
+  //   const result: GPUBindGroupEntry[] = [];
+
+  //   this.lights.forEach((e) => {
+  //     if (e.lights.length === 0) return;
+  //     result.push({ binding: e.binding, resource: { buffer: e.gpuBuffer.buffer } });
+  //   });
+
+  //   this.bindGroupEntry =result;
+  // }
 }

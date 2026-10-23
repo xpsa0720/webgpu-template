@@ -33,6 +33,7 @@ export { normalize } from "./util/math";
 export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
 export { Matrial } from "./3d/mesh/matrial/matrial";
 export { Specular } from "./3d/mesh/matrial/specular";
+export { InstanceMesh } from "./3d/mesh/instance";
 
 // types
 export type { WebGPUBuffer, WebGPUTexture, WebGPUSampler } from "./types/resource";

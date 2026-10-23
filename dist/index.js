@@ -23,6 +23,7 @@ export { normalize } from "./util/math";
 export { Light, PointLight, AmbientLight, DirectionalLight } from "./shader/gadget/shader_light";
 export { Matrial } from "./3d/mesh/matrial/matrial";
 export { Specular } from "./3d/mesh/matrial/specular";
+export { InstanceMesh } from "./3d/mesh/instance";
 // config
 export { DEFAULT_CONFIG } from "./core/config";
 //# sourceMappingURL=index.js.map
