@@ -337,10 +337,7 @@ export class Render3DPass extends RenderPass {
             this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
             this.instanceMesh.forEach((instanceMesh) => {
                 instanceMesh.update();
-                const t0 = performance.now();
                 instanceMesh.frustumCull(vpMatrix);
-                const t1 = performance.now();
-                console.log(`frustumCull: ${(t1 - t0).toFixed(1)}ms, visible: ${instanceMesh.renderCount}/${instanceMesh.count}`);
                 if (instanceMesh.renderCount === 0)
                     return;
                 if (!instanceMesh.cachedBindGroup) {

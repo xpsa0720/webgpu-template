@@ -20,7 +20,6 @@ export class InstanceMesh {
     // 인스턴스별 미리 계산된 데이터 캐시
     cachedMatrixData;
     cachedMatrialData;
-    // frustumCull용 평탄화된 위치 배열 (x,y,z,x,y,z,...)
     positions;
     // 인덱스 배열: swap 시 실제 데이터 대신 인덱스만 교환
     indices;
