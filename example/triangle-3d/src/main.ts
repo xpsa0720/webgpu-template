@@ -86,7 +86,7 @@ class App3D {
       render3DPass,
       geometry: templateCube.geometry,
       instanceInfo: InstanceMesh.randomInstanceInfo(
-        1000000,
+        100000,
         new Matrial({
           color: new Vector3(0.3, 1, 0.3),
           specular: new Specular({ strength: 0.5, shininess: 2 }),
