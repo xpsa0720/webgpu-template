@@ -27,6 +27,24 @@ function createRotateMatrix(rotate, inverse = false) {
     const XYZ = Z_Matrix.multiply(XY);
     return XYZ;
 }
+// 쿼터니언 [x, y, z, w] → createRotateMatrix와 같은 순서(Rx · Ry · Rz)의 오일러 각 (라디안)
+export function quaternionToEuler(q) {
+    const [x, y, z, w] = q;
+    // 회전 행렬 성분 (mRC = R행 C열)
+    const m11 = 1 - 2 * (y * y + z * z);
+    const m12 = 2 * (x * y - z * w);
+    const m13 = 2 * (x * z + y * w);
+    const m22 = 1 - 2 * (x * x + z * z);
+    const m23 = 2 * (y * z - x * w);
+    const m32 = 2 * (y * z + x * w);
+    const m33 = 1 - 2 * (x * x + y * y);
+    const ry = Math.asin(Math.max(-1, Math.min(1, m13)));
+    if (Math.abs(m13) < 0.9999999) {
+        return new Vector3(Math.atan2(-m23, m33), ry, Math.atan2(-m12, m11));
+    }
+    // 짐벌 락 (y = ±90°): z를 0으로 두고 x에 몰아줌
+    return new Vector3(Math.atan2(m32, m22), ry, 0);
+}
 export function createFowardRotateMatrix(rotate, inverse = false) {
     const rotate_X = rotate.x * (inverse ? -1 : 1);
     const rotate_Y = rotate.y * (inverse ? -1 : 1);
@@ -74,7 +92,7 @@ function createScaleMatrix(scale, inverse = false) {
     ]);
     return Matrix;
 }
-function createModelMatrix(mesh) {
+export function createModelMatrix(mesh) {
     const S = createScaleMatrix(mesh.scale);
     const R = createRotateMatrix(mesh.rotate);
     const T = createTranslateMatrix(mesh.location);
@@ -118,18 +136,30 @@ export function createProjectionMatrix(camera, aspect) {
 export function createViewProjectionMatrix(camera, aspect) {
     return createViewMatrix(camera).multiply(createProjectionMatrix(camera, aspect));
 }
-export function createMatrixData(transform, viewProjection) {
-    const M = createModelMatrix(transform);
-    // M.multiply(VP) → P * V * M (읽는 순서 = 적용 순서)
-    const MVP = M.multiply(viewProjection);
+export function createNormalMatrix(transform) {
     const S_inv = createScaleMatrix(transform.scale, true);
     const R = createRotateMatrix(transform.rotate);
-    const NormalMatrix = S_inv.multiply(R);
-    const data = new Float32Array(48);
-    data.set([...MVP.getArrayData(), ...NormalMatrix.getArrayData(), ...M.getArrayData()], 0);
+    const n = S_inv.multiply(R);
+    return n;
+}
+export function createMatrixData(transform, parentMat) {
+    const local = createModelMatrix(transform);
+    const M = parentMat?.parentWorldMat
+        ? local.multiply(parentMat.parentWorldMat)
+        : local;
+    const n = createNormalMatrix(transform);
+    const NormalMatrix = parentMat?.parentNormalMat
+        ? n.multiply(parentMat.parentNormalMat)
+        : n;
+    // Matrixs struct 순서: normalMatrix, modelMatrix (mat4x4 × 2 = 32 floats)
+    // VP는 별도 uniform → 셰이더에서 vpMatrix * modelMatrix로 MVP 조립
+    const data = new Float32Array(32);
+    data.set([
+        ...NormalMatrix.getArrayData(),
+        ...M.getArrayData(),
+    ], 0);
     return data;
 }
-// 인스턴싱용: modelMatrix + normalMatrix만 반환 (VP는 uniform으로 따로 전달)
 export function createModelMatrixData(transform) {
     const M = createModelMatrix(transform);
     const S_inv = createScaleMatrix(transform.scale, true);
@@ -139,8 +169,8 @@ export function createModelMatrixData(transform) {
     data.set([...M.getArrayData(), ...NormalMatrix.getArrayData()], 0);
     return data;
 }
-export function createMatrix(mesh, vpMatrix, device, buffer) {
-    const data = createMatrixData(mesh, vpMatrix);
+export function createMatrix(mesh, device, buffer, parentMat) {
+    const data = createMatrixData(mesh, parentMat);
     device.queue.writeBuffer(buffer.buffer, 0, data);
     return buffer;
 }

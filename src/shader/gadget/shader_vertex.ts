@@ -1,4 +1,5 @@
-import type { InstanceMesh } from "../../3d/mesh/instance";
+
+import type { InstanceMesh } from "../../3d/node/mesh/instance";
 import { gpuBufferSizeFormat } from "../../util/math";
 import type { VertexLayout } from "../../util/vertex_layout";
 import { SHADER_VERTEX_DEFAULT, SHADER_VERTEX_INPUT } from "./code/shader_code";

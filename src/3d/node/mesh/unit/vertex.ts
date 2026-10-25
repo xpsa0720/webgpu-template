@@ -1,4 +1,4 @@
-import { Vector2, Vector3 } from "../../math/vector";
+import { Vector2, Vector3 } from "../../../math/vector";
 
 interface VertexParams {
   location: Vector3;

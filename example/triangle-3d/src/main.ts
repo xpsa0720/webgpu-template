@@ -16,6 +16,7 @@ import {
   loadModel,
   loadOBJ,
   loadGLTF,
+  Node,
 } from "@xpsa0720/webgpu";
 import { toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
@@ -82,20 +83,18 @@ class App3D {
 
     // === OBJ 로더 테스트: public/test_cube.obj 로드 ===
     try {
-      const objResult = await loadOBJ("/test_cube.obj");
-      console.log(`OBJ 로드 성공: vertices=${objResult.vertices.length}, indices=${objResult.indices.length}`);
-      const objGeometry = new Geometry(render3DPass, objResult.vertices, objResult.indices);
-      const objMesh = new Mesh({
-        render3DPass,
-        geometry: objGeometry,
-        location: new Vector3(-2, 0, 0),
-        matrial: new Matrial({
-          color: new Vector3(0.2, 1, 0.5),
-          specular: new Specular({ strength: 0.8, shininess: 4 }),
-        }),
+      const objRoot = await loadOBJ(render3DPass, "/test_cube.obj");
+      console.log(`OBJ 로드 성공: meshs=${objRoot.meshs.length}`);
+      // test_cube.obj에는 .mtl이 없어서 기본 회색 → 테스트용 색 지정
+      const objMatrial = new Matrial({
+        color: new Vector3(0.2, 1, 0.5),
+        specular: new Specular({ strength: 0.8, shininess: 4 }),
       });
-      render3DPass.meshs.push(objMesh);
-      console.log("OBJ 메시 렌더링 등록 완료");
+      objRoot.meshs.forEach((mesh) => (mesh.matrial = objMatrial));
+      objRoot.location = new Vector3(-2, 0, 0);
+      objRoot.updateWorld();
+      render3DPass.nodes.push(objRoot);
+      console.log("OBJ 노드 렌더링 등록 완료");
     } catch (e) {
       console.error("OBJ 로드 실패:", e);
     }
@@ -110,20 +109,10 @@ class App3D {
       if (!files || files.length === 0) return;
       console.log(`파일 드롭: ${Array.from(files).map(f => f.name).join(", ")}`);
       try {
-        // FileList 전체 전달 (.gltf + .bin 등 동반 파일 지원)
-        const result = await loadModel(files);
-        console.log(`모델 로드 성공: vertices=${result.vertices.length}, indices=${result.indices.length}`);
-        const geometry = new Geometry(render3DPass, result.vertices, result.indices);
-        const mesh = new Mesh({
-          render3DPass,
-          geometry,
-          location: new Vector3(0, 0, 0),
-          matrial: new Matrial({
-            color: new Vector3(0.8, 0.6, 0.2),
-            specular: new Specular({ strength: 0.8, shininess: 4 }),
-          }),
-        });
-        render3DPass.meshs.push(mesh);
+        // FileList 전체 전달 (.gltf + .bin / .obj + .mtl 등 동반 파일 지원)
+        const root = await loadModel(render3DPass, files);
+        console.log(`모델 로드 성공: 최상위 노드 ${root.children.length}개, 루트 meshs ${root.meshs.length}개`);
+        render3DPass.nodes.push(root);
         console.log("드롭된 모델 렌더링 등록 완료");
       } catch (err) {
         console.error("모델 로드 실패:", err);
@@ -149,6 +138,54 @@ class App3D {
     //   ),
     // });
     // render3DPass.instanceMesh.push(instanceCubes);
+
+    // === Node 테스트 ===
+    // 1) 계층: 태양 → 지구 → 달 (부모 회전 → 자식 공전)
+    const sun = new Node({
+      render3DPass,
+      location: new Vector3(0, 3, -6),
+      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.8,
+        matrial: new Matrial({ color: new Vector3(1, 0.8, 0.2) }) })],
+    });
+    const earth = new Node({
+      render3DPass,
+      location: new Vector3(3, 0, 0), // 태양 기준
+      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.4,
+        matrial: new Matrial({ color: new Vector3(0.2, 0.5, 1) }) })],
+    });
+    const moon = new Node({
+      render3DPass,
+      location: new Vector3(1, 0, 0), // 지구 기준
+      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.15,
+        matrial: new Matrial({ color: new Vector3(0.8, 0.8, 0.8) }) })],
+    });
+    sun.addChild(earth);
+    earth.addChild(moon);
+    render3DPass.nodes.push(sun); // 루트만 등록
+
+    // 2) transform: 위아래 이동 + 회전 + 축마다 다른 크기 (normalMat 확인용)
+    const box = new Node({
+      render3DPass,
+      location: new Vector3(-4, 0, -3),
+      meshs: [new Cube({ render3DPass, location: new Vector3(0, 0, 0),
+        matrial: new Matrial({ color: new Vector3(1, 0.4, 0.8) }) })],
+    });
+    render3DPass.nodes.push(box);
+
+    const startTime = performance.now();
+    const updateTestNodes = () => {
+      const t = (performance.now() - startTime) / 1000;
+
+      sun.rotate.y = t * 0.5;   // 지구 공전
+      earth.rotate.y = t * 2;   // 달 공전
+      sun.updateWorld();        // 루트에서 한 번 → 지구, 달까지 갱신
+
+      box.location.y = Math.sin(t * 2);
+      box.rotate.x = t;
+      box.rotate.y = t * 0.7;
+      box.scale = new Vector3(1 + 0.5 * Math.sin(t * 3), 1, 1);
+      box.updateWorld();
+    };
 
     // PointLight 추가
     render3DPass.addLight(
@@ -252,6 +289,7 @@ class App3D {
     this.wp.animate({
       b: {},
       callBack: () => {
+        updateTestNodes();
         const forward = camera.target.copy().subtract(camera.position);
         // forward.y = 0;
         const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);

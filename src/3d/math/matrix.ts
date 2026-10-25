@@ -111,5 +111,34 @@ export class Mat4x4 {
     return new Float32Array(result);
   }
 
+  getMatrix() {
+    const result = [];
 
+    for (let i = 0; i < 4; i++) {
+      result.push(this.columns[i].x);
+      result.push(this.columns[i].y);
+      result.push(this.columns[i].z);
+      result.push(this.columns[i].w);
+    }
+
+    return new Float32Array(result);
+  }
+
+  getTranslate(): Vector3 {
+    return this.columns[3].toVector3();
+  }
+  multiplyVec4(vec: Vector4): Vector4 {
+    const x = this.getRow(0).dot(vec);
+    const y = this.getRow(1).dot(vec);
+    const z = this.getRow(2).dot(vec);
+    const w = this.getRow(3).dot(vec);
+    return new Vector4(x, y, z,w);
+  }
+  getScale(): Vector3 {
+    const sx = Math.hypot(this.columns[0].x, this.columns[0].y, this.columns[0].z); // x축 크기
+    const sy = Math.hypot(this.columns[1].x, this.columns[1].y, this.columns[1].z);
+    const sz = Math.hypot(this.columns[2].x, this.columns[2].y, this.columns[2].z);
+
+    return new Vector3(sx,sy,sz);
+  }
 }

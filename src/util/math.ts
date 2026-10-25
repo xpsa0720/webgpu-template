@@ -1,6 +1,6 @@
 import type { Mat4x4 } from "../3d/math/matrix";
-import { Vector3 } from "../3d/math/vector";
-import type { Mesh } from "../3d/mesh/mesh";
+import { Vector3, Vector4 } from "../3d/math/vector";
+import type { Mesh } from "../3d/node/mesh/mesh";
 import type { Camera } from "../types/camera";
 import { createProjectionMatrix, createViewMatrix } from "./matrix";
 
@@ -121,52 +121,108 @@ export function wgslStructSize(structCode: string): number {
 // 반환: Float64Array(24) — 평면당 4개씩 6개
 export function extractFrustumPlanes(PV: Mat4x4): Float64Array {
   const c = PV.columns;
-  // column-major: row i = [c[0][i], c[1][i], c[2][i], c[3][i]]
-  const r0x = c[0].x, r0y = c[1].x, r0z = c[2].x, r0w = c[3].x;
-  const r1x = c[0].y, r1y = c[1].y, r1z = c[2].y, r1w = c[3].y;
-  const r2x = c[0].z, r2y = c[1].z, r2z = c[2].z, r2w = c[3].z;
-  const r3x = c[0].w, r3y = c[1].w, r3z = c[2].w, r3w = c[3].w;
+  const r0x = c[0].x,
+    r0y = c[1].x,
+    r0z = c[2].x,
+    r0w = c[3].x;
+  const r1x = c[0].y,
+    r1y = c[1].y,
+    r1z = c[2].y,
+    r1w = c[3].y;
+  const r2x = c[0].z,
+    r2y = c[1].z,
+    r2z = c[2].z,
+    r2w = c[3].z;
+  const r3x = c[0].w,
+    r3y = c[1].w,
+    r3z = c[2].w,
+    r3w = c[3].w;
 
   const planes = new Float64Array(24);
 
   // left:   row3 + row0
-  planes[0]  = r3x + r0x; planes[1]  = r3y + r0y; planes[2]  = r3z + r0z; planes[3]  = r3w + r0w;
-  planes[4]  = r3x - r0x; planes[5]  = r3y - r0y; planes[6]  = r3z - r0z; planes[7]  = r3w - r0w;
-  planes[8]  = r3x + r1x; planes[9]  = r3y + r1y; planes[10] = r3z + r1z; planes[11] = r3w + r1w;
-  planes[12] = r3x - r1x; planes[13] = r3y - r1y; planes[14] = r3z - r1z; planes[15] = r3w - r1w;
-  planes[16] = r3x + r2x; planes[17] = r3y + r2y; planes[18] = r3z + r2z; planes[19] = r3w + r2w;
-  planes[20] = r3x - r2x; planes[21] = r3y - r2y; planes[22] = r3z - r2z; planes[23] = r3w - r2w;
+  planes[0] = r3x + r0x;
+  planes[1] = r3y + r0y;
+  planes[2] = r3z + r0z;
+  planes[3] = r3w + r0w;
+  planes[4] = r3x - r0x;
+  planes[5] = r3y - r0y;
+  planes[6] = r3z - r0z;
+  planes[7] = r3w - r0w;
+  planes[8] = r3x + r1x;
+  planes[9] = r3y + r1y;
+  planes[10] = r3z + r1z;
+  planes[11] = r3w + r1w;
+  planes[12] = r3x - r1x;
+  planes[13] = r3y - r1y;
+  planes[14] = r3z - r1z;
+  planes[15] = r3w - r1w;
+  planes[16] = r3x + r2x;
+  planes[17] = r3y + r2y;
+  planes[18] = r3z + r2z;
+  planes[19] = r3w + r2w;
+  planes[20] = r3x - r2x;
+  planes[21] = r3y - r2y;
+  planes[22] = r3z - r2z;
+  planes[23] = r3w - r2w;
 
   // 정규화
   for (let i = 0; i < 6; i++) {
     const o = i * 4;
-    const len = Math.sqrt(planes[o] * planes[o] + planes[o+1] * planes[o+1] + planes[o+2] * planes[o+2]);
-    planes[o] /= len; planes[o+1] /= len; planes[o+2] /= len; planes[o+3] /= len;
+    const len = Math.sqrt(
+      planes[o] * planes[o] +
+        planes[o + 1] * planes[o + 1] +
+        planes[o + 2] * planes[o + 2],
+    );
+    planes[o] /= len;
+    planes[o + 1] /= len;
+    planes[o + 2] /= len;
+    planes[o + 3] /= len;
   }
 
   return planes;
 }
 
-// 단일 mesh용 frustum culling (기존 호환)
-export function isView(PV: Mat4x4, AabbCenter: Vector3, AabbRadius: number, location: Vector3): boolean {
+export function isView(
+  PV: Mat4x4,
+  AabbCenter: Vector3,
+  AabbRadius: number,
+  M: Mat4x4,
+): boolean {
+  const c = M.multiplyVec4(
+    new Vector4(AabbCenter.x, AabbCenter.y, AabbCenter.z, 1),
+  ); // 월드 중심
+  const s = M.getScale();
+  const radius = AabbRadius * Math.max(s.x, s.y, s.z);
+
+
+
   const planes = extractFrustumPlanes(PV);
-  const ox = AabbCenter.x + location.x;
-  const oy = AabbCenter.y + location.y;
-  const oz = AabbCenter.z + location.z;
+  const ox = c.x;
+  const oy = c.y;
+  const oz = c.z;
 
   for (let i = 0; i < 6; i++) {
     const o = i * 4;
-    const d = planes[o] * ox + planes[o+1] * oy + planes[o+2] * oz + planes[o+3];
-    if (d < -AabbRadius) return true;
+    const d =
+      planes[o] * ox + planes[o + 1] * oy + planes[o + 2] * oz + planes[o + 3];
+    if (d < -radius) return true;
   }
   return false;
 }
 
 // 인스턴스 대량 판정용: planes는 미리 추출한 것을 재사용
-export function isOutsideFrustum(planes: Float64Array, ox: number, oy: number, oz: number, radius: number): boolean {
+export function isOutsideFrustum(
+  planes: Float64Array,
+  ox: number,
+  oy: number,
+  oz: number,
+  radius: number,
+): boolean {
   for (let i = 0; i < 6; i++) {
     const o = i * 4;
-    const d = planes[o] * ox + planes[o+1] * oy + planes[o+2] * oz + planes[o+3];
+    const d =
+      planes[o] * ox + planes[o + 1] * oy + planes[o + 2] * oz + planes[o + 3];
     if (d < -radius) return true;
   }
   return false;

@@ -1,4 +1,4 @@
-import type { InstanceMesh } from "../../3d/mesh/instance";
+import type { InstanceMesh } from "../../3d/node/mesh/instance";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 interface VertexInput {
     location: number;

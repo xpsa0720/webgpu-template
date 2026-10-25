@@ -1,4 +1,4 @@
-import type { Mesh } from "../3d/mesh/mesh";
+import type { Mesh } from "../3d/node/mesh/mesh";
 import type { VertexLayoutOptions } from "../util/vertex_layout";
 import type { Camera } from "./camera";
 import type { PrintGPUBuffer, PrintType } from "./print";

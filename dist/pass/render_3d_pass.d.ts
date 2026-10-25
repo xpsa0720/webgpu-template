@@ -1,5 +1,6 @@
-import type { InstanceMesh } from "../3d/mesh/instance";
-import type { Mesh } from "../3d/mesh/mesh";
+import type { InstanceMesh } from "../3d/node/mesh/instance";
+import type { Mesh } from "../3d/node/mesh/mesh";
+import type { Node } from "../3d/node/node";
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
 import { Light, ShaderLightGadget } from "../shader/gadget/shader_light";
@@ -9,6 +10,7 @@ import { RenderPass, type RenderPassArg } from "./render_pass";
 interface Render3DPassArg extends RenderPassArg {
     target: GPUTexture | HTMLCanvasElement;
     meshs?: Mesh[];
+    nodes?: Node[];
     instanceMesh?: InstanceMesh[];
     camera: Camera;
     loadOp?: GPULoadOp;
@@ -19,6 +21,7 @@ interface Render3DPassArg extends RenderPassArg {
 }
 export declare class Render3DPass extends RenderPass {
     meshs: Mesh[];
+    nodes: Node[];
     instanceMesh: InstanceMesh[];
     camera: Camera;
     cameraBuffer: WebGPUBuffer;
@@ -47,11 +50,12 @@ export declare class Render3DPass extends RenderPass {
     private get directionalLightGadget();
     compile(): void;
     private invalidateAllBindGroups;
-    update(): void;
+    private invalidateNodeBindGroups;
     private getLightCountSnapshot;
     addLight(light: Light): void;
     removeLight(light: Light): void;
     encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
+    private nodeRecursionRender;
     updateBindGroupEntray(): void;
 }
 export {};

@@ -15,5 +15,9 @@ export declare class Mat4x4 {
     private getElement;
     getRow(index: number): Vector4;
     getArrayData(): Float32Array<ArrayBuffer>;
+    getMatrix(): Float32Array<ArrayBuffer>;
+    getTranslate(): Vector3;
+    multiplyVec4(vec: Vector4): Vector4;
+    getScale(): Vector3;
 }
 //# sourceMappingURL=matrix.d.ts.map

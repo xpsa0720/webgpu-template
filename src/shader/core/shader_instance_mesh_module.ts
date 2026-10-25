@@ -1,4 +1,4 @@
-import type { InstanceMesh } from "../../3d/mesh/instance";
+import type { InstanceMesh } from "../../3d/node/mesh/instance";
 import {
   SHADER_CAMERA_POSITION_UNIFORM,
   SHADER_MATRIAL_STRUCT,

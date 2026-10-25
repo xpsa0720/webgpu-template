@@ -1,6 +1,6 @@
-import type { Render3DPass } from "../../../pass/render_3d_pass";
-import type { WebGPUBuffer } from "../../../types/resource";
-import type { Vector2 } from "../../math/vector";
+import type { Render3DPass } from "../../../../pass/render_3d_pass";
+import type { WebGPUBuffer } from "../../../../types/resource";
+import type { Vector2 } from "../../../math/vector";
 import type { Vertex } from "../unit/vertex";
 
 export class Geometry {
@@ -83,18 +83,18 @@ export class Geometry {
     return buffer;
   }
 
-  pushVertex(vertex: Vertex) {
-    this._vertex.push(vertex);
-    this.vertexBuffer = this.updateVertexBuffer();
-    this.indexs.push(this._vertex.length - 1);
-    this.indexBuffer = this.updateIndexBuffer();
-  }
-  popVertex() {
-    this._vertex.pop();
-    this.vertexBuffer = this.updateVertexBuffer();
-    this.indexs.pop();
-    this.indexBuffer = this.updateIndexBuffer();
-  }
+//   pushVertex(vertex: Vertex) {
+//     this._vertex.push(vertex);
+//     this.vertexBuffer = this.updateVertexBuffer();
+//     this.indexs.push(this._vertex.length - 1);
+//     this.indexBuffer = this.updateIndexBuffer();
+//   }
+//   popVertex() {
+//     this._vertex.pop();
+//     this.vertexBuffer = this.updateVertexBuffer();
+//     this.indexs.pop();
+//     this.indexBuffer = this.updateIndexBuffer();
+//   }
 
   get vertex(): Vertex[] {
     return this._vertex;

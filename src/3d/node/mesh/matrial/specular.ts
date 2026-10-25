@@ -1,4 +1,4 @@
-import { Vector4 } from "../../math/vector";
+import { Vector4 } from "../../../math/vector";
 
 export interface SpecularParams {
   strength?: number;

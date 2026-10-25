@@ -1,5 +1,5 @@
-import type { Render3DPass } from "../../../pass/render_3d_pass";
-import { Vector3 } from "../../math/vector";
+import type { Render3DPass } from "../../../../pass/render_3d_pass";
+import { Vector3 } from "../../../math/vector";
 import { Geometry } from "../geometry/geometry";
 import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
@@ -14,6 +14,7 @@ interface MeshParams {
   depth?: number;
   matrial?: Matrial;
 }
+
 export class Cube extends Mesh {
   constructor({
     location,

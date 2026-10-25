@@ -6,10 +6,8 @@
  * 20~29  : 인스턴싱 (예정)
  * 30~    : 예약
  */
-
-export const SHADER_MATRIX_STRUCT = `
+export const SHADER_MESH_MATRIX_STRUCT = `
 struct Matrixs{
-  mvpMatrix: mat4x4<f32>,
   normalMatrix: mat4x4<f32>,
   modelMatrix: mat4x4<f32>
 }`;
@@ -36,7 +34,8 @@ struct Matrial {
 export const SHADER_MATRIX_UNIFORM =`@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM =`@group(3) @binding(1) var<uniform> cameraPos:vec4f;`
 export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial;`
-export const SHADER_INSTANCE_FLAG_UNIFORM =`@group(3) @binding(3) var<uniform> instanceFlag: u32`
+// 카메라 VP: 패스 전체에서 1개 (Mesh 버퍼와 분리 → 카메라만 움직이면 Mesh 버퍼를 다시 쓸 필요 없음)
+export const SHADER_MESH_VP_UNIFORM =`@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;`
 
 
 export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f`;
@@ -45,7 +44,7 @@ export const SHADER_VERTEX_DEFAULT = `
   @vertex
   fn vs(@VERTEX_INPUT, @BUILTIN_INPUT) -> VertexOut {
   var out:VertexOut;
-  var mvp = matrix.mvpMatrix;
+  var mvp = vpMatrix * matrix.modelMatrix;
   var normalizeNormal = matrix.normalMatrix;
   var color = matrial.baseColor;
   var world_position = matrix.modelMatrix;

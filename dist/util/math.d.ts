@@ -22,7 +22,7 @@ export declare const WGSL_TYPE_INFO: Record<string, {
  */
 export declare function wgslStructSize(structCode: string): number;
 export declare function extractFrustumPlanes(PV: Mat4x4): Float64Array;
-export declare function isView(PV: Mat4x4, AabbCenter: Vector3, AabbRadius: number, location: Vector3): boolean;
+export declare function isView(PV: Mat4x4, AabbCenter: Vector3, AabbRadius: number, M: Mat4x4): boolean;
 export declare function isOutsideFrustum(planes: Float64Array, ox: number, oy: number, oz: number, radius: number): boolean;
 export declare function distance(a: Vector3, b?: Vector3): number;
 //# sourceMappingURL=math.d.ts.map

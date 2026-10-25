@@ -1,11 +1,11 @@
-import type { Render3DPass } from "../../pass/render_3d_pass";
-import { SHADER_MATRIAL_STRUCT } from "../../shader/gadget/code/shader_code";
-import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../shader/gadget/code/shader_instance";
-import type { WebGPUBuffer } from "../../types/resource";
-import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize } from "../../util/math";
-import { createModelMatrixData } from "../../util/matrix";
-import type { Mat4x4 } from "../math/matrix";
-import { Vector3 } from "../math/vector";
+import type { Render3DPass } from "../../../pass/render_3d_pass";
+import { SHADER_MATRIAL_STRUCT } from "../../../shader/gadget/code/shader_code";
+import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../../shader/gadget/code/shader_instance";
+import type { WebGPUBuffer } from "../../../types/resource";
+import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize } from "../../../util/math";
+import { createModelMatrixData } from "../../../util/matrix";
+import type { Mat4x4 } from "../../math/matrix";
+import { Vector3 } from "../../math/vector";
 import type { Geometry } from "./geometry/geometry";
 import type { Matrial } from "./matrial/matrial";
 

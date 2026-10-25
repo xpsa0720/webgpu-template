@@ -1,4 +1,4 @@
-import { Vector3 } from "../3d/math/vector";
+import { Vector3, Vector4 } from "../3d/math/vector";
 import { createProjectionMatrix, createViewMatrix } from "./matrix";
 export function normalize(vec) {
     const denominator = Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
@@ -98,7 +98,6 @@ export function wgslStructSize(structCode) {
 // 반환: Float64Array(24) — 평면당 4개씩 6개
 export function extractFrustumPlanes(PV) {
     const c = PV.columns;
-    // column-major: row i = [c[0][i], c[1][i], c[2][i], c[3][i]]
     const r0x = c[0].x, r0y = c[1].x, r0z = c[2].x, r0w = c[3].x;
     const r1x = c[0].y, r1y = c[1].y, r1z = c[2].y, r1w = c[3].y;
     const r2x = c[0].z, r2y = c[1].z, r2z = c[2].z, r2w = c[3].z;
@@ -132,7 +131,9 @@ export function extractFrustumPlanes(PV) {
     // 정규화
     for (let i = 0; i < 6; i++) {
         const o = i * 4;
-        const len = Math.sqrt(planes[o] * planes[o] + planes[o + 1] * planes[o + 1] + planes[o + 2] * planes[o + 2]);
+        const len = Math.sqrt(planes[o] * planes[o] +
+            planes[o + 1] * planes[o + 1] +
+            planes[o + 2] * planes[o + 2]);
         planes[o] /= len;
         planes[o + 1] /= len;
         planes[o + 2] /= len;
@@ -140,16 +141,18 @@ export function extractFrustumPlanes(PV) {
     }
     return planes;
 }
-// 단일 mesh용 frustum culling (기존 호환)
-export function isView(PV, AabbCenter, AabbRadius, location) {
+export function isView(PV, AabbCenter, AabbRadius, M) {
+    const c = M.multiplyVec4(new Vector4(AabbCenter.x, AabbCenter.y, AabbCenter.z, 1)); // 월드 중심
+    const s = M.getScale();
+    const radius = AabbRadius * Math.max(s.x, s.y, s.z);
     const planes = extractFrustumPlanes(PV);
-    const ox = AabbCenter.x + location.x;
-    const oy = AabbCenter.y + location.y;
-    const oz = AabbCenter.z + location.z;
+    const ox = c.x;
+    const oy = c.y;
+    const oz = c.z;
     for (let i = 0; i < 6; i++) {
         const o = i * 4;
         const d = planes[o] * ox + planes[o + 1] * oy + planes[o + 2] * oz + planes[o + 3];
-        if (d < -AabbRadius)
+        if (d < -radius)
             return true;
     }
     return false;

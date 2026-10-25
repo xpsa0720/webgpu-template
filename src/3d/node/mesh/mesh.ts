@@ -1,11 +1,11 @@
-import type { Render3DPass } from "../../pass/render_3d_pass";
+import type { Render3DPass } from "../../../pass/render_3d_pass";
 import {
   SHADER_MATRIAL_STRUCT,
-  SHADER_MATRIX_STRUCT,
-} from "../../shader/gadget/code/shader_code";
-import type { WebGPUBuffer } from "../../types/resource";
-import { distance, wgslStructSize } from "../../util/math";
-import { Vector3 } from "../math/vector";
+  SHADER_MESH_MATRIX_STRUCT,
+} from "../../../shader/gadget/code/shader_code";
+import type { WebGPUBuffer } from "../../../types/resource";
+import { distance, wgslStructSize } from "../../../util/math";
+import { Vector3 } from "../../math/vector";
 import { Geometry } from "./geometry/geometry";
 import type { Matrial } from "./matrial/matrial";
 
@@ -20,9 +20,9 @@ export interface MeshParams {
 
 export class Mesh {
   render3DPass: Render3DPass;
-  location: Vector3; // World Space 기준
-  rotate: Vector3; // 방향 벡터가 아닌 각 축의 각도 기준 (0~360)
-  scale: Vector3;
+  private _location!: Vector3; // World Space 기준
+  private _rotate!: Vector3; // 방향 벡터가 아닌 각 축의 각도 기준 (라디안)
+  private _scale!: Vector3;
   geometry: Geometry;
   matrial: Matrial;
   matrixBuffer: WebGPUBuffer;
@@ -30,7 +30,8 @@ export class Mesh {
   cachedBindGroup: GPUBindGroup | null = null;
   AabbCenter!: Vector3;
   AabbRadius!: number;
-
+  // location / rotate / scale이 바뀌면 true (교체 + x/y/z 직접 수정 모두 감지)
+  dirty: boolean = true;
   constructor({
     location,
     rotate,
@@ -50,7 +51,7 @@ export class Mesh {
     const device = render3DPass.device;
     this.matrixBuffer = {
       buffer: device.createBuffer({
-        size: wgslStructSize(SHADER_MATRIX_STRUCT),
+        size: wgslStructSize(SHADER_MESH_MATRIX_STRUCT),
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
@@ -60,6 +61,41 @@ export class Mesh {
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
+  }
+
+  get location(): Vector3 {
+    return this._location;
+  }
+  set location(value: Vector3) {
+    this._location = this.watch(value);
+    this.dirty = true;
+  }
+
+  get rotate(): Vector3 {
+    return this._rotate;
+  }
+  set rotate(value: Vector3) {
+    this._rotate = this.watch(value);
+    this.dirty = true;
+  }
+
+  get scale(): Vector3 {
+    return this._scale;
+  }
+  set scale(value: Vector3) {
+    this._scale = this.watch(value);
+    this.dirty = true;
+  }
+
+  // Vector3의 x/y/z가 바뀌면 dirty = true (mesh.location.x += 1, mesh.location.add(v) 등)
+  private watch(vector: Vector3): Vector3 {
+    return new Proxy(vector, {
+      set: (target, key, value) => {
+        const result = Reflect.set(target, key, value);
+        this.dirty = true;
+        return result;
+      },
+    });
   }
 
   private AABB() {

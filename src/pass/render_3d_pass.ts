@@ -1,5 +1,7 @@
-import type { InstanceMesh } from "../3d/mesh/instance";
-import type { Mesh } from "../3d/mesh/mesh";
+import type { Mat4x4 } from "../3d/math/matrix";
+import type { InstanceMesh } from "../3d/node/mesh/instance";
+import type { Mesh } from "../3d/node/mesh/mesh";
+import type { Node } from "../3d/node/node";
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
 import { ShaderGadgetModule } from "../shader/core/shader_module";
@@ -31,13 +33,18 @@ import {
 import type { Camera } from "../types/camera";
 import type { WebGPUBuffer } from "../types/resource";
 import { isView } from "../util/math";
-import { createMatrix, createViewProjectionMatrix } from "../util/matrix";
+import {
+  createMatrix,
+  createModelMatrix,
+  createViewProjectionMatrix,
+} from "../util/matrix";
 import { roundUp } from "../util/vertex_layout";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 
 interface Render3DPassArg extends RenderPassArg {
   target: GPUTexture | HTMLCanvasElement;
   meshs?: Mesh[];
+  nodes?: Node[];
   instanceMesh?: InstanceMesh[];
   camera: Camera;
   loadOp?: GPULoadOp;
@@ -49,6 +56,7 @@ interface Render3DPassArg extends RenderPassArg {
 
 export class Render3DPass extends RenderPass {
   meshs: Mesh[];
+  nodes: Node[];
   instanceMesh: InstanceMesh[];
   camera: Camera;
   cameraBuffer: WebGPUBuffer;
@@ -76,6 +84,7 @@ export class Render3DPass extends RenderPass {
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
+    this.nodes = arg.nodes ?? [];
     this.instanceMesh = arg.instanceMesh ?? [];
     this.lights = arg.lights ?? [];
     this.shaderLights = this.initLight();
@@ -97,7 +106,7 @@ export class Render3DPass extends RenderPass {
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
-    // VP 행렬 uniform 버퍼 (인스턴싱용, mat4x4<f32> = 64바이트)
+    // VP 행렬 uniform 버퍼 (Mesh / Node / 인스턴싱 공용, mat4x4<f32> = 64바이트)
     this.vpBuffer = {
       buffer: this.device.createBuffer({
         size: 4 * 16,
@@ -279,15 +288,27 @@ export class Render3DPass extends RenderPass {
   }
 
   private invalidateAllBindGroups() {
-    this.meshs.forEach((mesh) => { mesh.cachedBindGroup = null; });
-    this.instanceMesh.forEach((im) => { im.cachedBindGroup = null; });
+    this.meshs.forEach((mesh) => {
+      mesh.cachedBindGroup = null;
+    });
+    this.instanceMesh.forEach((im) => {
+      im.cachedBindGroup = null;
+    });
+    this.invalidateNodeBindGroups(this.nodes);
   }
 
-  update() {}
+  private invalidateNodeBindGroups(nodes: Node[]) {
+    nodes.forEach((node) => {
+      node.meshs.forEach((mesh) => {
+        mesh.cachedBindGroup = null;
+      });
+      this.invalidateNodeBindGroups(node.children);
+    });
+  }
 
   private getLightCountSnapshot() {
-    return Object.values(this.shaderLights).map(
-      (g) => roundUp(formatLightCount, g.lights.length),
+    return Object.values(this.shaderLights).map((g) =>
+      roundUp(formatLightCount, g.lights.length),
     );
   }
 
@@ -376,14 +397,24 @@ export class Render3DPass extends RenderPass {
     this.cameraPosData[1] = this.camera.position.y;
     this.cameraPosData[2] = this.camera.position.z;
     this.cameraPosData[3] = 1;
-    this.device.queue.writeBuffer(this.cameraBuffer.buffer, 0, this.cameraPosData);
+    this.device.queue.writeBuffer(
+      this.cameraBuffer.buffer,
+      0,
+      this.cameraPosData,
+    );
 
     const vpMatrix = createViewProjectionMatrix(this.camera, aspect);
+    // VP는 프레임당 1번만 씀 (Mesh / Node / 인스턴스 공용)
+    this.vpData.set(vpMatrix.getArrayData());
+    this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
 
     this.meshs.forEach((mesh) => {
-      if(isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, mesh.location)) return;
-      createMatrix(mesh, vpMatrix, this.device, mesh.matrixBuffer);
-
+      const M = createModelMatrix(mesh);
+      if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M)) return;
+      if (mesh.dirty){
+        createMatrix(mesh, this.device, mesh.matrixBuffer);
+        mesh.dirty = false;
+      }
       this.device.queue.writeBuffer(
         mesh.matrialBuffer.buffer,
         0,
@@ -397,6 +428,7 @@ export class Render3DPass extends RenderPass {
             { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
             { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
             { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
+            { binding: 3, resource: { buffer: this.vpBuffer.buffer } },
             ...this.lightBindGroupEntry,
           ],
         });
@@ -408,12 +440,10 @@ export class Render3DPass extends RenderPass {
       pass.drawIndexed(mesh.geometry.indexs.length);
     });
 
+    this.nodeRecursionRender(this.nodes, vpMatrix, pass);
+
     if (this.instanceMesh.length > 0) {
       pass.setPipeline(this.instnaceMeshRenderShaderPipeline);
-
-      // VP 행렬을 위에서 한 번 계산한 것 재사용
-      this.vpData.set(vpMatrix.getArrayData());
-      this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
 
       this.instanceMesh.forEach((instanceMesh) => {
         instanceMesh.update();
@@ -428,8 +458,14 @@ export class Render3DPass extends RenderPass {
               { binding: 0, resource: { buffer: this.vpBuffer.buffer } },
               { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
               ...this.lightBindGroupEntry,
-              { binding: 20, resource: { buffer: instanceMesh.matrixBuffer.buffer } },
-              { binding: 21, resource: { buffer: instanceMesh.matrialBuffer.buffer } },
+              {
+                binding: 20,
+                resource: { buffer: instanceMesh.matrixBuffer.buffer },
+              },
+              {
+                binding: 21,
+                resource: { buffer: instanceMesh.matrialBuffer.buffer },
+              },
             ],
           });
         }
@@ -437,11 +473,55 @@ export class Render3DPass extends RenderPass {
         pass.setBindGroup(3, instanceMesh.cachedBindGroup);
         pass.setVertexBuffer(0, instanceMesh.geometry.vertexBuffer.buffer);
         pass.setIndexBuffer(instanceMesh.geometry.indexBuffer.buffer, "uint32");
-        pass.drawIndexed(instanceMesh.geometry.indexs.length, instanceMesh.renderCount);
+        pass.drawIndexed(
+          instanceMesh.geometry.indexs.length,
+          instanceMesh.renderCount,
+        );
       });
     }
 
     pass.end();
+  }
+
+  private nodeRecursionRender(
+    nodes: Node[],
+    vpMatrix: Mat4x4,
+    pass: GPURenderPassEncoder,
+  ) {
+    nodes.forEach((node) => {
+      node.meshs.forEach((mesh) => {
+        const M = createModelMatrix(mesh).multiply(node.worldMat);
+        if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M)) return;
+        createMatrix(mesh, this.device, mesh.matrixBuffer, {
+          parentWorldMat: node.worldMat,
+          parentNormalMat: node.normalMat,
+        });
+
+        this.device.queue.writeBuffer(
+          mesh.matrialBuffer.buffer,
+          0,
+          mesh.matrial.getDataArray(),
+        );
+        if (!mesh.cachedBindGroup) {
+          mesh.cachedBindGroup = this.device.createBindGroup({
+            layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
+            entries: [
+              { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
+              { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+              { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
+              { binding: 3, resource: { buffer: this.vpBuffer.buffer } },
+              ...this.lightBindGroupEntry,
+            ],
+          });
+        }
+        pass.setBindGroup(3, mesh.cachedBindGroup);
+        pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
+        pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint32");
+        pass.drawIndexed(mesh.geometry.indexs.length);
+      });
+      if (node.children.length > 0)
+        this.nodeRecursionRender(node.children, vpMatrix, pass);
+    });
   }
 
   updateBindGroupEntray() {

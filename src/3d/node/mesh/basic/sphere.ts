@@ -1,6 +1,6 @@
-import type { Render3DPass } from "../../../pass/render_3d_pass";
-import { toRadian } from "../../../util/math";
-import { Vector3 } from "../../math/vector";
+import type { Render3DPass } from "../../../../pass/render_3d_pass";
+import { toRadian } from "../../../../util/math";
+import { Vector3 } from "../../../math/vector";
 import { Geometry } from "../geometry/geometry";
 import { Matrial } from "../matrial/matrial";
 import { Mesh } from "../mesh";
