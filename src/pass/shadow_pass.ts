@@ -1,18 +1,22 @@
+import type { Mat4x4 } from "../3d/math/matrix";
+import type { Node } from "../3d/node/node";
 import { FORMAT_TABLE } from "../shader/gadget/shader_vertex";
 import type { OutGPUBuffer } from "../types/pass";
 import { gpuBufferSizeFormat, isView } from "../util/math";
 import { createMatrix, createModelMatrix } from "../util/matrix";
 import { Pass, type DebugPassArg, type PassArg } from "./pass";
-import { RenderPass } from "./render_pass";
+import type { Render3DPass } from "./render_3d_pass";
+
 
 interface ShadowPassArg extends PassArg {
+  render3DPass: Render3DPass;
   debugMode?: boolean;
   loadOp?: GPULoadOp;
   format?: GPUTextureFormat;
 }
 
 export class ShadowPass extends Pass {
-  entries: Record<number, GPUBindingResource>;
+  render3DPass: Render3DPass;
   device: GPUDevice;
   shadowShaderPipeline!: GPURenderPipeline;
   shadowShaderModule!: GPUShaderModule;
@@ -24,9 +28,9 @@ export class ShadowPass extends Pass {
 
   constructor(arg: ShadowPassArg) {
     super(arg);
+    this.render3DPass = arg.render3DPass;
     this.debugMode = arg.debugMode ?? false;
     this.device = arg.device;
-    
   }
 
   settingPipeline() {
@@ -41,11 +45,7 @@ export class ShadowPass extends Pass {
               FORMAT_TABLE["float32x3"].byteSize * 1,
             ),
             stepMode: "vertex",
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: "float32x3" },
-              { shaderLocation: 1, offset: 12, format: "float32x3" },
-              { shaderLocation: 2, offset: 24, format: "float32x2" },
-            ],
+            attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
           },
         ],
       },
@@ -74,7 +74,7 @@ export class ShadowPass extends Pass {
     renderPassDescriptor: GPURenderPassDescriptor,
   ) {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
-    pass.setPipeline(this.meshRenderShaderPipeline);
+    pass.setPipeline(this.shadowShaderPipeline);
     if (this.bindGroup) {
       pass.setBindGroup(0, this.bindGroup);
     }
@@ -90,7 +90,7 @@ export class ShadowPass extends Pass {
     //   this.vpData.set(vpMatrix.getArrayData());
     //   this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
 
-    this.meshs.forEach((mesh) => {
+    this.render3DPass.meshs.forEach((mesh) => {
       const M = createModelMatrix(mesh);
       if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M)) return;
       if (mesh.dirty) {
@@ -123,6 +123,60 @@ export class ShadowPass extends Pass {
     });
 
     pass.end();
+  }
+
+  private nodeRecursionRender(
+    nodes: Node[],
+    vpMatrix: Mat4x4,
+    pass: GPURenderPassEncoder,
+  ) {
+    nodes.forEach((node) => {
+      node.meshs.forEach((mesh) => {
+        const M = createModelMatrix(mesh).multiply(node.worldMat);
+        if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M)) return;
+        createMatrix(mesh, this.device, mesh.matrixBuffer, {
+          parentWorldMat: node.worldMat,
+          parentNormalMat: node.normalMat,
+        });
+
+        this.device.queue.writeBuffer(
+          mesh.matrialBuffer.buffer,
+          0,
+          mesh.matrial.getDataArray(),
+        );
+        if (!mesh.cachedBindGroup) {
+          mesh.cachedBindGroup = this.device.createBindGroup({
+            layout: this.shadowShaderPipeline.getBindGroupLayout(3),
+            entries: [
+              { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
+            //   {
+            //     binding: 1,
+            //     resource: { buffer: this.camera.cameraBuffer!.buffer },
+            //   },
+              { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
+            //   {
+            //     binding: 3,
+            //     resource: { buffer: this.camera.vpBuffer!.buffer },
+            //   },
+            //   {
+            //     binding: 4,
+            //     resource:
+            //       mesh.matrial.texture?.texture.createView() ??
+            //       this.dummyTextureView,
+            //   },
+            //   { binding: 5, resource: this.defaultSampler },
+              ...this.render3DPass.lightBindGroupEntry,
+            ],
+          });
+        }
+        pass.setBindGroup(3, mesh.cachedBindGroup);
+        pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
+        pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint32");
+        pass.drawIndexed(mesh.geometry.indexs.length);
+      });
+      if (node.children.length > 0)
+        this.nodeRecursionRender(node.children, vpMatrix, pass);
+    });
   }
 
   ensureBindGroups() {
