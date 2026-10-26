@@ -5,7 +5,6 @@ import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_m
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
 import { Light, ShaderLightGadget } from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
-import type { WebGPUBuffer } from "../types/resource";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 interface Render3DPassArg extends RenderPassArg {
     target: GPUTexture | HTMLCanvasElement;
@@ -18,14 +17,13 @@ interface Render3DPassArg extends RenderPassArg {
     blend?: boolean;
     lights?: Light[];
     debugMode?: boolean;
+    debugViewShaderCode?: boolean;
 }
 export declare class Render3DPass extends RenderPass {
     meshs: Mesh[];
     nodes: Node[];
     instanceMesh: InstanceMesh[];
     camera: Camera;
-    cameraBuffer: WebGPUBuffer;
-    vpBuffer: WebGPUBuffer;
     lights: Light[];
     shaderLights: Record<number, ShaderLightGadget<any>>;
     lightBindGroupEntry: GPUBindGroupEntry[];
@@ -37,8 +35,8 @@ export declare class Render3DPass extends RenderPass {
     private depthTexture;
     private depthWidth;
     private depthHeight;
-    private cameraPosData;
-    private vpData;
+    private defaultSampler;
+    private dummyTextureView;
     constructor(arg: Render3DPassArg);
     private initLight;
     createShaderModule(): void;

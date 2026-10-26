@@ -11,6 +11,7 @@ export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetPa
     device: GPUDevice;
     lights?: T[];
     countPlaceholder: string;
+    lengthPlaceholder: string;
     onLightChange?: () => void;
 }
 export declare const formatLightCount = 8;
@@ -25,9 +26,10 @@ export declare abstract class ShaderLightGadget<T extends Light> extends ShaderG
     binding: number;
     gpuBuffer: WebGPUBuffer;
     countPlaceholder: string;
+    lengthPlaceholder: string;
     private _lights;
     private onLightChange?;
-    constructor({ struct, define, placeholder, binding, group, code, device, func, lights, countPlaceholder, onLightChange, }: ShaderLightGadgetParams<T>);
+    constructor({ struct, define, placeholder, binding, group, code, device, func, lights, countPlaceholder, lengthPlaceholder, onLightChange, }: ShaderLightGadgetParams<T>);
     private createBuffer;
     get lights(): readonly T[];
     set lights(value: T[]);

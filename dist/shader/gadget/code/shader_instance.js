@@ -21,7 +21,13 @@ fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f, specualrSh
 
 @fragment
 fn fs(out: VertexOut) -> @location(0) vec4f {
-  var finalColor=vec4f();
+  var baseColor = out.color;
+  var texColor = textureSample(tex, texSampler, out.uv);
+  if(instanceMatrial[out.instance_index].texturFlag == 1){
+    baseColor *= texColor;
+  }
+
+  var finalColor = vec4f(0,0,0,0);
   var x = cameraPos.x;
 
   var specualrShininess= instanceMatrial[out.instance_index].specualrShininess;

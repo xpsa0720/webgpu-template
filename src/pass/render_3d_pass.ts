@@ -9,16 +9,7 @@ import {
   AMBIENT_LIGHT,
   DIRECTIONAL_LIGHT,
   POINT_LIGHT,
-  SHADER_CAMERA_POSITION_UNIFORM,
-  SHADER_MATRIAL_UNIFORM,
-  SHADER_MATRIX_UNIFORM,
 } from "../shader/gadget/code/shader_code";
-import {
-  SHADER_INSTANCE_MATRIAL_STORAGE,
-  SHADER_INSTANCE_MATRIX_STORAGE,
-  SHADER_INSTANCE_VERTEX,
-} from "../shader/gadget/code/shader_instance";
-import { ShaderbindingGadget } from "../shader/gadget/shader_binding";
 import {
   AmbientLight,
   DirectionalLight,
@@ -36,7 +27,6 @@ import { isView } from "../util/math";
 import {
   createMatrix,
   createModelMatrix,
-  createViewProjectionMatrix,
 } from "../util/matrix";
 import { roundUp } from "../util/vertex_layout";
 import { RenderPass, type RenderPassArg } from "./render_pass";
@@ -52,6 +42,7 @@ interface Render3DPassArg extends RenderPassArg {
   blend?: boolean;
   lights?: Light[];
   debugMode?: boolean;
+  debugViewShaderCode?: boolean;
 }
 
 export class Render3DPass extends RenderPass {
@@ -59,8 +50,7 @@ export class Render3DPass extends RenderPass {
   nodes: Node[];
   instanceMesh: InstanceMesh[];
   camera: Camera;
-  cameraBuffer: WebGPUBuffer;
-  vpBuffer: WebGPUBuffer;
+
 
   lights: Light[];
   shaderLights: Record<number, ShaderLightGadget<any>>;
@@ -78,9 +68,9 @@ export class Render3DPass extends RenderPass {
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
+  private defaultSampler: GPUSampler;
+  private dummyTextureView: GPUTextureView;
   // 매 프레임 재사용할 Float32Array
-  private cameraPosData = new Float32Array(4);
-  private vpData = new Float32Array(16);
   constructor(arg: Render3DPassArg) {
     super(arg);
     this.meshs = arg.meshs ?? [];
@@ -91,28 +81,45 @@ export class Render3DPass extends RenderPass {
     this.updateBindGroupEntray();
     this.shaderMeshRenderGadgetModule = new ShaderGadgetMeshModule({
       device: this.device,
-      viewShaderCode: arg.debugMode,
+      viewShaderCode: arg.debugViewShaderCode ?? arg.debugMode,
     });
     this.shaderInstanceRenderGadgetModule = new ShaderGadgetInstanceMeshModule({
       device: this.device,
-      viewShaderCode: arg.debugMode,
+      viewShaderCode: arg.debugViewShaderCode ?? arg.debugMode,
     });
     this.createShaderModule();
     this.settingPipeline();
     this.camera = arg.camera;
-    this.cameraBuffer = {
+    this.camera.cameraBuffer = {
       buffer: this.device.createBuffer({
         size: 4 * 4,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
-    // VP 행렬 uniform 버퍼 (Mesh / Node / 인스턴싱 공용, mat4x4<f32> = 64바이트)
-    this.vpBuffer = {
+    this.camera.vpBuffer = {
       buffer: this.device.createBuffer({
         size: 4 * 16,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
       }),
     };
+
+    this.defaultSampler = this.device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+    });
+
+    const dummyTex = this.device.createTexture({
+      size: [1, 1, 1],
+      format: "rgba8unorm",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    this.device.queue.writeTexture(
+      { texture: dummyTex },
+      new Uint8Array([255, 255, 255, 255]),
+      { bytesPerRow: 4 },
+      [1, 1, 1],
+    );
+    this.dummyTextureView = dummyTex.createView();
   }
 
   private initLight() {
@@ -124,6 +131,7 @@ export class Render3DPass extends RenderPass {
         struct: POINT_LIGHT.struct,
         define: POINT_LIGHT.define,
         countPlaceholder: POINT_LIGHT.countPlaceholder,
+        lengthPlaceholder: POINT_LIGHT.lengthPlaceholder,
         group: 3,
         binding: 10,
         code: POINT_LIGHT.code,
@@ -134,6 +142,7 @@ export class Render3DPass extends RenderPass {
         struct: AMBIENT_LIGHT.struct,
         define: AMBIENT_LIGHT.define,
         countPlaceholder: AMBIENT_LIGHT.countPlaceholder,
+        lengthPlaceholder: AMBIENT_LIGHT.lengthPlaceholder,
         group: 3,
         binding: 11,
         code: AMBIENT_LIGHT.code,
@@ -144,6 +153,7 @@ export class Render3DPass extends RenderPass {
         struct: DIRECTIONAL_LIGHT.struct,
         define: DIRECTIONAL_LIGHT.define,
         countPlaceholder: DIRECTIONAL_LIGHT.countPlaceholder,
+        lengthPlaceholder: DIRECTIONAL_LIGHT.lengthPlaceholder,
         group: 3,
         binding: 12,
         code: DIRECTIONAL_LIGHT.code,
@@ -359,6 +369,7 @@ export class Render3DPass extends RenderPass {
     encoder: GPUCommandEncoder,
     renderPassDescriptor: GPURenderPassDescriptor,
   ) {
+
     const aspect = this.getAspect();
     const [width, height] = this.getTargetSize();
     if (
@@ -381,6 +392,7 @@ export class Render3DPass extends RenderPass {
       depthLoadOp: "clear",
       depthStoreOp: "store",
     };
+
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(this.meshRenderShaderPipeline);
     if (this.bindGroup) {
@@ -393,20 +405,8 @@ export class Render3DPass extends RenderPass {
       pass.setBindGroup(2, this.bindGroupSampler);
     }
 
-    this.cameraPosData[0] = this.camera.position.x;
-    this.cameraPosData[1] = this.camera.position.y;
-    this.cameraPosData[2] = this.camera.position.z;
-    this.cameraPosData[3] = 1;
-    this.device.queue.writeBuffer(
-      this.cameraBuffer.buffer,
-      0,
-      this.cameraPosData,
-    );
-
-    const vpMatrix = createViewProjectionMatrix(this.camera, aspect);
-    // VP는 프레임당 1번만 씀 (Mesh / Node / 인스턴스 공용)
-    this.vpData.set(vpMatrix.getArrayData());
-    this.device.queue.writeBuffer(this.vpBuffer.buffer, 0, this.vpData);
+    this.camera.update(this.device, aspect);
+    const vpMatrix = this.camera.vpMatrix!;
 
     this.meshs.forEach((mesh) => {
       const M = createModelMatrix(mesh);
@@ -426,9 +426,11 @@ export class Render3DPass extends RenderPass {
           layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
           entries: [
             { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-            { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+            { binding: 1, resource: { buffer: this.camera.cameraBuffer!.buffer } },
             { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
-            { binding: 3, resource: { buffer: this.vpBuffer.buffer } },
+            { binding: 3, resource: { buffer: this.camera.vpBuffer!.buffer } },
+            { binding: 4, resource: mesh.matrial.texture?.texture.createView() ?? this.dummyTextureView },
+            { binding: 5, resource: this.defaultSampler },
             ...this.lightBindGroupEntry,
           ],
         });
@@ -455,8 +457,8 @@ export class Render3DPass extends RenderPass {
           instanceMesh.cachedBindGroup = this.device.createBindGroup({
             layout: this.instnaceMeshRenderShaderPipeline.getBindGroupLayout(3),
             entries: [
-              { binding: 0, resource: { buffer: this.vpBuffer.buffer } },
-              { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+              { binding: 0, resource: { buffer: this.camera.vpBuffer!.buffer } },
+              { binding: 1, resource: { buffer: this.camera.cameraBuffer!.buffer } },
               ...this.lightBindGroupEntry,
               {
                 binding: 20,
@@ -507,9 +509,11 @@ export class Render3DPass extends RenderPass {
             layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
             entries: [
               { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-              { binding: 1, resource: { buffer: this.cameraBuffer.buffer } },
+              { binding: 1, resource: { buffer: this.camera.cameraBuffer!.buffer } },
               { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
-              { binding: 3, resource: { buffer: this.vpBuffer.buffer } },
+              { binding: 3, resource: { buffer: this.camera.vpBuffer!.buffer } },
+              { binding: 4, resource: mesh.matrial.texture?.texture.createView() ?? this.dummyTextureView },
+              { binding: 5, resource: this.defaultSampler },
               ...this.lightBindGroupEntry,
             ],
           });

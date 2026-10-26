@@ -47,7 +47,7 @@ class App3D {
       new Vector3(0, 0, 0),
       60,
       0.1,
-      100,
+      1000,
     );
 
     const render3DPass = this.wp.createRender3DPass(0, {
@@ -55,7 +55,7 @@ class App3D {
       camera,
       blend: true,
       debugMode: false,
-      
+      debugViewShaderCode: true
     });
 
     const cube = new Cube({
@@ -105,12 +105,15 @@ class App3D {
     });
     this.canvas.addEventListener("drop", async (e) => {
       e.preventDefault();
-      const files = e.dataTransfer?.files;
-      if (!files || files.length === 0) return;
-      console.log(`파일 드롭: ${Array.from(files).map(f => f.name).join(", ")}`);
+      const items = e.dataTransfer?.items;
+      if (!items || items.length === 0) return;
+
+      // 디렉토리 포함 재귀 파일 수집
+      const allFiles = await collectDroppedFiles(items);
+      if (allFiles.length === 0) return;
+      console.log(`파일 드롭: ${allFiles.map(f => f.webkitRelativePath || f.name).join(", ")}`);
       try {
-        // FileList 전체 전달 (.gltf + .bin / .obj + .mtl 등 동반 파일 지원)
-        const root = await loadModel(render3DPass, files);
+        const root = await loadModel(render3DPass, allFiles);
         console.log(`모델 로드 성공: 최상위 노드 ${root.children.length}개, 루트 meshs ${root.meshs.length}개`);
         render3DPass.nodes.push(root);
         console.log("드롭된 모델 렌더링 등록 완료");
@@ -193,7 +196,7 @@ class App3D {
     );
 
     // AmbientLight 추가
-    render3DPass.addLight(new AmbientLight({ intensity: 0.2 }));
+    render3DPass.addLight(new AmbientLight({ intensity: 1 }));
 
     // 마우스 휠로 opacity 조절
     this.canvas.addEventListener(
@@ -250,7 +253,7 @@ class App3D {
     });
 
     // 카메라 이동 (WASD/Space/Shift)
-    const moveSpeed = 0.05;
+    const moveSpeed = 0.5;
     const keys = new Set<string>();
     window.addEventListener("keydown", (e) => keys.add(e.key.toLowerCase()));
     window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
@@ -337,6 +340,43 @@ class App3D {
       },
     });
   }
+}
+
+/** DataTransferItemList에서 디렉토리를 재귀 탐색하여 모든 File을 수집 */
+async function collectDroppedFiles(items: DataTransferItemList): Promise<File[]> {
+  const entries: FileSystemEntry[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry?.();
+    if (entry) entries.push(entry);
+  }
+
+  const result: File[] = [];
+
+  async function readEntry(entry: FileSystemEntry, pathPrefix: string) {
+    if (entry.isFile) {
+      const file = await new Promise<File>((resolve, reject) => {
+        (entry as FileSystemFileEntry).file(resolve, reject);
+      });
+      // webkitRelativePath는 readonly라 직접 설정 불가 → 새 File로 래핑
+      const relativePath = pathPrefix + file.name;
+      const newFile = new File([file], file.name, { type: file.type });
+      Object.defineProperty(newFile, "webkitRelativePath", { value: relativePath });
+      result.push(newFile);
+    } else if (entry.isDirectory) {
+      const dirReader = (entry as FileSystemDirectoryEntry).createReader();
+      const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+        dirReader.readEntries(resolve, reject);
+      });
+      for (const child of entries) {
+        await readEntry(child, pathPrefix + entry.name + "/");
+      }
+    }
+  }
+
+  for (const entry of entries) {
+    await readEntry(entry, "");
+  }
+  return result;
 }
 
 const app = new App3D();

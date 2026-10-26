@@ -17,13 +17,14 @@ export class ShaderLightGadget extends ShaderGadget {
     binding;
     gpuBuffer;
     countPlaceholder;
+    lengthPlaceholder;
     _lights;
     onLightChange;
     constructor({ struct, define, placeholder, binding, group, code, device, func, 
     // instanceFunc,
     // instanceCode,
-    lights = [], countPlaceholder, onLightChange, }) {
-        super({ placeholder: { [countPlaceholder]: "0", ...placeholder } });
+    lights = [], countPlaceholder, lengthPlaceholder, onLightChange, }) {
+        super({ placeholder: { [countPlaceholder]: "0", [lengthPlaceholder]: "0", ...placeholder } });
         this.struct = struct;
         this.define = define;
         this.group = group;
@@ -36,6 +37,7 @@ export class ShaderLightGadget extends ShaderGadget {
         this.binding = binding;
         this._lights = lights;
         this.countPlaceholder = countPlaceholder;
+        this.lengthPlaceholder = lengthPlaceholder;
         this.onLightChange = onLightChange;
         this.gpuBuffer = this.createBuffer();
         lights.forEach((l) => this.addLight(l));
@@ -75,6 +77,7 @@ export class ShaderLightGadget extends ShaderGadget {
     }
     updateCount() {
         this.placeholder[this.countPlaceholder] = String(Math.max(1, roundUp(formatLightCount, this._lights.length)));
+        this.placeholder[this.lengthPlaceholder] = String(this._lights.length);
     }
     updateLight(index) {
         const data = uniformData(this.struct, this.lights[index]);

@@ -28,14 +28,16 @@ struct Matrial {
   specualrColor: vec4f,
   specualrStrength: f32,
   specualrShininess: f32,
+  texturFlag: u32,
 }`;
 
 
 export const SHADER_MATRIX_UNIFORM =`@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM =`@group(3) @binding(1) var<uniform> cameraPos:vec4f;`
 export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial;`
-// 카메라 VP: 패스 전체에서 1개 (Mesh 버퍼와 분리 → 카메라만 움직이면 Mesh 버퍼를 다시 쓸 필요 없음)
 export const SHADER_MESH_VP_UNIFORM =`@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;`
+export const SHADER_MATRIAL_TEXTURE =`@group(3) @binding(4) var tex: texture_2d<f32>;`
+export const SHADER_MATRIAL_SAMPLER =`@group(3) @binding(5) var texSampler: sampler;`
 
 
 export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f`;
@@ -73,8 +75,14 @@ fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f, specualrSh
 
 @fragment
 fn fs(out: VertexOut) -> @location(0) vec4f {
-  var finalColor=vec4f();
+  var baseColor = out.color;
+  if(matrial.texturFlag == 1){
+    var texColor = textureSample(tex, texSampler, out.uv);
+    baseColor *= texColor;
+  }
+
   var x = cameraPos.x;
+  var finalColor = vec4f(0,0,0,0);
 
   var specualrShininess= matrial.specualrShininess;
   var specualrStrength= matrial.specualrStrength;
@@ -83,7 +91,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
 
   @LIGHT_CODES
 
-  finalColor.a = out.color.a;
+  finalColor.a = baseColor.a;
   return finalColor;
 }`;
 
@@ -91,6 +99,7 @@ export interface ShaderLightGadgetTemplate {
   struct: string;
   define: string;
   countPlaceholder: string;
+  lengthPlaceholder: string;
   code: string;
   func: string;
 }
@@ -103,9 +112,10 @@ export const POINT_LIGHT: ShaderLightGadgetTemplate = {
   }`,
   define: `@group(3) @binding(10) var<uniform> pointLight:array<PointLight, @POINT_LIGHT_COUNT>;`,
   countPlaceholder: "@POINT_LIGHT_COUNT",
+  lengthPlaceholder: "@POINT_LIGHT_LENGTH",
   code: `
-    for(var i=0; i< @POINT_LIGHT_COUNT; i++){
-      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, out.color,pointLight[i].color, pointLight[i].intensity,specualrShininess,specualrStrength,specualrColor);
+    for(var i=0; i< @POINT_LIGHT_LENGTH; i++){
+      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, baseColor,pointLight[i].color, pointLight[i].intensity,specualrShininess,specualrStrength,specualrColor);
     }
     `,
   func: `
@@ -130,9 +140,10 @@ export const AMBIENT_LIGHT: ShaderLightGadgetTemplate = {
 }`,
   define: `@group(3) @binding(11) var<uniform> ambientLight:array<AmbientLight, @AMBIENT_LIGHT_COUNT>;`,
   countPlaceholder: "@AMBIENT_LIGHT_COUNT",
+  lengthPlaceholder: "@AMBIENT_LIGHT_LENGTH",
   code: `
-    for(var i=0; i< @AMBIENT_LIGHT_COUNT; i++){
-      finalColor+= AmbientLight_(out.color, ambientLight[i].intensity);
+    for(var i=0; i< @AMBIENT_LIGHT_LENGTH; i++){
+      finalColor+= AmbientLight_(baseColor, ambientLight[i].intensity);
     }`,
   func: `
     fn AmbientLight_(baseColor: vec4f, ambient:f32) -> vec4f{
@@ -149,6 +160,7 @@ export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate = {
   }`,
   define: `@group(3) @binding(12) var<uniform> directionalLight:array<DirectionalLight, @DIRECTIONAL_LIGHT_COUNT>;`,
   countPlaceholder: "@DIRECTIONAL_LIGHT_COUNT",
+  lengthPlaceholder: "@DIRECTIONAL_LIGHT_LENGTH",
   code: "",
   func: ``,
 };

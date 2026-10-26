@@ -5,10 +5,6 @@ export class RenderPass extends Pass {
     context;
     entries;
     device;
-    // vertexEntryPoint: string;
-    // fragmentEntryPoint: string;
-    // vertexCount: GPUSize32;
-    // instanceCount: GPUSize32;
     meshRenderShaderPipeline;
     loadOp;
     format;
@@ -28,6 +24,13 @@ export class RenderPass extends Pass {
         this.context = null;
         if (this.target instanceof HTMLCanvasElement) {
             this.context = this.target.getContext("webgpu");
+            const canvas = this.target;
+            const resizeObserver = new ResizeObserver(() => {
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * devicePixelRatio;
+                canvas.height = rect.height * devicePixelRatio;
+            });
+            resizeObserver.observe(canvas);
         }
         this.device = arg.device;
         this.loadOp = arg.loadOp ?? "clear";

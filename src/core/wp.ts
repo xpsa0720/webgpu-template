@@ -228,6 +228,7 @@ export class WP<
       format: arg.format,
       blend: arg.blend,
       debugMode: arg.debugMode ?? this.config.debugMode,
+      debugViewShaderCode: arg.debugViewShaderCode ?? this.config.debugViewShaderCode,
       camera: arg.camera,
       meshs: arg.meshs,
     });

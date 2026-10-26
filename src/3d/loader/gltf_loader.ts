@@ -74,10 +74,31 @@ async function readDocument(
   // .gltf → JSON 파싱 + 동반 파일(.bin, 텍스처)을 resources로 매핑
   const json = JSON.parse(new TextDecoder("utf-8").decode(mainBuffer));
 
+  // gltf가 참조하는 모든 URI 수집 (buffers, images)
+  const referencedURIs = new Set<string>();
+  for (const buf of json.buffers ?? []) {
+    if (buf.uri) referencedURIs.add(buf.uri);
+  }
+  for (const img of json.images ?? []) {
+    if (img.uri) referencedURIs.add(img.uri);
+  }
+
   const resources: { [s: string]: Uint8Array<ArrayBuffer> } = {};
   for (const file of files) {
     if (file === mainFile) continue;
-    resources[file.name] = new Uint8Array(await file.arrayBuffer());
+    const data = new Uint8Array(await file.arrayBuffer());
+
+    // webkitRelativePath가 있으면 gltf 기준 상대 경로 추출
+    const relativePath = file.webkitRelativePath
+      ? file.webkitRelativePath.split("/").slice(1).join("/")
+      : null;
+
+    // gltf URI와 매칭: 상대 경로 또는 파일명이 URI 끝부분과 일치하면 해당 URI를 키로 사용
+    const matchedURI = [...referencedURIs].find(
+      (uri) => uri === relativePath || uri === file.name || uri.endsWith("/" + file.name),
+    );
+
+    resources[matchedURI ?? relativePath ?? file.name] = data;
   }
 
   return io.readJSON({ json, resources });
@@ -87,22 +108,34 @@ async function readDocument(
  * Document의 기본 Scene(없으면 부모가 없는 노드들)을 루트 Node 아래에 붙인다.
  * 같은 glTF material / primitive는 Matrial / Geometry를 공유한다.
  */
-function buildNodeTree(render3DPass: Render3DPass, doc: Document): Node {
+async function buildNodeTree(render3DPass: Render3DPass, doc: Document): Promise<Node> {
   const root = doc.getRoot();
   const scene = root.getDefaultScene() ?? root.listScenes()[0] ?? null;
   const topNodes = scene
     ? scene.listChildren()
     : root.listNodes().filter((n) => n.getParentNode() === null);
 
+  const device = render3DPass.device;
   const matrialCache = new Map<GLTFMaterial | null, Matrial>();
   const geometryCache = new Map<Primitive, Geometry | null>();
 
-  const getMatrial = (material: GLTFMaterial | null): Matrial => {
+  const getMatrial = async (material: GLTFMaterial | null): Promise<Matrial> => {
     let matrial = matrialCache.get(material);
     if (!matrial) {
       if (material) {
         const [r, g, b, a] = material.getBaseColorFactor();
-        matrial = new Matrial({ color: new Vector3(r, g, b), opacity: a });
+        let imageBitmap: ImageBitmap | undefined;
+
+        const baseColorTex = material.getBaseColorTexture();
+        if (baseColorTex) {
+          const imageData = baseColorTex.getImage();
+          if (imageData) {
+            const blob = new Blob([imageData], { type: baseColorTex.getMimeType() });
+            imageBitmap = await createImageBitmap(blob);
+          }
+        }
+
+        matrial = new Matrial({ color: new Vector3(r, g, b), opacity: a, device, imageBitmap });
       } else {
         matrial = createDefaultMatrial();
       }
@@ -118,13 +151,13 @@ function buildNodeTree(render3DPass: Render3DPass, doc: Document): Node {
     return geometryCache.get(primitive)!;
   };
 
-  const convertNode = (gltfNode: GLTFNode): Node => {
+  const convertNode = async (gltfNode: GLTFNode): Promise<Node> => {
     const meshs: Mesh[] = [];
     for (const primitive of gltfNode.getMesh()?.listPrimitives() ?? []) {
       const geometry = getGeometry(primitive);
       if (!geometry) continue;
       meshs.push(
-        createLoadedMesh(render3DPass, geometry, getMatrial(primitive.getMaterial())),
+        createLoadedMesh(render3DPass, geometry, await getMatrial(primitive.getMaterial())),
       );
     }
 
@@ -138,12 +171,16 @@ function buildNodeTree(render3DPass: Render3DPass, doc: Document): Node {
       meshs,
     });
 
-    gltfNode.listChildren().forEach((child) => node.addChild(convertNode(child)));
+    for (const child of gltfNode.listChildren()) {
+      node.addChild(await convertNode(child));
+    }
     return node;
   };
 
   const rootNode = new Node({ render3DPass, location: new Vector3(0, 0, 0) });
-  topNodes.forEach((n) => rootNode.addChild(convertNode(n)));
+  for (const n of topNodes) {
+    rootNode.addChild(await convertNode(n));
+  }
   return rootNode;
 }
 

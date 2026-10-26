@@ -73,42 +73,35 @@ function valueToFloats(value: unknown): number[] {
   throw new Error(`uniformData: 변환할 수 없는 값 타입`);
 }
 
-/**
- * WGSL struct 문자열과 데이터 객체로부터 정렬된 Float32Array를 생성한다.
- * 데이터 객체의 프로퍼티 이름이 struct 멤버 이름과 일치해야 한다.
- *
- * @example
- * uniformData(
- *   `struct PointLight{ position: vec4f, intensity: f32, color: vec4f }`,
- *   { position: new Vector4(1,2,3,1), intensity: 0.5, color: new Vector4(1,0,0,1) }
- * )
- * // → Float32Array [1,2,3,1, 0.5,0,0,0, 1,0,0,1]
- */
 export function uniformData<T extends object>(
   structCode: string,
   data: T,
 ): Float32Array {
   const layout = parseStructLayout(structCode);
-  const result = new Float32Array(layout.floatLength);
+  const buffer = new ArrayBuffer(layout.size);
+  const floatView = new Float32Array(buffer);
+  const uint32View = new Uint32Array(buffer);
+  const int32View = new Int32Array(buffer);
 
   for (const member of layout.members) {
     const value = (data as Record<string, unknown>)[member.name];
     if (value === undefined) {
       throw new Error(`uniformData: struct 멤버 "${member.name}"에 대응하는 데이터가 없음`);
     }
-    const floats = valueToFloats(value);
-    result.set(floats, member.floatOffset);
+
+    if (member.type === "u32" && typeof value === "number") {
+      uint32View[member.floatOffset] = value;
+    } else if (member.type === "i32" && typeof value === "number") {
+      int32View[member.floatOffset] = value;
+    } else {
+      const floats = valueToFloats(value);
+      floatView.set(floats, member.floatOffset);
+    }
   }
 
-  return result;
+  return floatView;
 }
 
-/**
- * 여러 개의 데이터 객체를 하나의 Float32Array로 합친다 (uniform array 용).
- *
- * @example
- * uniformDataArray(structCode, [light1, light2])
- */
 export function uniformDataArray<T extends object>(
   structCode: string,
   dataList: readonly T[],

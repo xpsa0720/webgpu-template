@@ -19,6 +19,7 @@ export interface ShaderLightGadgetParams<
   device: GPUDevice;
   lights?: T[];
   countPlaceholder: string;
+  lengthPlaceholder: string;
   onLightChange?: () => void;
 }
 
@@ -37,6 +38,7 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
   binding: number;
   gpuBuffer: WebGPUBuffer;
   countPlaceholder: string;
+  lengthPlaceholder: string;
   private _lights: T[];
   private onLightChange?: () => void;
 
@@ -53,9 +55,10 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     // instanceCode,
     lights = [],
     countPlaceholder,
+    lengthPlaceholder,
     onLightChange,
   }: ShaderLightGadgetParams<T>) {
-    super({ placeholder: { [countPlaceholder]: "0", ...placeholder } });
+    super({ placeholder: { [countPlaceholder]: "0", [lengthPlaceholder]: "0", ...placeholder } });
     this.struct = struct;
     this.define = define;
     this.group = group;
@@ -68,6 +71,7 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     this.binding = binding;
     this._lights = lights;
     this.countPlaceholder = countPlaceholder;
+    this.lengthPlaceholder = lengthPlaceholder;
     this.onLightChange = onLightChange;
     this.gpuBuffer = this.createBuffer();
 
@@ -120,6 +124,7 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     this.placeholder[this.countPlaceholder] = String(
       Math.max(1, roundUp(formatLightCount, this._lights.length)),
     );
+    this.placeholder[this.lengthPlaceholder] = String(this._lights.length);
   }
 
   updateLight(index: number){

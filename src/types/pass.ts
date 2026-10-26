@@ -37,6 +37,7 @@ export interface CreateRender3DPassArg {
   format?: GPUTextureFormat;
   blend?: boolean;
   debugMode?: boolean;
+  debugViewShaderCode?: boolean;
   camera: Camera;
   meshs?: Mesh[];
 }
