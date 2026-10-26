@@ -3,7 +3,8 @@ import type { Mesh } from "../3d/node/mesh/mesh";
 import type { Node } from "../3d/node/node";
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
-import { Light, ShaderLightGadget } from "../shader/gadget/shader_light";
+import type { Light } from "../3d/light/light";
+import { ShaderLightGadget } from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 interface Render3DPassArg extends RenderPassArg {

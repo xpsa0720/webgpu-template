@@ -14,8 +14,9 @@ export class Mesh {
     cachedBindGroup = null;
     AabbCenter;
     AabbRadius;
-    // location / rotate / scale이 바뀌면 true (교체 + x/y/z 직접 수정 모두 감지)
     dirty = true;
+    castShadow = false;
+    receiveShadow = false;
     constructor({ location, rotate, scale, geometry, render3DPass, matrial, }) {
         this.render3DPass = render3DPass;
         this.location = location;

@@ -1,5 +1,8 @@
-import { Vector4 } from "../../3d/math/vector";
 import type { WebGPUBuffer } from "../../types/resource";
+import type { AmbientLight } from "../../3d/light/ambient_light";
+import type { DirectionalLight } from "../../3d/light/directional_light";
+import type { Light } from "../../3d/light/light";
+import type { PointLight } from "../../3d/light/point_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetParams {
     define: string;
@@ -41,34 +44,6 @@ export declare abstract class ShaderLightGadget<T extends Light> extends ShaderG
     getCode(): string;
     getFunctionCode(): string;
     getStructUniformCode(): string;
-}
-export interface LightParams {
-    intensity?: number;
-    color?: Vector4;
-}
-export declare class Light {
-    intensity: number;
-    color: Vector4;
-    constructor({ intensity, color }?: LightParams);
-}
-export interface AmbientLightParams extends LightParams {
-}
-export declare class AmbientLight extends Light {
-    constructor(params?: AmbientLightParams);
-}
-export interface PointLightParams extends LightParams {
-    position?: Vector4;
-}
-export declare class PointLight extends Light {
-    position: Vector4;
-    constructor({ position, ...rest }?: PointLightParams);
-}
-export interface DirectionalLightParams extends LightParams {
-    directional?: Vector4;
-}
-export declare class DirectionalLight extends Light {
-    directional: Vector4;
-    constructor({ directional, ...rest }?: DirectionalLightParams);
 }
 export declare class ShaderAmbientLightGadget extends ShaderLightGadget<AmbientLight> {
     constructor(params: ShaderLightGadgetParams<AmbientLight>);

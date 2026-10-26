@@ -30,8 +30,9 @@ export class Mesh {
   cachedBindGroup: GPUBindGroup | null = null;
   AabbCenter!: Vector3;
   AabbRadius!: number;
-  // location / rotate / scale이 바뀌면 true (교체 + x/y/z 직접 수정 모두 감지)
   dirty: boolean = true;
+  castShadow: boolean = false;
+  receiveShadow: boolean = false;
   constructor({
     location,
     rotate,

@@ -116,33 +116,6 @@ export class ShaderLightGadget extends ShaderGadget {
         return super.getCode(result);
     }
 }
-export class Light {
-    intensity;
-    color;
-    constructor({ intensity = 1, color = new Vector4(1, 1, 1, 1) } = {}) {
-        this.intensity = intensity;
-        this.color = color;
-    }
-}
-export class AmbientLight extends Light {
-    constructor(params = {}) {
-        super(params);
-    }
-}
-export class PointLight extends Light {
-    position;
-    constructor({ position = new Vector4(0, 0, 0, 1), ...rest } = {}) {
-        super(rest);
-        this.position = position;
-    }
-}
-export class DirectionalLight extends Light {
-    directional;
-    constructor({ directional = new Vector4(0, -1, 0, 0), ...rest } = {}) {
-        super(rest);
-        this.directional = directional;
-    }
-}
 export class ShaderAmbientLightGadget extends ShaderLightGadget {
     constructor(params) {
         super(params);

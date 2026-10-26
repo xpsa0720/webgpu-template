@@ -1,9 +1,9 @@
-import { Vector3, Vector4 } from "../math/vector";
+import { Vector4 } from "../math/vector";
 import { Light } from "./light";
 export class DirectionalLight extends Light {
     directional;
-    constructor({ directional, intensity, color }) {
-        super({ intensity, color });
+    constructor({ directional = new Vector4(0, -1, 0, 0), ...rest } = {}) {
+        super(rest);
         this.directional = directional;
     }
 }

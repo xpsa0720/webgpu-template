@@ -1,8 +1,9 @@
+import { Vector4 } from "../math/vector";
 import { Light } from "./light";
 export class PointLight extends Light {
     position;
-    constructor({ position, intensity, color }) {
-        super({ intensity, color });
+    constructor({ position = new Vector4(0, 0, 0, 1), ...rest } = {}) {
+        super(rest);
         this.position = position;
     }
 }

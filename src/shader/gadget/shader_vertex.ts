@@ -19,7 +19,7 @@ const SCALAR: Record<
 };
 
 /** GPUVertexFormat → { byteSize, family } */
-const FORMAT_TABLE: Record<string, { byteSize: number; family: TypeFamily }> = {
+export const FORMAT_TABLE: Record<string, { byteSize: number; family: TypeFamily }> = {
   // float 계열
   float16: { byteSize: 2, family: "float" },
   float16x2: { byteSize: 4, family: "float" },

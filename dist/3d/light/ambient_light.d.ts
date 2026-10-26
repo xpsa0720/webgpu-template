@@ -1,10 +1,7 @@
-import { Vector4 } from "../math/vector";
-import { Light } from "./light";
-export interface AmbientLightParams {
-    intensity?: number;
-    color?: Vector4;
+import { Light, type LightParams } from "./light";
+export interface AmbientLightParams extends LightParams {
 }
 export declare class AmbientLight extends Light {
-    constructor({ intensity, color }: AmbientLightParams);
+    constructor(params?: AmbientLightParams);
 }
 //# sourceMappingURL=ambient_light.d.ts.map

@@ -1,12 +1,10 @@
-import { Vector3, Vector4 } from "../math/vector";
+import { Vector4 } from "../math/vector";
 export class Light {
-    // position: Vector3;
     intensity;
     color;
-    constructor({ intensity, color }) {
-        // this.position = position;
-        this.intensity = intensity ?? 1;
-        this.color = color ?? new Vector4(1, 1, 1, 1);
+    constructor({ intensity = 1, color = new Vector4(1, 1, 1, 1) } = {}) {
+        this.intensity = intensity;
+        this.color = color;
     }
 }
 //# sourceMappingURL=light.js.map

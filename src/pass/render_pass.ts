@@ -26,6 +26,7 @@ export abstract class RenderPass extends Pass {
   protected bindGroup: GPUBindGroup | null = null;
   protected bindGroupTex: GPUBindGroup | null = null;
   protected bindGroupSampler: GPUBindGroup | null = null;
+
   constructor(arg: RenderPassArg) {
     if (!arg.device) {
       throw Error("Device not initialized");
@@ -33,7 +34,6 @@ export abstract class RenderPass extends Pass {
 
     super(arg);
     this.debugMode = arg.debugMode ?? false;
-    // this.shaderCode = arg.shaderCode;
     this.target = arg.target;
     this.context = null;
     if (this.target instanceof HTMLCanvasElement) {
@@ -73,6 +73,11 @@ export abstract class RenderPass extends Pass {
   }
 
   abstract settingPipeline(shaderCode?: string) :any;
+  abstract encoderWriteCommand(
+    encoder: GPUCommandEncoder,
+    renderPassDescriptor: GPURenderPassDescriptor,
+  ) :void;
+
 
   deleteBuffer(bindigIdx: number) {
     if (!this.entries[bindigIdx]) {
@@ -121,11 +126,6 @@ export abstract class RenderPass extends Pass {
       });
     }
   }
-
-  abstract encoderWriteCommand(
-    encoder: GPUCommandEncoder,
-    renderPassDescriptor: GPURenderPassDescriptor,
-  ) :void;
 
   createPass(
     encoder: GPUCommandEncoder,

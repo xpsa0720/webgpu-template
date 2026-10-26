@@ -6,6 +6,6 @@ export interface LightParams {
 export declare class Light {
     intensity: number;
     color: Vector4;
-    constructor({ intensity, color }: LightParams);
+    constructor({ intensity, color }?: LightParams);
 }
 //# sourceMappingURL=light.d.ts.map

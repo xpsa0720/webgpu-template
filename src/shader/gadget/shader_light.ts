@@ -1,8 +1,11 @@
-import { Vector4 } from "../../3d/math/vector";
 import type { WebGPUBuffer } from "../../types/resource";
 import { gpuBufferSizeFormat, wgslStructSize } from "../../util/math";
 import { parseStructLayout, uniformData, uniformDataArray } from "../../util/uniform";
 import { roundUp } from "../../util/vertex_layout";
+import type { AmbientLight } from "../../3d/light/ambient_light";
+import type { DirectionalLight } from "../../3d/light/directional_light";
+import type { Light } from "../../3d/light/light";
+import type { PointLight } from "../../3d/light/point_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 
 export interface ShaderLightGadgetParams<
@@ -149,15 +152,6 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     return super.getCode(this.func);
   }
 
-  // getInstanceCode() {
-  //   if (this._lights.length === 0) return "";
-  //   return super.getCode(this.instanceCode);
-  // }
-
-  // getInstanceFunctionCode() {
-  //   if (this._lights.length === 0) return "";
-  //   return super.getCode(this.instanceFunc);
-  // }
 
   getStructUniformCode() {
     if (this._lights.length === 0) return "";
@@ -166,59 +160,6 @@ export abstract class ShaderLightGadget<T extends Light> extends ShaderGadget {
     result += this.define + "\n";
 
     return super.getCode(result);
-  }
-
-  // private getDataBuffer(device: GPUDevice) {
-  //   return device.createBuffer({
-  //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-  //     size: this._lights.length * 4,
-  //   });
-  // }
-}
-
-export interface LightParams {
-  intensity?: number;
-  color?: Vector4;
-}
-
-export class Light {
-  intensity: number;
-  color: Vector4;
-  constructor({ intensity = 1, color = new Vector4(1, 1, 1, 1) }: LightParams = {}) {
-    this.intensity = intensity;
-    this.color = color;
-  }
-}
-
-export interface AmbientLightParams extends LightParams {}
-
-export class AmbientLight extends Light {
-  constructor(params: AmbientLightParams = {}) {
-    super(params);
-  }
-}
-
-export interface PointLightParams extends LightParams {
-  position?: Vector4;
-}
-
-export class PointLight extends Light {
-  position: Vector4;
-  constructor({ position = new Vector4(0, 0, 0, 1), ...rest }: PointLightParams = {}) {
-    super(rest);
-    this.position = position;
-  }
-}
-
-export interface DirectionalLightParams extends LightParams {
-  directional?: Vector4;
-}
-
-export class DirectionalLight extends Light {
-  directional: Vector4;
-  constructor({ directional = new Vector4(0, -1, 0, 0), ...rest }: DirectionalLightParams = {}) {
-    super(rest);
-    this.directional = directional;
   }
 }
 

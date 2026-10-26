@@ -4,18 +4,17 @@ import type { Mesh } from "../3d/node/mesh/mesh";
 import type { Node } from "../3d/node/node";
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
-import { ShaderGadgetModule } from "../shader/core/shader_module";
 import {
   AMBIENT_LIGHT,
   DIRECTIONAL_LIGHT,
   POINT_LIGHT,
 } from "../shader/gadget/code/shader_code";
+import { AmbientLight } from "../3d/light/ambient_light";
+import { DirectionalLight } from "../3d/light/directional_light";
+import type { Light } from "../3d/light/light";
+import { PointLight } from "../3d/light/point_light";
 import {
-  AmbientLight,
-  DirectionalLight,
   formatLightCount,
-  Light,
-  PointLight,
   ShaderAmbientLightGadget,
   ShaderDirectionalLightGadget,
   ShaderLightGadget,
@@ -50,7 +49,6 @@ export class Render3DPass extends RenderPass {
   nodes: Node[];
   instanceMesh: InstanceMesh[];
   camera: Camera;
-
 
   lights: Light[];
   shaderLights: Record<number, ShaderLightGadget<any>>;
@@ -369,7 +367,6 @@ export class Render3DPass extends RenderPass {
     encoder: GPUCommandEncoder,
     renderPassDescriptor: GPURenderPassDescriptor,
   ) {
-
     const aspect = this.getAspect();
     const [width, height] = this.getTargetSize();
     if (
