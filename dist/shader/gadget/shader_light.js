@@ -17,15 +17,14 @@ export class ShaderLightGadget extends ShaderGadget {
     binding;
     gpuBuffer;
     countPlaceholder;
-    lengthPlaceholder;
     _lights;
     onLightChange;
     _bufferCapacity = 0; // 현재 버퍼가 수용 가능한 light 수 (roundUp 단위)
     constructor({ struct, define, placeholder, binding, group, code, device, func, 
     // instanceFunc,
     // instanceCode,
-    lights = [], countPlaceholder, lengthPlaceholder, onLightChange, }) {
-        super({ placeholder: { [countPlaceholder]: "0", [lengthPlaceholder]: "0", ...placeholder } });
+    lights = [], countPlaceholder, onLightChange, }) {
+        super({ placeholder: { [countPlaceholder]: "0", ...placeholder } });
         this.struct = struct;
         this.define = define;
         this.group = group;
@@ -38,7 +37,6 @@ export class ShaderLightGadget extends ShaderGadget {
         this.binding = binding;
         this._lights = lights;
         this.countPlaceholder = countPlaceholder;
-        this.lengthPlaceholder = lengthPlaceholder;
         this.onLightChange = onLightChange;
         this.gpuBuffer = this.createBuffer();
         lights.forEach((l) => this.addLight(l));
@@ -89,7 +87,6 @@ export class ShaderLightGadget extends ShaderGadget {
     }
     updateCount() {
         this.placeholder[this.countPlaceholder] = String(Math.max(1, roundUp(formatLightCount, this._lights.length)));
-        this.placeholder[this.lengthPlaceholder] = String(this._lights.length);
     }
     updateLight(index) {
         const data = uniformData(this.struct, this.lights[index]);
@@ -135,8 +132,8 @@ export class ShaderPointLightGadget extends ShaderLightGadget {
             ...params,
             placeholder: {
                 ...params.placeholder,
-                "@POINT_LIGHT_COMPARE_CODE": params.shadowAddCode,
-                "@POINT_SHADOW_VISIBILTY_FUNC_CODE": params.shadowAddFunc,
+                "@POINT_LIGHT_COMPARE_CODE": "",
+                "@POINT_SHADOW_VISIBILTY_FUNC_CODE": "",
             },
         });
         this.shadowPvMatrixDefine = SHADER_POINT_LIGHT_PV_MATRIX;
@@ -144,18 +141,35 @@ export class ShaderPointLightGadget extends ShaderLightGadget {
         this.shadowAddFunc = params.shadowAddFunc;
         this.shadowAddCode = params.shadowAddCode;
     }
+    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
+    get hasShadow() {
+        return this.lights.some((l) => l.castShadow);
+    }
+    // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
+    syncShadowPlaceholder() {
+        this.placeholder["@POINT_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
+        this.placeholder["@POINT_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+    }
+    getCode() {
+        this.syncShadowPlaceholder();
+        return super.getCode();
+    }
+    getFunctionCode() {
+        this.syncShadowPlaceholder();
+        return super.getFunctionCode();
+    }
     getShadowDefinesCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowTextureDefine + "\n" + this.shadowPvMatrixDefine + "\n";
     }
     getShadowAddCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowAddCode;
     }
     getShadowAddFuncCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowAddFunc;
     }
@@ -170,8 +184,8 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget {
             ...params,
             placeholder: {
                 ...params.placeholder,
-                "@DIRECTIONAL_LIGHT_COMPARE_CODE": params.shadowAddCode,
-                "@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE": params.shadowAddFunc,
+                "@DIRECTIONAL_LIGHT_COMPARE_CODE": "",
+                "@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE": "",
             },
         });
         this.shadowPvMatrixDefine = SHADER_DIRECTIONAL_LIGHT_PV_MATRIX;
@@ -179,18 +193,35 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget {
         this.shadowAddFunc = params.shadowAddFunc;
         this.shadowAddCode = params.shadowAddCode;
     }
+    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
+    get hasShadow() {
+        return this.lights.some((l) => l.castShadow);
+    }
+    // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
+    syncShadowPlaceholder() {
+        this.placeholder["@DIRECTIONAL_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
+        this.placeholder["@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+    }
+    getCode() {
+        this.syncShadowPlaceholder();
+        return super.getCode();
+    }
+    getFunctionCode() {
+        this.syncShadowPlaceholder();
+        return super.getFunctionCode();
+    }
     getShadowDefinesCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowTextureDefine + "\n" + this.shadowPvMatrixDefine + "\n";
     }
     getShadowAddCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowAddCode;
     }
     getShadowAddFuncCode() {
-        if (this.lights.length === 0)
+        if (!this.hasShadow)
             return "";
         return this.shadowAddFunc;
     }

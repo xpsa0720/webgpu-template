@@ -24,11 +24,13 @@ export interface MeshParams {
 
 export class Node {
   render3DPass: Render3DPass;
-  location: Vector3;
-  rotate: Vector3;
-  scale: Vector3;
-  worldMat: Mat4x4;
-  normalMat: Mat4x4;
+  private _location!: Vector3;
+  private _rotate!: Vector3;
+  private _scale!: Vector3;
+  worldMat!: Mat4x4;
+  normalMat!: Mat4x4;
+  // location / rotate / scale이 바뀌면 true. 렌더러가 프레임마다 확인해서 updateWorld()로 반영
+  dirty: boolean = true;
 
   parent: Node | null = null;
   children: Node[] = [];
@@ -42,16 +44,6 @@ export class Node {
     this.rotate = rotate ?? new Vector3(0);
     this.scale = scale ?? new Vector3(1, 1, 1);
     this.meshs = meshs ?? [];
-    this.worldMat = createModelMatrix({
-      location: this.location,
-      rotate: this.rotate,
-      scale: this.scale,
-    });
-    this.normalMat = createNormalMatrix({
-      location: this.location,
-      rotate: this.rotate,
-      scale: this.scale,
-    });
     const device = render3DPass.device;
     this.matrixBuffer = {
       buffer: device.createBuffer({
@@ -62,12 +54,51 @@ export class Node {
     this.updateWorld();
   }
 
+  get location(): Vector3 {
+    return this._location;
+  }
+  set location(value: Vector3) {
+    this._location = this.watch(value);
+    this.dirty = true;
+  }
+
+  get rotate(): Vector3 {
+    return this._rotate;
+  }
+  set rotate(value: Vector3) {
+    this._rotate = this.watch(value);
+    this.dirty = true;
+  }
+
+  get scale(): Vector3 {
+    return this._scale;
+  }
+  set scale(value: Vector3) {
+    this._scale = this.watch(value);
+    this.dirty = true;
+  }
+
+  // Vector3의 x/y/z가 바뀌면 dirty = true (node.location.x += 1, node.rotate.add(v) 등)
+  private watch(vector: Vector3): Vector3 {
+    return new Proxy(vector, {
+      set: (target, key, value) => {
+        const result = Reflect.set(target, key, value);
+        this.dirty = true;
+        return result;
+      },
+    });
+  }
+
   addChild(child: Node) {
     child.parent = this;
     this.children.push(child);
-    this.updateWorld();
+    child.updateWorld(); // 부모가 생겼으니 자식 쪽만 즉시 다시 계산
   }
 
+  /**
+   * 월드 / normal 행렬을 다시 계산한다 (자식까지 재귀).
+   * 렌더러는 dirty일 때만 호출한다. 값을 바꾼 직후 월드 행렬이 바로 필요하면 직접 호출해도 된다.
+   */
   updateWorld() {
     const local = createModelMatrix({
       location: this.location,
@@ -83,8 +114,9 @@ export class Node {
     this.normalMat = this.parent
       ? localNormal.multiply(this.parent.normalMat)
       : localNormal;
-		this.meshs.forEach((mesh)=> mesh.dirty = true)
+    this.meshs.forEach((mesh) => (mesh.dirty = true)); // Mesh 행렬은 Node 행렬을 포함하므로 다시 써야 함
+    this.dirty = false;
 
-    this.children.forEach((child) => child.updateWorld());
+    this.children.forEach((child) => child.updateWorld()); // 부모가 바뀌면 자식 월드도 바뀜
   }
 }

@@ -18,7 +18,6 @@ export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetPa
     device: GPUDevice;
     lights?: T[];
     countPlaceholder: string;
-    lengthPlaceholder: string;
     onLightChange?: () => void;
 }
 export declare const formatLightCount = 8;
@@ -33,11 +32,10 @@ export declare abstract class ShaderLightGadget<T extends Light> extends ShaderG
     binding: number;
     gpuBuffer: WebGPUBuffer;
     countPlaceholder: string;
-    lengthPlaceholder: string;
     private _lights;
     private onLightChange?;
     private _bufferCapacity;
-    constructor({ struct, define, placeholder, binding, group, code, device, func, lights, countPlaceholder, lengthPlaceholder, onLightChange, }: ShaderLightGadgetParams<T>);
+    constructor({ struct, define, placeholder, binding, group, code, device, func, lights, countPlaceholder, onLightChange, }: ShaderLightGadgetParams<T>);
     private createBuffer;
     /** 버퍼 용량이 충분하면 writeBuffer만, 부족하면 새로 생성 */
     private ensureBuffer;
@@ -57,6 +55,7 @@ export interface ShadowGadget {
     shadowTextureDefine: string;
     shadowAddFunc: string;
     shadowAddCode: string;
+    readonly hasShadow: boolean;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;
@@ -70,6 +69,11 @@ export declare class ShaderPointLightGadget extends ShaderLightGadget<PointLight
     shadowAddFunc: string;
     shadowAddCode: string;
     constructor(params: ShaderLightGadgetParams<PointLight> & ShadowGadgetParams);
+    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
+    get hasShadow(): boolean;
+    private syncShadowPlaceholder;
+    getCode(): string;
+    getFunctionCode(): string;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;
@@ -80,6 +84,11 @@ export declare class ShaderDirectionalLightGadget extends ShaderLightGadget<Dire
     shadowAddFunc: string;
     shadowAddCode: string;
     constructor(params: ShaderLightGadgetParams<DirectionalLight> & ShadowGadgetParams);
+    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
+    get hasShadow(): boolean;
+    private syncShadowPlaceholder;
+    getCode(): string;
+    getFunctionCode(): string;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;

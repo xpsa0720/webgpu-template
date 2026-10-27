@@ -11,6 +11,7 @@ export declare const SHADER_VERTEXOUT_STRUCT = "\nstruct VertexOut{\n  @builtin(
 export declare const SHADER_MATRIAL_STRUCT = "\nstruct Matrial {\n  baseColor: vec4f,\n  specualrColor: vec4f,\n  specualrStrength: f32,\n  specualrShininess: f32,\n  texturFlag: u32,\n}";
 export declare const SHADER_MATRIX_UNIFORM = "@group(3) @binding(0) var<uniform> matrix:Matrixs;";
 export declare const SHADER_CAMERA_POSITION_UNIFORM = "@group(3) @binding(1) var<uniform> cameraPos:vec4f;";
+export declare const SHADER_LIGHT_COUNTS_UNIFORM = "@group(3) @binding(13) var<uniform> lightCounts: vec4<u32>;";
 export declare const SHADER_MATRIAL_UNIFORM = "@group(3) @binding(2) var<uniform> matrial: Matrial;";
 export declare const SHADER_MESH_VP_UNIFORM = "@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;";
 export declare const SHADER_MATRIAL_TEXTURE = "@group(3) @binding(4) var tex: texture_2d<f32>;";
@@ -27,7 +28,6 @@ export interface ShaderLightGadgetTemplate {
     struct: string;
     define: string;
     countPlaceholder: string;
-    lengthPlaceholder: string;
     code: string;
     func: string;
 }

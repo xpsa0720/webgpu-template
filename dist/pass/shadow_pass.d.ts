@@ -15,7 +15,6 @@ export declare class ShadowPass extends Pass {
     shadowShaderModule: GPUShaderModule;
     blendState: GPUBlendState | undefined;
     lightVpBuffer: WebGPUBuffer;
-    mMatrixBuffer: WebGPUBuffer;
     protected debugMode: boolean;
     constructor(arg: ShadowPassArg);
     settingPipeline(): GPURenderPipeline;
@@ -27,8 +26,12 @@ export declare class ShadowPass extends Pass {
      * 한 번만 호출하면 됨 (매 프레임 호출하면 느림).
      * 중앙 sampleSize x sampleSize 영역의 depth 값을 출력.
      */
+    /**
+     * 디버그: shadow map 텍스처 배열의 layer 수와, 각 layer의 가운데 열(x = width/2, y = 0..height-1) depth 값을 출력.
+     * depth 텍스처는 부분 복사가 불가능해서 layer 전체를 읽은 뒤 가운데 열만 뽑는다.
+     */
+    readShadowMapColumns(): Promise<void>;
     readShadowMap(sampleSize?: number): Promise<void>;
-    private isLightShadow;
 }
 export {};
 //# sourceMappingURL=shadow_pass.d.ts.map

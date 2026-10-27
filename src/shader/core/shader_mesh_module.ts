@@ -1,4 +1,4 @@
-import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_FRAGMENT_DEFAULT, SHADER_MATRIAL_STRUCT, SHADER_MATRIAL_UNIFORM, SHADER_MESH_MATRIX_STRUCT, SHADER_MATRIX_UNIFORM, SHADER_MESH_VP_UNIFORM, SHADER_VERTEX_DEFAULT, SHADER_VERTEXOUT_STRUCT, SHADER_MATRIAL_TEXTURE, SHADER_MATRIAL_SAMPLER } from "../gadget/code/shader_code";
+import { SHADER_CAMERA_POSITION_UNIFORM, SHADER_LIGHT_COUNTS_UNIFORM, SHADER_FRAGMENT_DEFAULT, SHADER_MATRIAL_STRUCT, SHADER_MATRIAL_UNIFORM, SHADER_MESH_MATRIX_STRUCT, SHADER_MATRIX_UNIFORM, SHADER_MESH_VP_UNIFORM, SHADER_VERTEX_DEFAULT, SHADER_VERTEXOUT_STRUCT, SHADER_MATRIAL_TEXTURE, SHADER_MATRIAL_SAMPLER } from "../gadget/code/shader_code";
 import { ShaderbindingGadget } from "../gadget/shader_binding";
 import { ShaderFragmentGadget } from "../gadget/shader_fragment";
 import { ShaderStructGadget } from "../gadget/shader_struct";
@@ -24,6 +24,10 @@ export class ShaderGadgetMeshModule extends ShaderGadgetModule {
       bindings: [
         new ShaderbindingGadget({
           define: SHADER_CAMERA_POSITION_UNIFORM,
+          type: "uniform",
+        }),
+        new ShaderbindingGadget({
+          define: SHADER_LIGHT_COUNTS_UNIFORM,
           type: "uniform",
         }),
         new ShaderbindingGadget({

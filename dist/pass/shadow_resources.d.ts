@@ -1,8 +1,6 @@
+import type { LightShadow } from "../3d/shadow/lightShadow";
 import type { ShaderLightGadget } from "../shader/gadget/shader_light";
-/**
- * Shadow 관련 GPU 리소스를 중앙 관리하는 클래스.
- * group(3) binding 20~24에 해당하는 리소스를 생성/갱신/바인딩한다.
- */
+export type ShadowLightType = "directional" | "point";
 export declare class ShadowResources {
     device: GPUDevice;
     sampler: GPUSampler;
@@ -13,11 +11,23 @@ export declare class ShadowResources {
     directionalCount: number;
     pointCount: number;
     constructor(device: GPUDevice);
-    update(shaderLights: Record<number, ShaderLightGadget<any>>): void;
+    /**
+     * castShadow인 light를 종류별로 정해진 순서로 반환한다.
+     * 이 순서가 곧 PV 버퍼 칸 번호(i * 64) = shadow map texture layer 번호 = 셰이더 인덱스.
+     * update / writePvMatrices / ShadowPass가 모두 이 함수만 사용해야 순서가 어긋나지 않는다.
+     */
+    getShadowLights(shaderLights: Record<number, ShaderLightGadget<any>>, type: ShadowLightType): LightShadow[];
+    /**
+     * castShadow light 수에 맞춰 텍스처 배열 / PV 버퍼를 (재)생성한다.
+     * @returns 리소스를 다시 만들었으면 true — 기존 버퍼를 destroy했으므로 호출 측은
+     *          bind group entry를 갱신하고 캐시된 bind group을 비워야 한다.
+     */
+    update(shaderLights: Record<number, ShaderLightGadget<any>>): boolean;
     /**
      * castShadow인 light들의 PV matrix를 storage buffer에 기록한다.
      */
     writePvMatrices(shaderLights: Record<number, ShaderLightGadget<any>>): void;
+    private writeLightPvMatrices;
     /**
      * 바인드 그룹 엔트리 배열 반환.
      * 셰이더에 shadow 바인딩이 선언된 경우에만 호출되므로,

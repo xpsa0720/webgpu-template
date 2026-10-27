@@ -2,9 +2,10 @@
 export const SHADOW_DIRECTIONAL_COMPARE = `
 if (directionalLight[i].castShadow == 0) {
   noneDirectionalShadowCount += 1;
+  castShadow = false;
     }`;
 export const SHADOW_DIRECTIONAL_ADD_FUNC = `
-if (directionalLight[lightIndex].castShadow == 1) {
+if (castShadow) {
   let pvMatrix = directionalLightPVMatrix[lightIndex];
   let lightClip = pvMatrix * worldPos;
 

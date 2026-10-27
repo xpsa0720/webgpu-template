@@ -6,7 +6,7 @@ import { DirectionalLight } from "../3d/light/directional_light";
 import { PointLight } from "../3d/light/point_light";
 import { formatLightCount, ShaderAmbientLightGadget, ShaderDirectionalLightGadget, ShaderLightGadget, ShaderPointLightGadget, } from "../shader/gadget/shader_light";
 import { isView } from "../util/math";
-import { createMatrix, createModelMatrix, } from "../util/matrix";
+import { createMatrix, createModelMatrix } from "../util/matrix";
 import { roundUp } from "../util/vertex_layout";
 import { RenderPass } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
@@ -18,14 +18,6 @@ export class Render3DPass extends RenderPass {
     camera;
     shaderLights;
     lightBindGroupEntry;
-    /** 모든 ShaderLightGadget에 등록된 light를 모아서 반환 */
-    get lights() {
-        const result = [];
-        for (const gadget of Object.values(this.shaderLights)) {
-            result.push(...gadget.lights);
-        }
-        return result;
-    }
     shaderMeshRenderGadgetModule;
     shaderInstanceRenderGadgetModule;
     meshRenderShaderModule;
@@ -39,9 +31,19 @@ export class Render3DPass extends RenderPass {
     depthHeight = 0;
     defaultSampler;
     dummyTextureView;
+    // 실제 조명 개수 uniform (x: point, y: ambient, z: directional, w: 미사용)
+    lightCountsBuffer;
+    // 마지막으로 컴파일한 셰이더 기준, 종류별 castShadow 조명 존재 여부
+    shadowPresence = [];
+    lightCountsData = new Uint32Array(4);
     // 매 프레임 재사용할 Float32Array
     constructor(arg) {
         super(arg);
+        this.lightCountsBuffer = this.device.createBuffer({
+            size: 16,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+        });
+        this.lightCountsData.fill(0xffffffff); // 첫 프레임에 반드시 쓰도록 무효값으로 시작
         this.meshs = arg.meshs ?? [];
         this.nodes = arg.nodes ?? [];
         this.instanceMesh = arg.instanceMesh ?? [];
@@ -57,6 +59,7 @@ export class Render3DPass extends RenderPass {
         });
         this.createShaderModule();
         this.settingPipeline();
+        this.shadowPresence = this.getShadowPresence();
         this.camera = arg.camera;
         this.camera.cameraBuffer = {
             buffer: this.device.createBuffer({
@@ -72,7 +75,10 @@ export class Render3DPass extends RenderPass {
         };
         this.shadowResources = new ShadowResources(this.device);
         this.shadowResources.update(this.shaderLights);
-        this.shadowPass = new ShadowPass({ device: this.device, render3DPass: this });
+        this.shadowPass = new ShadowPass({
+            device: this.device,
+            render3DPass: this,
+        });
         this.defaultSampler = this.device.createSampler({
             magFilter: "linear",
             minFilter: "linear",
@@ -93,7 +99,6 @@ export class Render3DPass extends RenderPass {
                 struct: POINT_LIGHT.struct,
                 define: POINT_LIGHT.define,
                 countPlaceholder: POINT_LIGHT.countPlaceholder,
-                lengthPlaceholder: POINT_LIGHT.lengthPlaceholder,
                 group: 3,
                 binding: 10,
                 code: POINT_LIGHT.code,
@@ -106,7 +111,6 @@ export class Render3DPass extends RenderPass {
                 struct: AMBIENT_LIGHT.struct,
                 define: AMBIENT_LIGHT.define,
                 countPlaceholder: AMBIENT_LIGHT.countPlaceholder,
-                lengthPlaceholder: AMBIENT_LIGHT.lengthPlaceholder,
                 group: 3,
                 binding: 11,
                 code: AMBIENT_LIGHT.code,
@@ -117,7 +121,6 @@ export class Render3DPass extends RenderPass {
                 struct: DIRECTIONAL_LIGHT.struct,
                 define: DIRECTIONAL_LIGHT.define,
                 countPlaceholder: DIRECTIONAL_LIGHT.countPlaceholder,
-                lengthPlaceholder: DIRECTIONAL_LIGHT.lengthPlaceholder,
                 group: 3,
                 binding: 12,
                 code: DIRECTIONAL_LIGHT.code,
@@ -158,7 +161,7 @@ export class Render3DPass extends RenderPass {
                 lightStructsUniforms: structCode,
                 lightCode: fragmentCode,
                 funtionCode: functionCode,
-                shadowDefinesCode: shadowDefinesCode
+                shadowDefinesCode: shadowDefinesCode,
             }),
         });
         this.instnaceMeshRenderShaderModule = this.device.createShaderModule({
@@ -166,7 +169,7 @@ export class Render3DPass extends RenderPass {
                 lightStructsUniforms: structCode,
                 lightCode: fragmentCode,
                 funtionCode: functionCode,
-                shadowDefinesCode: shadowDefinesCode
+                shadowDefinesCode: shadowDefinesCode,
             }),
         });
     }
@@ -251,6 +254,7 @@ export class Render3DPass extends RenderPass {
         return this.shaderLights[2];
     }
     compile() {
+        this.shadowPresence = this.getShadowPresence();
         this.shadowResources.update(this.shaderLights);
         this.updateBindGroupEntray();
         this.invalidateAllBindGroups();
@@ -273,6 +277,10 @@ export class Render3DPass extends RenderPass {
             });
             this.invalidateNodeBindGroups(node.children);
         });
+    }
+    /** 종류별로 castShadow 조명이 있는지 (바뀌면 셰이더의 그림자 코드 유무가 달라지므로 재컴파일) */
+    getShadowPresence() {
+        return Object.values(this.shaderLights).map((g) => isShadowGadget(g) && g.hasShadow);
     }
     getLightCountSnapshot() {
         return Object.values(this.shaderLights).map((g) => roundUp(formatLightCount, g.lights.length));
@@ -346,9 +354,20 @@ export class Render3DPass extends RenderPass {
         };
         this.camera.update(this.device, aspect);
         const vpMatrix = this.camera.vpMatrix;
-        // shadow 리소스 갱신 및 PV matrix 기록
-        this.shadowResources.update(this.shaderLights);
+        //캐시된 bind group을 새 리소스로 교체 (addLight, removeLight, castShadow 변경 모두 여기서 처리)
+        const presence = this.getShadowPresence();
+        if (presence.some((v, i) => v !== this.shadowPresence[i])) {
+            // 그림자 조명이 0 ↔ 1개 이상으로 바뀜 → 셰이더에서 그림자 코드를 넣거나 빼고 다시 컴파일
+            // (compile 안에서 shadowResources 갱신, bind group entry 갱신, 캐시 비우기까지 처리)
+            this.compile();
+        }
+        else if (this.shadowResources.update(this.shaderLights)) {
+            this.updateBindGroupEntray();
+            this.invalidateAllBindGroups();
+        }
         this.shadowResources.writePvMatrices(this.shaderLights);
+        this.writeLightCounts();
+        this.updateMesh();
         // shadow pass는 메인 렌더 패스 시작 전에 실행 (encoder에 pass 중첩 불가)
         this.shadowPass.createPass(encoder);
         const pass = encoder.beginRenderPass(renderPassDescriptor);
@@ -366,22 +385,22 @@ export class Render3DPass extends RenderPass {
             const M = createModelMatrix(mesh);
             if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M))
                 return;
-            if (mesh.dirty) {
-                createMatrix(mesh, this.device, mesh.matrixBuffer);
-                mesh.dirty = false;
-            }
-            if (mesh.matrial.dirty) {
-                this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, mesh.matrial.getDataArray());
-            }
             if (!mesh.cachedBindGroup) {
                 mesh.cachedBindGroup = this.device.createBindGroup({
                     layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
                     entries: [
                         { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-                        { binding: 1, resource: { buffer: this.camera.cameraBuffer.buffer } },
+                        {
+                            binding: 1,
+                            resource: { buffer: this.camera.cameraBuffer.buffer },
+                        },
                         { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
                         { binding: 3, resource: { buffer: this.camera.vpBuffer.buffer } },
-                        { binding: 4, resource: mesh.matrial.texture?.texture.createView() ?? this.dummyTextureView },
+                        {
+                            binding: 4,
+                            resource: mesh.matrial.texture?.texture.createView() ??
+                                this.dummyTextureView,
+                        },
                         { binding: 5, resource: this.defaultSampler },
                         ...this.lightBindGroupEntry,
                     ],
@@ -404,8 +423,14 @@ export class Render3DPass extends RenderPass {
                     instanceMesh.cachedBindGroup = this.device.createBindGroup({
                         layout: this.instnaceMeshRenderShaderPipeline.getBindGroupLayout(3),
                         entries: [
-                            { binding: 0, resource: { buffer: this.camera.vpBuffer.buffer } },
-                            { binding: 1, resource: { buffer: this.camera.cameraBuffer.buffer } },
+                            {
+                                binding: 0,
+                                resource: { buffer: this.camera.vpBuffer.buffer },
+                            },
+                            {
+                                binding: 1,
+                                resource: { buffer: this.camera.cameraBuffer.buffer },
+                            },
                             ...this.lightBindGroupEntry,
                             {
                                 binding: 30,
@@ -426,28 +451,82 @@ export class Render3DPass extends RenderPass {
         }
         pass.end();
     }
+    /** 실제 조명 개수가 바뀌었을 때만 lightCounts uniform에 쓴다 (셰이더 루프 횟수) */
+    writeLightCounts() {
+        const point = this.pointLightGadget.lights.length;
+        const ambient = this.ambientLightGadget.lights.length;
+        const directional = this.directionalLightGadget.lights.length;
+        const d = this.lightCountsData;
+        if (d[0] === point && d[1] === ambient && d[2] === directional)
+            return;
+        d[0] = point;
+        d[1] = ambient;
+        d[2] = directional;
+        d[3] = 0;
+        this.device.queue.writeBuffer(this.lightCountsBuffer, 0, d);
+    }
+    updateMesh() {
+        // getDataArray()가 Matrial.dirty를 false로 바꾸는 문제 해결
+        const updatedMatrials = new Set();
+        this.meshs.forEach((mesh) => {
+            if (mesh.dirty) {
+                createMatrix(mesh, this.device, mesh.matrixBuffer);
+                mesh.dirty = false;
+            }
+            this.writeMatrial(mesh, updatedMatrials);
+        });
+        this.updateNode(this.nodes, updatedMatrials);
+    }
+    updateNode(nodes, updatedMatrials) {
+        nodes.forEach((node) => {
+            if (node.dirty)
+                node.updateWorld();
+            node.meshs.forEach((mesh) => {
+                if (mesh.dirty) {
+                    createMatrix(mesh, this.device, mesh.matrixBuffer, {
+                        parentWorldMat: node.worldMat,
+                        parentNormalMat: node.normalMat,
+                    });
+                    mesh.dirty = false;
+                }
+                this.writeMatrial(mesh, updatedMatrials);
+            });
+            if (node.children.length > 0)
+                this.updateNode(node.children, updatedMatrials);
+        });
+    }
+    writeMatrial(mesh, updatedMatrials) {
+        const matrial = mesh.matrial;
+        if (!matrial.dirty && !updatedMatrials.has(matrial))
+            return;
+        updatedMatrials.add(matrial);
+        this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, matrial.getDataArray());
+    }
     nodeRecursionRender(nodes, vpMatrix, pass) {
         nodes.forEach((node) => {
             node.meshs.forEach((mesh) => {
                 const M = createModelMatrix(mesh).multiply(node.worldMat);
                 if (isView(vpMatrix, mesh.AabbCenter, mesh.AabbRadius, M))
                     return;
-                createMatrix(mesh, this.device, mesh.matrixBuffer, {
-                    parentWorldMat: node.worldMat,
-                    parentNormalMat: node.normalMat,
-                });
-                if (mesh.matrial.dirty) {
-                    this.device.queue.writeBuffer(mesh.matrialBuffer.buffer, 0, mesh.matrial.getDataArray());
-                }
                 if (!mesh.cachedBindGroup) {
                     mesh.cachedBindGroup = this.device.createBindGroup({
                         layout: this.meshRenderShaderPipeline.getBindGroupLayout(3),
                         entries: [
                             { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-                            { binding: 1, resource: { buffer: this.camera.cameraBuffer.buffer } },
+                            {
+                                binding: 1,
+                                resource: { buffer: this.camera.cameraBuffer.buffer },
+                            },
                             { binding: 2, resource: { buffer: mesh.matrialBuffer.buffer } },
-                            { binding: 3, resource: { buffer: this.camera.vpBuffer.buffer } },
-                            { binding: 4, resource: mesh.matrial.texture?.texture.createView() ?? this.dummyTextureView },
+                            {
+                                binding: 3,
+                                resource: { buffer: this.camera.vpBuffer.buffer },
+                            },
+                            {
+                                binding: 4,
+                                resource: mesh.matrial.texture?.texture.createView() ??
+                                    this.dummyTextureView,
+                            },
                             { binding: 5, resource: this.defaultSampler },
                             ...this.lightBindGroupEntry,
                         ],
@@ -473,6 +552,10 @@ export class Render3DPass extends RenderPass {
                 resource: { buffer: e.gpuBuffer.buffer },
             });
         });
+        // 실제 조명 개수 전달
+        if (lightGadgets.some((g) => g.lights.length > 0)) {
+            result.push({ binding: 13, resource: { buffer: this.lightCountsBuffer } });
+        }
         // shadow 리소스 바인딩 (20~24) 추가
         if (this.shadowResources) {
             result.push(...this.shadowResources.getBindGroupEntries());

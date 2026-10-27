@@ -40,6 +40,7 @@ struct Matrial {
 
 export const SHADER_MATRIX_UNIFORM = `@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM = `@group(3) @binding(1) var<uniform> cameraPos:vec4f;`;
+export const SHADER_LIGHT_COUNTS_UNIFORM =`@group(3) @binding(13) var<uniform> lightCounts: vec4<u32>;`;
 export const SHADER_MATRIAL_UNIFORM = `@group(3) @binding(2) var<uniform> matrial: Matrial;`;
 export const SHADER_MESH_VP_UNIFORM = `@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;`;
 export const SHADER_MATRIAL_TEXTURE = `@group(3) @binding(4) var tex: texture_2d<f32>;`;
@@ -116,7 +117,6 @@ export interface ShaderLightGadgetTemplate {
   struct: string;
   define: string;
   countPlaceholder: string;
-  lengthPlaceholder: string;
   code: string;
   func: string;
 }
@@ -135,10 +135,9 @@ export const POINT_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate = {
   }`,
   define: `@group(3) @binding(10) var<uniform> pointLight:array<PointLight, @POINT_LIGHT_COUNT>;`,
   countPlaceholder: "@POINT_LIGHT_COUNT",
-  lengthPlaceholder: "@POINT_LIGHT_LENGTH",
   code: `
   var nonePointShadowCount = 0u;
-  for(var i = 0u; i < @POINT_LIGHT_LENGTH; i++) {
+  for(var i = 0u; i < lightCounts.x; i++) {
 
       @POINT_LIGHT_COMPARE_CODE
 
@@ -198,9 +197,8 @@ export const AMBIENT_LIGHT: ShaderLightGadgetTemplate = {
 }`,
   define: `@group(3) @binding(11) var<uniform> ambientLight:array<AmbientLight, @AMBIENT_LIGHT_COUNT>;`,
   countPlaceholder: "@AMBIENT_LIGHT_COUNT",
-  lengthPlaceholder: "@AMBIENT_LIGHT_LENGTH",
   code: `
-    for(var i=0; i< @AMBIENT_LIGHT_LENGTH; i++){
+    for(var i = 0u; i < lightCounts.y; i++){
       finalColor+= AmbientLight_(baseColor, ambientLight[i].intensity);
     }`,
   func: `
@@ -219,11 +217,11 @@ export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate
   }`,
   define: `@group(3) @binding(12) var<uniform> directionalLight:array<DirectionalLight, @DIRECTIONAL_LIGHT_COUNT>;`,
   countPlaceholder: "@DIRECTIONAL_LIGHT_COUNT",
-  lengthPlaceholder: "@DIRECTIONAL_LIGHT_LENGTH",
   code: `
   var noneDirectionalShadowCount = 0u;
-  for(var i = 0u; i < 1; i++) {
-
+  for(var i = 0u; i < lightCounts.z; i++) {
+      var castShadow = true;
+        
       @DIRECTIONAL_LIGHT_COMPARE_CODE
 
       finalColor += DirectionalLight_(
@@ -234,6 +232,7 @@ export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate
               directionalLight[i].color,
               i - noneDirectionalShadowCount,
               out.world_position,
+              castShadow
           );
   }
   `,
@@ -246,6 +245,7 @@ fn DirectionalLight_(
     lightColor: vec4f,
     lightIndex: u32,
     worldPos: vec4f,
+    castShadow:bool
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);

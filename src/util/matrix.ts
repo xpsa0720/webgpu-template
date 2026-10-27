@@ -126,34 +126,61 @@ export function createModelMatrix(mesh: Transform) {
 }
 
 export function createViewMatrix(camera: Camera) {
-  // forward 방향에 카메라 회전 적용
   const rotMat = createFowardRotateMatrix(camera.rotate);
   const rawF = normalize(camera.target.copy().subtract(camera.position));
   const F = normalize(rotMat.multiplyVec3(rawF));
 
-  let upref = camera.upref;
-  if (Math.abs(F.dot(upref)) > 0.999) {
-    upref = new Vector3(0, 0, 1);
+  return createLookAtMatrix(camera.position, F, camera.upref);
+}
+
+export function createLookAtMatrix(eye: Vector3, forward: Vector3, upref: Vector3) {
+  const F = normalize(forward);
+  let up = upref;
+  if (Math.abs(F.dot(up)) > 0.999) {
+    up = new Vector3(0, 0, 1);
   }
-  const R = normalize(F.crossProduct(upref));
+  const R = normalize(F.crossProduct(up));
   const U = R.crossProduct(F);
-  const C = camera.position;
-  // View 행렬은 -F를 z축으로 사용 (카메라 앞쪽 = -z)
-  const V = new Mat4x4([
+  return viewMatrixFromBasis(R, U, F, eye);
+}
+
+export function createCameraViewMatrix(camera: Camera) {
+  const yaw = camera.rotate.y;
+  const pitch = camera.rotate.x;
+
+  const F = new Vector3(
+    -Math.cos(pitch) * Math.sin(yaw),
+    Math.sin(pitch),
+    -Math.cos(pitch) * Math.cos(yaw),
+  );
+  const R = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const U = R.crossProduct(F);
+  return viewMatrixFromBasis(R, U, F, camera.position);
+}
+
+/** 시선 방향 → { yaw, pitch } (createCameraViewMatrix의 역변환, 라디안) */
+export function directionToYawPitch(direction: Vector3) {
+  const d = normalize(direction);
+  return {
+    yaw: Math.atan2(-d.x, -d.z),
+    pitch: Math.asin(Math.max(-1, Math.min(1, d.y))),
+  };
+}
+
+// View 행렬은 -F를 z축으로 사용 (카메라 앞쪽 = -z)
+function viewMatrixFromBasis(R: Vector3, U: Vector3, F: Vector3, C: Vector3) {
+  return new Mat4x4([
     new Vector4(R.x, U.x, -F.x, 0),
     new Vector4(R.y, U.y, -F.y, 0),
     new Vector4(R.z, U.z, -F.z, 0),
     new Vector4(-R.dot(C), -U.dot(C), F.dot(C), 1),
   ]);
-
-  return V;
 }
 
 export function createLookAtViewMatrix(position:Vector3,target:Vector3){
   let upref = new Vector3(0, 1, 0);
   const F = normalize(target.copy().subtract(position));
 
-  // F가 up과 평행하면 대체 up 사용
   if (Math.abs(F.dot(upref)) > 0.999) {
     upref = new Vector3(0, 0, 1);
   }
@@ -189,7 +216,6 @@ export function createProjectionMatrix(camera: Camera, aspect: number) {
   return V;
 }
 
-/** 직교 투영 행렬 (WebGPU NDC: z 0..1) */
 export function createOrthographicProjectionMatrix(
   left: number, right: number,
   bottom: number, top: number,
@@ -208,7 +234,7 @@ export function createOrthographicProjectionMatrix(
 }
 
 export function createViewProjectionMatrix(camera: Camera, aspect: number) {
-  return createViewMatrix(camera).multiply(
+  return createCameraViewMatrix(camera).multiply(
     createProjectionMatrix(camera, aspect),
   );
 }

@@ -1,6 +1,7 @@
 import type { InstanceMesh } from "../../3d/node/mesh/instance";
 import {
   SHADER_CAMERA_POSITION_UNIFORM,
+  SHADER_LIGHT_COUNTS_UNIFORM,
   SHADER_MATRIAL_SAMPLER,
   SHADER_MATRIAL_STRUCT,
   SHADER_MATRIAL_TEXTURE,
@@ -45,6 +46,10 @@ export class ShaderGadgetInstanceMeshModule extends ShaderGadgetModule {
         }),
         new ShaderbindingGadget({
           define: SHADER_CAMERA_POSITION_UNIFORM,
+          type: "uniform",
+        }),
+        new ShaderbindingGadget({
+          define: SHADER_LIGHT_COUNTS_UNIFORM,
           type: "uniform",
         }),
         new ShaderbindingGadget({

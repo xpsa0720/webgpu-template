@@ -28,8 +28,6 @@ export declare class Render3DPass extends RenderPass {
     camera: Camera;
     shaderLights: Record<number, ShaderLightGadget<any>>;
     lightBindGroupEntry: GPUBindGroupEntry[];
-    /** 모든 ShaderLightGadget에 등록된 light를 모아서 반환 */
-    get lights(): Light[];
     shaderMeshRenderGadgetModule: ShaderGadgetMeshModule;
     shaderInstanceRenderGadgetModule: ShaderGadgetInstanceMeshModule;
     meshRenderShaderModule: GPUShaderModule;
@@ -42,6 +40,9 @@ export declare class Render3DPass extends RenderPass {
     private depthHeight;
     private defaultSampler;
     private dummyTextureView;
+    private lightCountsBuffer;
+    private shadowPresence;
+    private lightCountsData;
     constructor(arg: Render3DPassArg);
     private initLight;
     createShaderModule(): void;
@@ -54,10 +55,17 @@ export declare class Render3DPass extends RenderPass {
     compile(): void;
     private invalidateAllBindGroups;
     private invalidateNodeBindGroups;
+    /** 종류별로 castShadow 조명이 있는지 (바뀌면 셰이더의 그림자 코드 유무가 달라지므로 재컴파일) */
+    private getShadowPresence;
     private getLightCountSnapshot;
     addLight(light: Light): void;
     removeLight(light: Light): void;
     encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
+    /** 실제 조명 개수가 바뀌었을 때만 lightCounts uniform에 쓴다 (셰이더 루프 횟수) */
+    private writeLightCounts;
+    private updateMesh;
+    private updateNode;
+    private writeMatrial;
     private nodeRecursionRender;
     updateBindGroupEntray(): void;
 }

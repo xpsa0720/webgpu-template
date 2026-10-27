@@ -3,24 +3,17 @@ import type { ShaderLightGadget, ShadowGadget } from "../shader/gadget/shader_li
 
 const SHADOW_MAP_SIZE = 2048;
 
-/**
- * Shadow 관련 GPU 리소스를 중앙 관리하는 클래스.
- * group(3) binding 20~24에 해당하는 리소스를 생성/갱신/바인딩한다.
- */
+export type ShadowLightType = "directional" | "point";
+
 export class ShadowResources {
   device: GPUDevice;
 
-  // binding 20: sampler_comparison
   sampler: GPUSampler;
 
-  // binding 21: directional shadow depth texture array
   directionalTexture?: GPUTexture;
-  // binding 22: directional light PV matrix storage buffer
   directionalPvMatrixBuffer?: GPUBuffer;
 
-  // binding 23: point shadow depth texture array
   pointTexture?: GPUTexture;
-  // binding 24: point light PV matrix storage buffer
   pointPvMatrixBuffer?: GPUBuffer;
 
   // 현재 할당된 castShadow light 수 (재생성 판단용)
@@ -30,31 +23,46 @@ export class ShadowResources {
   constructor(device: GPUDevice) {
     this.device = device;
     this.sampler = device.createSampler({
-      compare: "less",
+      compare: "less-equal",
       magFilter: "linear",
       minFilter: "linear",
     });
   }
 
-  update(shaderLights: Record<number, ShaderLightGadget<any>>): void {
-    let dirCount = 0;
-    let ptCount = 0;
-
+  /**
+   * castShadow인 light를 종류별로 정해진 순서로 반환한다.
+   * 이 순서가 곧 PV 버퍼 칸 번호(i * 64) = shadow map texture layer 번호 = 셰이더 인덱스.
+   * update / writePvMatrices / ShadowPass가 모두 이 함수만 사용해야 순서가 어긋나지 않는다.
+   */
+  getShadowLights(
+    shaderLights: Record<number, ShaderLightGadget<any>>,
+    type: ShadowLightType,
+  ): LightShadow[] {
+    const result: LightShadow[] = [];
     for (const gadget of Object.values(shaderLights)) {
       if (!isShadowGadget(gadget)) continue;
+      const isDir = gadget.shadowTextureDefine.includes("directional");
+      if ((type === "directional") !== isDir) continue;
       for (const light of gadget.lights) {
-        if (!isLightShadow(light)) continue;
-        if (!light.castShadow) continue;
-        if (gadget.shadowTextureDefine.includes("directional")) {
-          dirCount++;
-        } else {
-          ptCount++;
-        }
+        if (isLightShadow(light) && light.castShadow) result.push(light);
       }
     }
+    return result;
+  }
+
+  /**
+   * castShadow light 수에 맞춰 텍스처 배열 / PV 버퍼를 (재)생성한다.
+   * @returns 리소스를 다시 만들었으면 true — 기존 버퍼를 destroy했으므로 호출 측은
+   *          bind group entry를 갱신하고 캐시된 bind group을 비워야 한다.
+   */
+  update(shaderLights: Record<number, ShaderLightGadget<any>>): boolean {
+    const dirCount = this.getShadowLights(shaderLights, "directional").length;
+    const ptCount = this.getShadowLights(shaderLights, "point").length;
+    let recreated = false;
 
     // directional shadow 리소스
     if (dirCount !== this.directionalCount) {
+      recreated = true;
       this.directionalTexture?.destroy();
       this.directionalPvMatrixBuffer?.destroy();
       this.directionalTexture = undefined;
@@ -66,13 +74,16 @@ export class ShadowResources {
           format: "depth32float",
           usage:
             GPUTextureUsage.RENDER_ATTACHMENT |
-            GPUTextureUsage.TEXTURE_BINDING,
+            GPUTextureUsage.TEXTURE_BINDING |
+            GPUTextureUsage.COPY_SRC, // 디버그 
         });
         // mat4x4f = 64 bytes
         this.directionalPvMatrixBuffer = this.device.createBuffer({
           size: 64 * dirCount,
           usage:
-            GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+            GPUBufferUsage.COPY_DST |
+            GPUBufferUsage.STORAGE |
+            GPUBufferUsage.COPY_SRC,
         });
       }
       this.directionalCount = dirCount;
@@ -80,6 +91,7 @@ export class ShadowResources {
 
     // point shadow 리소스
     if (ptCount !== this.pointCount) {
+      recreated = true;
       this.pointTexture?.destroy();
       this.pointPvMatrixBuffer?.destroy();
       this.pointTexture = undefined;
@@ -91,53 +103,42 @@ export class ShadowResources {
           format: "depth32float",
           usage:
             GPUTextureUsage.RENDER_ATTACHMENT |
-            GPUTextureUsage.TEXTURE_BINDING,
+            GPUTextureUsage.TEXTURE_BINDING |
+            GPUTextureUsage.COPY_SRC, // 디버그 readback(readShadowMap / readShadowMapColumns)용
         });
         this.pointPvMatrixBuffer = this.device.createBuffer({
           size: 64 * ptCount,
           usage:
-            GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+            GPUBufferUsage.COPY_DST |
+            GPUBufferUsage.STORAGE |
+            GPUBufferUsage.COPY_SRC
         });
       }
       this.pointCount = ptCount;
     }
+    return recreated;
   }
 
   /**
    * castShadow인 light들의 PV matrix를 storage buffer에 기록한다.
    */
   writePvMatrices(shaderLights: Record<number, ShaderLightGadget<any>>): void {
-    let dirIdx = 0;
-    let ptIdx = 0;
+    this.writeLightPvMatrices(
+      this.getShadowLights(shaderLights, "directional"),
+      this.directionalPvMatrixBuffer,
+    );
+    this.writeLightPvMatrices(
+      this.getShadowLights(shaderLights, "point"),
+      this.pointPvMatrixBuffer,
+    );
+  }
 
-    for (const gadget of Object.values(shaderLights)) {
-      if (!isShadowGadget(gadget)) continue;
-      const isDir = gadget.shadowTextureDefine.includes("directional");
-
-      for (const light of gadget.lights) {
-        if (!isLightShadow(light)) continue;
-        if (!light.castShadow) continue;
-
-        if (light.dirty) light.updateMatrix();
-
-        const data = light.pvMatrix.getArrayData();
-        if (isDir && this.directionalPvMatrixBuffer) {
-          this.device.queue.writeBuffer(
-            this.directionalPvMatrixBuffer,
-            dirIdx * 64,
-            data,
-          );
-          dirIdx++;
-        } else if (!isDir && this.pointPvMatrixBuffer) {
-          this.device.queue.writeBuffer(
-            this.pointPvMatrixBuffer,
-            ptIdx * 64,
-            data,
-          );
-          ptIdx++;
-        }
-      }
-    }
+  private writeLightPvMatrices(lights: LightShadow[], buffer?: GPUBuffer) {
+    if (!buffer) return;
+    lights.forEach((light, i) => {
+      if (light.dirty) light.updateMatrix();
+      this.device.queue.writeBuffer(buffer, i * 64, light.pvMatrix.getArrayData());
+    });
   }
 
   /**

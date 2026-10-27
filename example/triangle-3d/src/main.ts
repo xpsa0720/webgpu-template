@@ -19,7 +19,7 @@ import {
   loadGLTF,
   Node,
 } from "@xpsa0720/webgpu";
-import { toRadian } from "@xpsa0720/webgpu/dist/util/math";
+import { normalize, toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
 
 class App3D {
@@ -56,7 +56,7 @@ class App3D {
       camera,
       blend: true,
       debugMode: false,
-      debugViewShaderCode: true
+      debugViewShaderCode: true,
     });
 
     const cube = new Cube({
@@ -68,7 +68,6 @@ class App3D {
         color: new Vector3(0.2, 0.5, 1),
         specular: new Specular({ strength: 0.8, shininess: 2 }),
       }),
-
     });
 
     const sphere = new Sphere({
@@ -85,9 +84,9 @@ class App3D {
       render3DPass,
       location: new Vector3(0, -10, 0),
       scale: new Vector3(1, 1, 1),
-      width: 30,
+      width: 500,
       height: 0.1,
-      depth: 30,
+      depth: 500,
       matrial: new Matrial({
         color: new Vector3(0.6, 0.6, 0.6),
       }),
@@ -109,7 +108,7 @@ class App3D {
       objRoot.meshs.forEach((mesh) => (mesh.matrial = objMatrial));
       objRoot.location = new Vector3(-2, 0, 0);
       objRoot.updateWorld();
-      // render3DPass.nodes.push(objRoot);
+    //   render3DPass.nodes.push(objRoot);
       console.log("OBJ 노드 렌더링 등록 완료");
     } catch (e) {
       console.error("OBJ 로드 실패:", e);
@@ -127,10 +126,14 @@ class App3D {
       // 디렉토리 포함 재귀 파일 수집
       const allFiles = await collectDroppedFiles(items);
       if (allFiles.length === 0) return;
-      console.log(`파일 드롭: ${allFiles.map(f => f.webkitRelativePath || f.name).join(", ")}`);
+      console.log(
+        `파일 드롭: ${allFiles.map((f) => f.webkitRelativePath || f.name).join(", ")}`,
+      );
       try {
         const root = await loadModel(render3DPass, allFiles);
-        console.log(`모델 로드 성공: 최상위 노드 ${root.children.length}개, 루트 meshs ${root.meshs.length}개`);
+        console.log(
+          `모델 로드 성공: 최상위 노드 ${root.children.length}개, 루트 meshs ${root.meshs.length}개`,
+        );
         render3DPass.nodes.push(root);
         console.log("드롭된 모델 렌더링 등록 완료");
       } catch (err) {
@@ -142,7 +145,7 @@ class App3D {
     const templateCube = new Cube({
       render3DPass,
       location: new Vector3(0, 0, 0),
-      scale: new Vector3(0.1,0.1,0.1)
+      scale: new Vector3(0.1, 0.1, 0.1),
     });
 
     // const instanceCubes = new InstanceMesh({
@@ -153,7 +156,7 @@ class App3D {
     //     new Matrial({
     //       color: new Vector3(0.3, 1, 0.3),
     //       specular: new Specular({ strength: 0.5, shininess: 2 }),
-    //     }), 
+    //     }),
     //   ),
     // });
     // render3DPass.instanceMesh.push(instanceCubes);
@@ -163,31 +166,54 @@ class App3D {
     const sun = new Node({
       render3DPass,
       location: new Vector3(0, 3, -6),
-      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.8,
-        matrial: new Matrial({ color: new Vector3(1, 0.8, 0.2) }) })],
+      meshs: [
+        new Sphere({
+          render3DPass,
+          location: new Vector3(0, 0, 0),
+          radius: 0.8,
+          matrial: new Matrial({ color: new Vector3(1, 0.8, 0.2) }),
+        }),
+      ],
     });
     const earth = new Node({
       render3DPass,
       location: new Vector3(3, 0, 0), // 태양 기준
-      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.4,
-        matrial: new Matrial({ color: new Vector3(0.2, 0.5, 1) }) })],
+      meshs: [
+        new Sphere({
+          render3DPass,
+          location: new Vector3(0, 0, 0),
+          radius: 0.4,
+          matrial: new Matrial({ color: new Vector3(0.2, 0.5, 1) }),
+        }),
+      ],
     });
     const moon = new Node({
       render3DPass,
       location: new Vector3(1, 0, 0), // 지구 기준
-      meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.15,
-        matrial: new Matrial({ color: new Vector3(0.8, 0.8, 0.8) }) })],
+      meshs: [
+        new Sphere({
+          render3DPass,
+          location: new Vector3(0, 0, 0),
+          radius: 0.15,
+          matrial: new Matrial({ color: new Vector3(0.8, 0.8, 0.8) }),
+        }),
+      ],
     });
-    // sun.addChild(earth);
-    // earth.addChild(moon);
-    // render3DPass.nodes.push(sun); // 루트만 등록
+    sun.addChild(earth);
+    earth.addChild(moon);
+    render3DPass.nodes.push(sun); // 루트만 등록
 
     // 2) transform: 위아래 이동 + 회전 + 축마다 다른 크기 (normalMat 확인용)
     const box = new Node({
       render3DPass,
       location: new Vector3(-4, 0, -3),
-      meshs: [new Cube({ render3DPass, location: new Vector3(0, 0, 0),
-        matrial: new Matrial({ color: new Vector3(1, 0.4, 0.8) }) })],
+      meshs: [
+        new Cube({
+          render3DPass,
+          location: new Vector3(0, 0, 0),
+          matrial: new Matrial({ color: new Vector3(1, 0.4, 0.8) }),
+        }),
+      ],
     });
     // render3DPass.nodes.push(box);
 
@@ -195,9 +221,9 @@ class App3D {
     const updateTestNodes = () => {
       const t = (performance.now() - startTime) / 1000;
 
-      sun.rotate.y = t * 0.5;   // 지구 공전
-      earth.rotate.y = t * 2;   // 달 공전
-      sun.updateWorld();        // 루트에서 한 번 → 지구, 달까지 갱신
+      sun.rotate.y = t * 0.5; // 지구 공전
+      earth.rotate.y = t * 2; // 달 공전
+      sun.updateWorld(); // 루트에서 한 번 → 지구, 달까지 갱신
 
       box.location.y = Math.sin(t * 2);
       box.rotate.x = t;
@@ -224,6 +250,25 @@ class App3D {
     });
     render3DPass.addLight(dirLight);
 
+    // DirectionalLight 여러 개 테스트: 방향과 색이 달라서 그림자가 어느 조명 것인지 구분 가능
+    const dirLightRed = new DirectionalLight({
+      position: new Vector3(-8, 8, 2),
+      target: new Vector3(0, 0, 0),
+      intensity: 0.6,
+      color: new Vector4(1, 0.3, 0.3, 1),
+      castShadow: true,
+    });
+    render3DPass.addLight(dirLightRed);
+
+    const dirLightBlue = new DirectionalLight({
+      position: new Vector3(2, 8, -8),
+      target: new Vector3(0, 0, 0),
+      intensity: 0.6,
+      color: new Vector4(0.3, 0.5, 1, 1),
+      castShadow: true,
+    });
+    render3DPass.addLight(dirLightBlue);
+
     // 마우스 휠로 opacity 조절
     this.canvas.addEventListener(
       "wheel",
@@ -237,6 +282,30 @@ class App3D {
       },
       { passive: false },
     );
+
+    // 방향키: DirectionalLight를 순서대로 하나씩 castShadow = false (전부 꺼지면 다음 입력에 전부 다시 true)
+    // light index / shadow index가 섞이는 상황(그림자 O/X 혼합, 첫 조명 X) 테스트용
+    const shadowTestLights = [dirLight, dirLightRed, dirLightBlue];
+    const shadowTestNames = ["white", "red", "blue"];
+    let shadowOffIdx = 0;
+    window.addEventListener("keydown", (e) => {
+      if (!e.key.startsWith("Arrow")) return;
+      if (shadowOffIdx < shadowTestLights.length) {
+        shadowTestLights[shadowOffIdx].castShadow = false;
+        shadowOffIdx++;
+      } else {
+        shadowTestLights.forEach((l) => (l.castShadow = true));
+        shadowOffIdx = 0;
+      }
+      // castShadow는 조명 uniform(castShadow: u32)에도 들어가므로 GPU 버퍼를 다시 써야 셰이더에 반영됨
+      Object.values(render3DPass.shaderLights)
+        .find((g) => g.lights.includes(dirLight))
+        ?.updateLightAll();
+      console.log(
+        "castShadow:",
+        shadowTestLights.map((l, i) => `${shadowTestNames[i]}=${l.castShadow}`).join(", "),
+      );
+    });
 
     // PointLight 동적 추가/제거 테스트 (1: 추가, 2: 제거)
     let dynamicLights: PointLight[] = [];
@@ -262,6 +331,13 @@ class App3D {
       }
     });
 
+    // N키: shadow map layer 수 + 각 layer 가운데 열 depth 출력
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "n" || e.key === "N") {
+        render3DPass.shadowPass.readShadowMapColumns();
+      }
+    });
+
     // M키: shadow map depth 값 콘솔 출력
     window.addEventListener("keydown", (e) => {
       if (e.key === "m" || e.key === "M") {
@@ -275,12 +351,7 @@ class App3D {
         camera.position.x = 90;
         camera.position.y = 0;
         camera.position.z = 0;
-        camera.target.x = 100;
-        camera.target.y = 0;
-        camera.target.z = 0;
-        camera.rotate.x = 0;
-        camera.rotate.y = 0;
-        camera.rotate.z = 0;
+        camera.lookAt(new Vector3(100, 0, 0));
         console.log("카메라 이동: 경계 (90,0,0) → 바깥 바라봄");
       }
     });
@@ -293,17 +364,13 @@ class App3D {
         camera.position.x = pos.x;
         camera.position.y = pos.y;
         camera.position.z = pos.z;
-        camera.target.x = tgt.x;
-        camera.target.y = tgt.y;
-        camera.target.z = tgt.z;
-        camera.rotate.x = 0;
-        camera.rotate.y = 0;
-        camera.rotate.z = 0;
-        console.log(`카메라 → DirectionalLight 시점: (${pos.x},${pos.y},${pos.z}) → (${tgt.x},${tgt.y},${tgt.z})`);
+        camera.lookAt(new Vector3(tgt.x, tgt.y, tgt.z));
+        console.log(
+          `카메라 → DirectionalLight 시점: (${pos.x},${pos.y},${pos.z}) → (${tgt.x},${tgt.y},${tgt.z})`,
+        );
       }
     });
 
-    // 카메라 이동 (WASD/Space/Shift)
     const moveSpeed = 0.5;
     const keys = new Set<string>();
     window.addEventListener("keydown", (e) => keys.add(e.key.toLowerCase()));
@@ -315,21 +382,10 @@ class App3D {
     this.canvas.addEventListener("click", () => {
       this.canvas.requestPointerLock();
     });
+
     window.addEventListener("mousemove", (e) => {
       if (document.pointerLockElement !== this.canvas) return;
 
-      //   const forward = camera.target.copy().subtract(camera.position);
-      //   const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
-      //   if (len > 0.0001) {
-      //     forward.x /= len;
-      //     forward.z /= len;
-      //   }
-
-      //   const moveX = e.movementX * Math.cos(camera.rotate.y) + e.movementX *Math.sin(camera.rotate.y)
-      //   const moveY = e.movementY * Math.cos(camera.rotate.x) - e.movementY *Math.sin(camera.rotate.x)
-
-      //   camera.rotate.y -= moveX * sensitivity;
-      //   camera.rotate.x -= moveY * sensitivity;
       const PITCH_LIMIT = toRadian(85);
       camera.rotate.y -= e.movementX * sensitivity; // yaw는 제한 없음
       camera.rotate.x -= e.movementY * sensitivity;
@@ -344,49 +400,32 @@ class App3D {
       b: {},
       callBack: () => {
         updateTestNodes();
-        const forward = camera.target.copy().subtract(camera.position);
-        // forward.y = 0;
-        const len = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
-        if (len > 0.0001) {
-          forward.x /= len;
-          forward.z /= len;
-        }
-        const rotMat = createFowardRotateMatrix(new Vector3(0, camera.rotate.y, 0));
-        const rawForward = rotMat.multiplyVec3(forward);
-
-        const right = new Vector3(-rawForward.z, 0, rawForward.x);
+        // 이동 방향은 yaw만으로 계산 (위아래를 봐도 수평 이동, 속도 일정)
+        const yaw = camera.rotate.y;
+        const forward = new Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+        const right = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
         if (keys.has("w")) {
-          camera.position.x += rawForward.x * moveSpeed;
-          camera.position.z += rawForward.z * moveSpeed;
-          camera.target.x += rawForward.x * moveSpeed;
-          camera.target.z += rawForward.z * moveSpeed;
+          camera.position.x += forward.x * moveSpeed;
+          camera.position.z += forward.z * moveSpeed;
         }
         if (keys.has("s")) {
-          camera.position.x -= rawForward.x * moveSpeed;
-          camera.position.z -= rawForward.z * moveSpeed;
-          camera.target.x -= rawForward.x * moveSpeed;
-          camera.target.z -= rawForward.z * moveSpeed;
+          camera.position.x -= forward.x * moveSpeed;
+          camera.position.z -= forward.z * moveSpeed;
         }
         if (keys.has("a")) {
           camera.position.x -= right.x * moveSpeed;
           camera.position.z -= right.z * moveSpeed;
-          camera.target.x -= right.x * moveSpeed;
-          camera.target.z -= right.z * moveSpeed;
         }
         if (keys.has("d")) {
           camera.position.x += right.x * moveSpeed;
           camera.position.z += right.z * moveSpeed;
-          camera.target.x += right.x * moveSpeed;
-          camera.target.z += right.z * moveSpeed;
         }
         if (keys.has(" ")) {
           camera.position.y += moveSpeed;
-          camera.target.y += moveSpeed;
         }
         if (keys.has("shift")) {
           camera.position.y -= moveSpeed;
-          camera.target.y -= moveSpeed;
         }
       },
     });
@@ -394,7 +433,9 @@ class App3D {
 }
 
 /** DataTransferItemList에서 디렉토리를 재귀 탐색하여 모든 File을 수집 */
-async function collectDroppedFiles(items: DataTransferItemList): Promise<File[]> {
+async function collectDroppedFiles(
+  items: DataTransferItemList,
+): Promise<File[]> {
   const entries: FileSystemEntry[] = [];
   for (let i = 0; i < items.length; i++) {
     const entry = items[i].webkitGetAsEntry?.();
@@ -411,13 +452,17 @@ async function collectDroppedFiles(items: DataTransferItemList): Promise<File[]>
       // webkitRelativePath는 readonly라 직접 설정 불가 → 새 File로 래핑
       const relativePath = pathPrefix + file.name;
       const newFile = new File([file], file.name, { type: file.type });
-      Object.defineProperty(newFile, "webkitRelativePath", { value: relativePath });
+      Object.defineProperty(newFile, "webkitRelativePath", {
+        value: relativePath,
+      });
       result.push(newFile);
     } else if (entry.isDirectory) {
       const dirReader = (entry as FileSystemDirectoryEntry).createReader();
-      const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
-        dirReader.readEntries(resolve, reject);
-      });
+      const entries = await new Promise<FileSystemEntry[]>(
+        (resolve, reject) => {
+          dirReader.readEntries(resolve, reject);
+        },
+      );
       for (const child of entries) {
         await readEntry(child, pathPrefix + entry.name + "/");
       }

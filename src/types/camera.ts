@@ -1,6 +1,6 @@
 import { Vector3, Vector4 } from "../3d/math/vector";
 import type { Mat4x4 } from "../3d/math/matrix";
-import { createViewProjectionMatrix } from "../util/matrix";
+import { createViewProjectionMatrix, directionToYawPitch } from "../util/matrix";
 import type { WebGPUBuffer } from "./resource";
 
 export class Camera {
@@ -29,14 +29,15 @@ export class Camera {
     near = 0.1,
     far = 100,
     upref = new Vector3(0, 1, 0),
-    rotate = new Vector3(0, 0, 0),
+    rotate?: Vector3, // (pitch, yaw, roll) 절대 각도. 생략하면 target을 바라보도록 계산
   ) {
     this._fov = fov;
     this._near = near;
     this._far = far;
     this._position = this._observe(position);
     this._target = this._observe(target);
-    this._rotate = this._observe(rotate);
+    this._rotate = this._observe(rotate ?? new Vector3(0, 0, 0));
+    if (!rotate) this.lookAt(target);
     this._upref = this._observe(upref);
 
   }
@@ -69,8 +70,21 @@ export class Camera {
   get target(): Vector3 {
     return this._target;
   }
+  // target을 통째로 바꾸면 그 지점을 바라보도록 rotate를 다시 계산한다.
+  // (x/y/z만 바꾸는 건 시선에 영향 없음 — 시선은 rotate(yaw/pitch)로만 결정)
   set target(v: Vector3) {
-    this._target = this._observe(v);
+    this.lookAt(v);
+  }
+
+  /** target 지점을 바라보도록 rotate(pitch, yaw)를 설정한다. */
+  lookAt(target: Vector3) {
+    this._target = this._observe(target);
+    const { yaw, pitch } = directionToYawPitch(
+      target.copy().subtract(this._position),
+    );
+    this._rotate.x = pitch;
+    this._rotate.y = yaw;
+    this._rotate.z = 0;
     this.dirty = true;
   }
 
