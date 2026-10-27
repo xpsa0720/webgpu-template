@@ -22,9 +22,9 @@ export declare abstract class RenderPass extends Pass {
     protected bindGroupSampler: GPUBindGroup | null;
     constructor(arg: RenderPassArg);
     abstract settingPipeline(shaderCode?: string): any;
+    abstract encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
     deleteBuffer(bindigIdx: number): void;
     ensureBindGroups(): void;
-    abstract encoderWriteCommand(encoder: GPUCommandEncoder, renderPassDescriptor: GPURenderPassDescriptor): void;
     createPass(encoder: GPUCommandEncoder, debugArg?: DebugPassArg): OutGPUBuffer[];
 }
 //# sourceMappingURL=render_pass.d.ts.map

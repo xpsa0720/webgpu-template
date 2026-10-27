@@ -7,6 +7,7 @@ import {
   Vector4,
   PointLight,
   AmbientLight,
+  DirectionalLight,
   Matrial,
   Specular,
   Mat3x3,
@@ -43,7 +44,7 @@ class App3D {
     const device = this.wp.device!;
 
     const camera = new Camera(
-      new Vector3(0, 0, 3),
+      new Vector3(0, 5, 10),
       new Vector3(0, 0, 0),
       60,
       0.1,
@@ -67,6 +68,7 @@ class App3D {
         color: new Vector3(0.2, 0.5, 1),
         specular: new Specular({ strength: 0.8, shininess: 2 }),
       }),
+
     });
 
     const sphere = new Sphere({
@@ -78,8 +80,22 @@ class App3D {
       }),
     });
 
-    render3DPass.meshs.push(cube);
-    render3DPass.meshs.push(sphere);
+    // 바닥 메시 (넓고 납작한 Cube)
+    const floor = new Cube({
+      render3DPass,
+      location: new Vector3(0, -10, 0),
+      scale: new Vector3(1, 1, 1),
+      width: 30,
+      height: 0.1,
+      depth: 30,
+      matrial: new Matrial({
+        color: new Vector3(0.6, 0.6, 0.6),
+      }),
+    });
+
+    render3DPass.meshs.push(floor);
+    // render3DPass.meshs.push(cube);
+    // render3DPass.meshs.push(sphere);
 
     // === OBJ 로더 테스트: public/test_cube.obj 로드 ===
     try {
@@ -93,7 +109,7 @@ class App3D {
       objRoot.meshs.forEach((mesh) => (mesh.matrial = objMatrial));
       objRoot.location = new Vector3(-2, 0, 0);
       objRoot.updateWorld();
-      render3DPass.nodes.push(objRoot);
+      // render3DPass.nodes.push(objRoot);
       console.log("OBJ 노드 렌더링 등록 완료");
     } catch (e) {
       console.error("OBJ 로드 실패:", e);
@@ -162,9 +178,9 @@ class App3D {
       meshs: [new Sphere({ render3DPass, location: new Vector3(0, 0, 0), radius: 0.15,
         matrial: new Matrial({ color: new Vector3(0.8, 0.8, 0.8) }) })],
     });
-    sun.addChild(earth);
-    earth.addChild(moon);
-    render3DPass.nodes.push(sun); // 루트만 등록
+    // sun.addChild(earth);
+    // earth.addChild(moon);
+    // render3DPass.nodes.push(sun); // 루트만 등록
 
     // 2) transform: 위아래 이동 + 회전 + 축마다 다른 크기 (normalMat 확인용)
     const box = new Node({
@@ -173,7 +189,7 @@ class App3D {
       meshs: [new Cube({ render3DPass, location: new Vector3(0, 0, 0),
         matrial: new Matrial({ color: new Vector3(1, 0.4, 0.8) }) })],
     });
-    render3DPass.nodes.push(box);
+    // render3DPass.nodes.push(box);
 
     const startTime = performance.now();
     const updateTestNodes = () => {
@@ -190,13 +206,23 @@ class App3D {
       box.updateWorld();
     };
 
-    // PointLight 추가
-    render3DPass.addLight(
-      new PointLight({ position: new Vector4(-2, 2, 2, 1), intensity: 10 }),
-    );
+    // PointLight 추가 (천장 전등처럼 위에서 아래로)
+    // render3DPass.addLight(
+    //   new PointLight({ position: new Vector4(0, 10, 0, 1), intensity: 50, castShadow: true }),
+    // );
 
     // AmbientLight 추가
-    render3DPass.addLight(new AmbientLight({ intensity: 1 }));
+    render3DPass.addLight(new AmbientLight({ intensity: 0.1 }));
+
+    // DirectionalLight 추가
+    const dirLight = new DirectionalLight({
+      position: new Vector3(5, 10, 5),
+      target: new Vector3(0, 0, 0),
+      intensity: 1,
+      color: new Vector4(1, 1, 1, 1),
+      castShadow: true,
+    });
+    render3DPass.addLight(dirLight);
 
     // 마우스 휠로 opacity 조절
     this.canvas.addEventListener(
@@ -236,6 +262,13 @@ class App3D {
       }
     });
 
+    // M키: shadow map depth 값 콘솔 출력
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "m" || e.key === "M") {
+        render3DPass.shadowPass.readShadowMap(16);
+      }
+    });
+
     // P키: 인스턴스 범위 경계에서 바깥을 바라봄 (일부만 보이는 상황)
     window.addEventListener("keydown", (e) => {
       if (e.key === "p" || e.key === "P") {
@@ -249,6 +282,24 @@ class App3D {
         camera.rotate.y = 0;
         camera.rotate.z = 0;
         console.log("카메라 이동: 경계 (90,0,0) → 바깥 바라봄");
+      }
+    });
+
+    // L키: DirectionalLight 시점으로 카메라 이동
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "l" || e.key === "L") {
+        const pos = dirLight.position;
+        const tgt = dirLight.target;
+        camera.position.x = pos.x;
+        camera.position.y = pos.y;
+        camera.position.z = pos.z;
+        camera.target.x = tgt.x;
+        camera.target.y = tgt.y;
+        camera.target.z = tgt.z;
+        camera.rotate.x = 0;
+        camera.rotate.y = 0;
+        camera.rotate.z = 0;
+        console.log(`카메라 → DirectionalLight 시점: (${pos.x},${pos.y},${pos.z}) → (${tgt.x},${tgt.y},${tgt.z})`);
       }
     });
 

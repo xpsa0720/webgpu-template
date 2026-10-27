@@ -4,11 +4,13 @@ struct InstanceMatrix{
   normalMatrix: mat4x4<f32>
 }`;
 export const SHADER_INSTANCE_VP_UNIFORM = `@group(3) @binding(0) var<uniform> vpMatrix: mat4x4<f32>;`;
-export const SHADER_INSTANCE_MATRIX_STORAGE = `@group(3) @binding(20) var<storage, read> instanceMatrix: array<InstanceMatrix>;`;
-export const SHADER_INSTANCE_MATRIAL_STORAGE = `@group(3) @binding(21) var<storage, read> instanceMatrial: array<Matrial>;`;
+export const SHADER_INSTANCE_MATRIX_STORAGE = `@group(3) @binding(30) var<storage, read> instanceMatrix: array<InstanceMatrix>;`;
+export const SHADER_INSTANCE_MATRIAL_STORAGE = `@group(3) @binding(31) var<storage, read> instanceMatrial: array<Matrial>;`;
 export const SHADER_BUILTIN_INPUT = `@builtin(instance_index) instance_index:u32`;
 export const SHADER_INSTANCE_FRAGMENT_DEFAULT = `
 @LIGHT_STRUCTS_UNIFORMS
+
+@SHADOW_DEFINES
 
 @LIGHT_FUNCTIONS
 
@@ -29,6 +31,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
 
   var finalColor = vec4f(0,0,0,0);
   var x = cameraPos.x;
+  var normal = normalize(out.normal);
 
   var specualrShininess= instanceMatrial[out.instance_index].specualrShininess;
   var specualrStrength= instanceMatrial[out.instance_index].specualrStrength;

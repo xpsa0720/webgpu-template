@@ -19,7 +19,6 @@ export class RenderPass extends Pass {
         }
         super(arg);
         this.debugMode = arg.debugMode ?? false;
-        // this.shaderCode = arg.shaderCode;
         this.target = arg.target;
         this.context = null;
         if (this.target instanceof HTMLCanvasElement) {

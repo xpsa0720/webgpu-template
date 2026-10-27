@@ -9,9 +9,7 @@ export interface LightParams {
 export class Light {
   intensity: number;
   color: Vector4;
-  castShadow: boolean = false;
-  shadowMap?: WebGPUTexture;
-  shadowMapSize: number = 2048;
+
   constructor({
     intensity = 1,
     color = new Vector4(1, 1, 1, 1),
@@ -20,16 +18,6 @@ export class Light {
     this.color = color;
   }
   
-  createShadowMap(device: GPUDevice) {
-    this.shadowMap?.texture.destroy();
-    this.shadowMap = {
-      texture: device.createTexture({
-        size: [this.shadowMapSize, this.shadowMapSize],
-        format: "depth32float",
-        usage:
-          GPUTextureUsage.RENDER_ATTACHMENT | // Shadow Pass에서 깊이를 씀
-          GPUTextureUsage.TEXTURE_BINDING, // Main Pass에서 읽음
-      }),
-    };
-  }
+
 }
+

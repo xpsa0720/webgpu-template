@@ -8,7 +8,10 @@ export declare function createFowardRotateMatrix(rotate: Vector3, inverse?: bool
 type Transform = Pick<Mesh, "location" | "rotate" | "scale">;
 export declare function createModelMatrix(mesh: Transform): Mat4x4;
 export declare function createViewMatrix(camera: Camera): Mat4x4;
+export declare function createLookAtViewMatrix(position: Vector3, target: Vector3): Mat4x4;
 export declare function createProjectionMatrix(camera: Camera, aspect: number): Mat4x4;
+/** 직교 투영 행렬 (WebGPU NDC: z 0..1) */
+export declare function createOrthographicProjectionMatrix(left: number, right: number, bottom: number, top: number, near: number, far: number): Mat4x4;
 export declare function createViewProjectionMatrix(camera: Camera, aspect: number): Mat4x4;
 export declare function createNormalMatrix(transform: Transform): Mat4x4;
 export declare function createMatrixData(transform: Transform, parentMat?: {

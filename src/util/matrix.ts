@@ -34,7 +34,6 @@ function createRotateMatrix(rotate: Vector3, inverse: boolean = false) {
   return XYZ;
 }
 
-// 쿼터니언 [x, y, z, w] → createRotateMatrix와 같은 순서(Rx · Ry · Rz)의 오일러 각 (라디안)
 export function quaternionToEuler(q: readonly number[]): Vector3 {
   const [x, y, z, w] = q;
   // 회전 행렬 성분 (mRC = R행 C열)
@@ -132,7 +131,11 @@ export function createViewMatrix(camera: Camera) {
   const rawF = normalize(camera.target.copy().subtract(camera.position));
   const F = normalize(rotMat.multiplyVec3(rawF));
 
-  const R = normalize(F.crossProduct(camera.upref));
+  let upref = camera.upref;
+  if (Math.abs(F.dot(upref)) > 0.999) {
+    upref = new Vector3(0, 0, 1);
+  }
+  const R = normalize(F.crossProduct(upref));
   const U = R.crossProduct(F);
   const C = camera.position;
   // View 행렬은 -F를 z축으로 사용 (카메라 앞쪽 = -z)
@@ -144,6 +147,27 @@ export function createViewMatrix(camera: Camera) {
   ]);
 
   return V;
+}
+
+export function createLookAtViewMatrix(position:Vector3,target:Vector3){
+  let upref = new Vector3(0, 1, 0);
+  const F = normalize(target.copy().subtract(position));
+
+  // F가 up과 평행하면 대체 up 사용
+  if (Math.abs(F.dot(upref)) > 0.999) {
+    upref = new Vector3(0, 0, 1);
+  }
+
+  const R = normalize(F.crossProduct(upref));
+  const U = R.crossProduct(F);
+  const L = position;
+  // View 행렬은 -F를 z축으로 사용 (카메라 앞쪽 = -z)
+  return new Mat4x4([
+    new Vector4(R.x, U.x, -F.x, 0),
+    new Vector4(R.y, U.y, -F.y, 0),
+    new Vector4(R.z, U.z, -F.z, 0),
+    new Vector4(-R.dot(L), -U.dot(L), F.dot(L), 1),
+  ]);
 }
 
 export function createProjectionMatrix(camera: Camera, aspect: number) {
@@ -163,6 +187,24 @@ export function createProjectionMatrix(camera: Camera, aspect: number) {
   ]);
 
   return V;
+}
+
+/** 직교 투영 행렬 (WebGPU NDC: z 0..1) */
+export function createOrthographicProjectionMatrix(
+  left: number, right: number,
+  bottom: number, top: number,
+  near: number, far: number,
+) {
+  const lr = 1 / (right - left);
+  const bt = 1 / (top - bottom);
+  const nf = 1 / (far - near);
+
+  return new Mat4x4([
+    new Vector4(2 * lr, 0, 0, 0),
+    new Vector4(0, 2 * bt, 0, 0),
+    new Vector4(0, 0, -nf, 0),
+    new Vector4(-(right + left) * lr, -(top + bottom) * bt, -near * nf, 1),
+  ]);
 }
 
 export function createViewProjectionMatrix(camera: Camera, aspect: number) {

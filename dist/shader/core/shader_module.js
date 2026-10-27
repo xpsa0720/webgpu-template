@@ -40,6 +40,7 @@ export class ShaderGadgetModule {
             lightStructsUniforms: "",
             lightCode: "",
             funtionCode: "",
+            shadowDefinesCode: ""
         });
         if (this.viewShaderCode) {
             console.log(result);

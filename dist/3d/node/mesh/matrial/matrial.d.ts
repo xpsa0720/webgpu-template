@@ -9,12 +9,20 @@ export interface MatrialParams {
     imageBitmap?: ImageBitmap;
 }
 export declare class Matrial {
-    color: Vector3;
+    private _color;
     texture: WebGPUTexture | null;
     textureFlag: number;
-    opacity: number;
-    specualr: Specular;
+    private _opacity;
+    private _specualr;
+    dirty: boolean;
+    private _cachedData;
     constructor({ color, opacity, specular, device, imageBitmap }: MatrialParams);
+    get color(): Vector3;
+    set color(v: Vector3);
+    get opacity(): number;
+    set opacity(v: number);
+    get specualr(): Specular;
+    set specualr(v: Specular);
     private createTexture;
     getColor(): Vector4;
     getDataArray(): Float32Array<ArrayBufferLike>;

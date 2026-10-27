@@ -9,7 +9,7 @@ const SCALAR = {
     u32: { family: "uint", bits: 32, suffix: "u" },
 };
 /** GPUVertexFormat → { byteSize, family } */
-const FORMAT_TABLE = {
+export const FORMAT_TABLE = {
     // float 계열
     float16: { byteSize: 2, family: "float" },
     float16x2: { byteSize: 4, family: "float" },

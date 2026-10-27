@@ -15,20 +15,28 @@ function getOrCreateDummyTexture(device) {
     return dummyTexture;
 }
 export class Matrial {
-    color;
+    _color;
     texture = null;
     textureFlag = 0;
-    opacity;
-    specualr;
+    _opacity;
+    _specualr;
+    dirty = true;
+    _cachedData = null;
     constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap }) {
-        this.color = color;
-        this.opacity = opacity;
-        this.specualr = specular;
+        this._color = color;
+        this._opacity = opacity;
+        this._specualr = specular;
         if (device) {
             this.texture = { texture: this.createTexture(device, imageBitmap) };
             this.textureFlag = imageBitmap ? 1 : 0;
         }
     }
+    get color() { return this._color; }
+    set color(v) { this._color = v; this.dirty = true; this._cachedData = null; }
+    get opacity() { return this._opacity; }
+    set opacity(v) { this._opacity = v; this.dirty = true; this._cachedData = null; }
+    get specualr() { return this._specualr; }
+    set specualr(v) { this._specualr = v; this.dirty = true; this._cachedData = null; }
     createTexture(device, imageBitmap) {
         if (!imageBitmap) {
             return getOrCreateDummyTexture(device);
@@ -45,13 +53,17 @@ export class Matrial {
         return new Vector4(this.color.x, this.color.y, this.color.z, this.opacity);
     }
     getDataArray() {
-        return uniformData(SHADER_MATRIAL_STRUCT, {
+        if (this._cachedData && !this.dirty)
+            return this._cachedData;
+        this._cachedData = uniformData(SHADER_MATRIAL_STRUCT, {
             baseColor: this.getColor(),
-            specualrColor: this.specualr.color,
-            specualrShininess: this.specualr.shininess,
-            specualrStrength: this.specualr.strength,
+            specualrColor: this._specualr.color,
+            specualrShininess: this._specualr.shininess,
+            specualrStrength: this._specualr.strength,
             texturFlag: this.textureFlag,
         });
+        this.dirty = false;
+        return this._cachedData;
     }
 }
 //# sourceMappingURL=matrial.js.map

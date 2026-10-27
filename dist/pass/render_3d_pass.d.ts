@@ -7,6 +7,8 @@ import type { Light } from "../3d/light/light";
 import { ShaderLightGadget } from "../shader/gadget/shader_light";
 import type { Camera } from "../types/camera";
 import { RenderPass, type RenderPassArg } from "./render_pass";
+import { ShadowPass } from "./shadow_pass";
+import { ShadowResources } from "./shadow_resources";
 interface Render3DPassArg extends RenderPassArg {
     target: GPUTexture | HTMLCanvasElement;
     meshs?: Mesh[];
@@ -16,7 +18,6 @@ interface Render3DPassArg extends RenderPassArg {
     loadOp?: GPULoadOp;
     format?: GPUTextureFormat;
     blend?: boolean;
-    lights?: Light[];
     debugMode?: boolean;
     debugViewShaderCode?: boolean;
 }
@@ -25,14 +26,17 @@ export declare class Render3DPass extends RenderPass {
     nodes: Node[];
     instanceMesh: InstanceMesh[];
     camera: Camera;
-    lights: Light[];
     shaderLights: Record<number, ShaderLightGadget<any>>;
     lightBindGroupEntry: GPUBindGroupEntry[];
+    /** 모든 ShaderLightGadget에 등록된 light를 모아서 반환 */
+    get lights(): Light[];
     shaderMeshRenderGadgetModule: ShaderGadgetMeshModule;
     shaderInstanceRenderGadgetModule: ShaderGadgetInstanceMeshModule;
     meshRenderShaderModule: GPUShaderModule;
     instnaceMeshRenderShaderModule: GPUShaderModule;
     instnaceMeshRenderShaderPipeline: GPURenderPipeline;
+    shadowPass: ShadowPass;
+    shadowResources: ShadowResources;
     private depthTexture;
     private depthWidth;
     private depthHeight;

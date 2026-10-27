@@ -49,6 +49,7 @@ export abstract class ShaderGadgetModule {
     lightStructsUniforms: string;
     lightCode: string;
     funtionCode: string;
+    shadowDefinesCode: string;
   }): string {
     let result = "";
 
@@ -65,6 +66,7 @@ export abstract class ShaderGadgetModule {
       lightStructsUniforms: "",
       lightCode: "",
       funtionCode: "",
+      shadowDefinesCode: ""
     });
 
     if (this.viewShaderCode) {

@@ -42,22 +42,33 @@ function getOrCreateDummyTexture(device: GPUDevice): GPUTexture {
 }
 
 export class Matrial {
-  color: Vector3;
+  private _color: Vector3;
   texture: WebGPUTexture | null = null;
   textureFlag: number = 0;
-  opacity: number;
-  specualr: Specular;
+  private _opacity: number;
+  private _specualr: Specular;
+  dirty: boolean = true;
+  private _cachedData: Float32Array | null = null;
 
   constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap }: MatrialParams) {
-    this.color = color;
-    this.opacity = opacity;
-    this.specualr = specular;
+    this._color = color;
+    this._opacity = opacity;
+    this._specualr = specular;
 
     if (device) {
       this.texture = { texture: this.createTexture(device, imageBitmap) };
       this.textureFlag = imageBitmap ? 1 : 0;
     }
   }
+
+  get color(): Vector3 { return this._color; }
+  set color(v: Vector3) { this._color = v; this.dirty = true; this._cachedData = null; }
+
+  get opacity(): number { return this._opacity; }
+  set opacity(v: number) { this._opacity = v; this.dirty = true; this._cachedData = null; }
+
+  get specualr(): Specular { return this._specualr; }
+  set specualr(v: Specular) { this._specualr = v; this.dirty = true; this._cachedData = null; }
 
   private createTexture(device: GPUDevice, imageBitmap?: ImageBitmap): GPUTexture {
     if (!imageBitmap) {
@@ -83,12 +94,15 @@ export class Matrial {
     return new Vector4(this.color.x, this.color.y, this.color.z, this.opacity);
   }
   getDataArray() {
-    return uniformData<MatrialUniformData>(SHADER_MATRIAL_STRUCT, {
+    if (this._cachedData && !this.dirty) return this._cachedData;
+    this._cachedData = uniformData<MatrialUniformData>(SHADER_MATRIAL_STRUCT, {
       baseColor: this.getColor(),
-      specualrColor: this.specualr.color,
-      specualrShininess: this.specualr.shininess,
-      specualrStrength: this.specualr.strength,
+      specualrColor: this._specualr.color,
+      specualrShininess: this._specualr.shininess,
+      specualrStrength: this._specualr.strength,
       texturFlag: this.textureFlag,
     });
+    this.dirty = false;
+    return this._cachedData;
   }
 }

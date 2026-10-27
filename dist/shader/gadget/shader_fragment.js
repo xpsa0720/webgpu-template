@@ -22,6 +22,7 @@ export class ShaderFragmentGadget extends ShaderGadget {
         this.placeholder["@LIGHT_STRUCTS_UNIFORMS"] = arg.lightStructsUniforms;
         this.placeholder["@LIGHT_CODES"] = arg.lightCode;
         this.placeholder["@LIGHT_FUNCTIONS"] = arg.funtionCode;
+        this.placeholder["@SHADOW_DEFINES"] = arg.shadowDefinesCode;
         let result = this.code;
         return super.getCode(result);
     }

@@ -1,8 +1,8 @@
-import { Vector4 } from "../../3d/math/vector";
 import { gpuBufferSizeFormat, wgslStructSize } from "../../util/math";
 import { parseStructLayout, uniformData, uniformDataArray } from "../../util/uniform";
 import { roundUp } from "../../util/vertex_layout";
 import { ShaderGadget } from "./shader_gadget";
+import { SHADER_DIRECTIONAL_LIGHT_PV_MATRIX, SHADER_DIRECTIONAL_SHADOW_TEXTURE, SHADER_POINT_LIGHT_PV_MATRIX, SHADER_POINT_SHADOW_TEXTURE, } from "./code/shader_code";
 export const formatLightCount = 8;
 export class ShaderLightGadget extends ShaderGadget {
     struct;
@@ -10,8 +10,8 @@ export class ShaderLightGadget extends ShaderGadget {
     group;
     structSize;
     func;
-    // instanceFunc: string;
     // instanceCode: string;
+    // instanceFunc: string;
     device;
     code;
     binding;
@@ -20,6 +20,7 @@ export class ShaderLightGadget extends ShaderGadget {
     lengthPlaceholder;
     _lights;
     onLightChange;
+    _bufferCapacity = 0; // 현재 버퍼가 수용 가능한 light 수 (roundUp 단위)
     constructor({ struct, define, placeholder, binding, group, code, device, func, 
     // instanceFunc,
     // instanceCode,
@@ -43,15 +44,26 @@ export class ShaderLightGadget extends ShaderGadget {
         lights.forEach((l) => this.addLight(l));
     }
     createBuffer() {
+        this._bufferCapacity = Math.max(1, roundUp(formatLightCount, this._lights.length));
         const buffer = this.device.createBuffer({
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-            size: this.structSize * Math.max(1, roundUp(formatLightCount, this._lights.length)),
+            size: this.structSize * this._bufferCapacity,
         });
         const data = uniformDataArray(this.struct, this.lights);
         this.device.queue.writeBuffer(buffer, 0, data);
-        return {
-            buffer,
-        };
+        return { buffer };
+    }
+    /** 버퍼 용량이 충분하면 writeBuffer만, 부족하면 새로 생성 */
+    ensureBuffer() {
+        const needed = Math.max(1, roundUp(formatLightCount, this._lights.length));
+        if (needed > this._bufferCapacity) {
+            this.gpuBuffer.buffer.destroy();
+            this.gpuBuffer = this.createBuffer();
+        }
+        else {
+            const data = uniformDataArray(this.struct, this.lights);
+            this.device.queue.writeBuffer(this.gpuBuffer.buffer, 0, data);
+        }
     }
     get lights() {
         return this._lights;
@@ -59,19 +71,19 @@ export class ShaderLightGadget extends ShaderGadget {
     set lights(value) {
         this._lights = value;
         this.updateCount();
-        this.gpuBuffer = this.createBuffer();
+        this.ensureBuffer();
         this.onLightChange?.();
     }
     addLight(light) {
         this._lights.push(light);
         this.updateCount();
-        this.gpuBuffer = this.createBuffer();
+        this.ensureBuffer();
         this.onLightChange?.();
     }
     removeLight(index) {
         const removed = this._lights.splice(index, 1)[0];
         this.updateCount();
-        this.gpuBuffer = this.createBuffer();
+        this.ensureBuffer();
         this.onLightChange?.();
         return removed;
     }
@@ -99,14 +111,6 @@ export class ShaderLightGadget extends ShaderGadget {
             return "";
         return super.getCode(this.func);
     }
-    // getInstanceCode() {
-    //   if (this._lights.length === 0) return "";
-    //   return super.getCode(this.instanceCode);
-    // }
-    // getInstanceFunctionCode() {
-    //   if (this._lights.length === 0) return "";
-    //   return super.getCode(this.instanceFunc);
-    // }
     getStructUniformCode() {
         if (this._lights.length === 0)
             return "";
@@ -122,13 +126,73 @@ export class ShaderAmbientLightGadget extends ShaderLightGadget {
     }
 }
 export class ShaderPointLightGadget extends ShaderLightGadget {
+    shadowPvMatrixDefine;
+    shadowTextureDefine;
+    shadowAddFunc;
+    shadowAddCode;
     constructor(params) {
-        super(params);
+        super({
+            ...params,
+            placeholder: {
+                ...params.placeholder,
+                "@POINT_LIGHT_COMPARE_CODE": params.shadowAddCode,
+                "@POINT_SHADOW_VISIBILTY_FUNC_CODE": params.shadowAddFunc,
+            },
+        });
+        this.shadowPvMatrixDefine = SHADER_POINT_LIGHT_PV_MATRIX;
+        this.shadowTextureDefine = SHADER_POINT_SHADOW_TEXTURE;
+        this.shadowAddFunc = params.shadowAddFunc;
+        this.shadowAddCode = params.shadowAddCode;
+    }
+    getShadowDefinesCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowTextureDefine + "\n" + this.shadowPvMatrixDefine + "\n";
+    }
+    getShadowAddCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowAddCode;
+    }
+    getShadowAddFuncCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowAddFunc;
     }
 }
 export class ShaderDirectionalLightGadget extends ShaderLightGadget {
+    shadowPvMatrixDefine;
+    shadowTextureDefine;
+    shadowAddFunc;
+    shadowAddCode;
     constructor(params) {
-        super(params);
+        super({
+            ...params,
+            placeholder: {
+                ...params.placeholder,
+                "@DIRECTIONAL_LIGHT_COMPARE_CODE": params.shadowAddCode,
+                "@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE": params.shadowAddFunc,
+            },
+        });
+        this.shadowPvMatrixDefine = SHADER_DIRECTIONAL_LIGHT_PV_MATRIX;
+        this.shadowTextureDefine = SHADER_DIRECTIONAL_SHADOW_TEXTURE;
+        this.shadowAddFunc = params.shadowAddFunc;
+        this.shadowAddCode = params.shadowAddCode;
+    }
+    getShadowDefinesCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowTextureDefine + "\n" + this.shadowPvMatrixDefine + "\n";
+    }
+    getShadowAddCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowAddCode;
+    }
+    getShadowAddFuncCode() {
+        if (this.lights.length === 0)
+            return "";
+        return this.shadowAddFunc;
     }
 }
 //# sourceMappingURL=shader_light.js.map

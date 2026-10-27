@@ -1,10 +1,17 @@
+import {
+  SHADOW_DIRECTIONAL_ADD_FUNC,
+  SHADOW_DIRECTIONAL_COMPARE,
+  SHADOW_POINT_ADD_FUNC,
+  SHADOW_POINT_COMPARE,
+} from "./shadow_add";
+
 /**
  * group(3) binding 할당 범위
  *
  * 0~9    : 기본 (matrix, camera, material 등)
  * 10~19  : Light (pointLight, ambientLight, directionalLight)
- * 20~29  : 인스턴싱 (예정)
- * 30~    : 예약
+ * 20~29  : Shadow (sampler, shadow textures, light PV matrices)
+ * 30~    : 인스턴싱
  */
 export const SHADER_MESH_MATRIX_STRUCT = `
 struct Matrixs{
@@ -31,14 +38,19 @@ struct Matrial {
   texturFlag: u32,
 }`;
 
+export const SHADER_MATRIX_UNIFORM = `@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
+export const SHADER_CAMERA_POSITION_UNIFORM = `@group(3) @binding(1) var<uniform> cameraPos:vec4f;`;
+export const SHADER_MATRIAL_UNIFORM = `@group(3) @binding(2) var<uniform> matrial: Matrial;`;
+export const SHADER_MESH_VP_UNIFORM = `@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;`;
+export const SHADER_MATRIAL_TEXTURE = `@group(3) @binding(4) var tex: texture_2d<f32>;`;
+export const SHADER_MATRIAL_SAMPLER = `@group(3) @binding(5) var texSampler: sampler;`;
 
-export const SHADER_MATRIX_UNIFORM =`@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
-export const SHADER_CAMERA_POSITION_UNIFORM =`@group(3) @binding(1) var<uniform> cameraPos:vec4f;`
-export const SHADER_MATRIAL_UNIFORM =`@group(3) @binding(2) var<uniform> matrial: Matrial;`
-export const SHADER_MESH_VP_UNIFORM =`@group(3) @binding(3) var<uniform> vpMatrix: mat4x4<f32>;`
-export const SHADER_MATRIAL_TEXTURE =`@group(3) @binding(4) var tex: texture_2d<f32>;`
-export const SHADER_MATRIAL_SAMPLER =`@group(3) @binding(5) var texSampler: sampler;`
 
+export const SHADER_SHADOW_SAMPLER = `@group(3) @binding(20) var shadowSampler: sampler_comparison;`;
+export const SHADER_DIRECTIONAL_SHADOW_TEXTURE = `@group(3) @binding(21) var directionalShadowTexture: texture_depth_2d_array;`;
+export const SHADER_DIRECTIONAL_LIGHT_PV_MATRIX = `@group(3) @binding(22) var<storage, read> directionalLightPVMatrix: array<mat4x4f>;`;
+export const SHADER_POINT_SHADOW_TEXTURE = `@group(3) @binding(23) var pointShadowTexture: texture_depth_2d_array;`;
+export const SHADER_POINT_LIGHT_PV_MATRIX = `@group(3) @binding(24) var<storage, read> pointLightPVMatrix: array<mat4x4f>;`;
 
 export const SHADER_VERTEX_INPUT = `@location(0) pos: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f`;
 
@@ -64,6 +76,8 @@ export const SHADER_VERTEX_DEFAULT = `
 export const SHADER_FRAGMENT_DEFAULT = `
 @LIGHT_STRUCTS_UNIFORMS
 
+@SHADOW_DEFINES
+
 @LIGHT_FUNCTIONS
 
 fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f, specualrShininess:f32, specualrStrength:f32, specualrColor:vec3f) -> vec4f{
@@ -72,6 +86,8 @@ fn Speculer(l:vec4f, r:vec4f,v: vec4f,normal:vec4f, lightColor:vec4f, specualrSh
   var result = color*specualr * specualrColor;
   return vec4f(result,1);
 }
+
+
 
 @fragment
 fn fs(out: VertexOut) -> @location(0) vec4f {
@@ -83,6 +99,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
 
   var x = cameraPos.x;
   var finalColor = vec4f(0,0,0,0);
+  var normal = normalize(out.normal);
 
   var specualrShininess= matrial.specualrShininess;
   var specualrStrength= matrial.specualrStrength;
@@ -104,33 +121,74 @@ export interface ShaderLightGadgetTemplate {
   func: string;
 }
 
-export const POINT_LIGHT: ShaderLightGadgetTemplate = {
+export interface ShaderShadowTemplate {
+  shadowAddCode: string;
+  shadowAddFunc: string;
+}
+
+export const POINT_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate = {
   struct: `struct PointLight{
     position: vec4f,
     intensity: f32,
-    color: vec4f
+    color: vec4f,
+    castShadow: u32,
   }`,
   define: `@group(3) @binding(10) var<uniform> pointLight:array<PointLight, @POINT_LIGHT_COUNT>;`,
   countPlaceholder: "@POINT_LIGHT_COUNT",
   lengthPlaceholder: "@POINT_LIGHT_LENGTH",
   code: `
-    for(var i=0; i< @POINT_LIGHT_LENGTH; i++){
-      finalColor+= PointLight_(pointLight[i].position, out.world_position, out.normal, baseColor,pointLight[i].color, pointLight[i].intensity,specualrShininess,specualrStrength,specualrColor);
-    }
+  var nonePointShadowCount = 0u;
+  for(var i = 0u; i < @POINT_LIGHT_LENGTH; i++) {
+
+      @POINT_LIGHT_COMPARE_CODE
+
+      finalColor += PointLight_(
+              pointLight[i].position,
+              out.world_position,
+              normal,
+              baseColor,
+              pointLight[i].color,
+              pointLight[i].intensity,
+              specualrShininess,
+              specualrStrength,
+              specualrColor,
+              i - nonePointShadowCount,
+              out.world_position,
+          );
+  }
     `,
   func: `
-    fn PointLight_(lightPosition:vec4f, p:vec4f, normal: vec4f, baseColor: vec4f, lightColor:vec4f, intensity:f32, specualrShininess:f32, specualrStrength:f32, specualrColor:vec3f) -> vec4f{
+fn PointLight_(
+    lightPosition: vec4f,
+    p: vec4f,
+    normal: vec4f,
+    baseColor: vec4f,
+    lightColor: vec4f,
+    intensity: f32,
+    specualrShininess: f32,
+    specualrStrength: f32,
+    specualrColor: vec3f,
+    lightIndex: u32,
+    worldPos: vec4f,
+) -> vec4f {
     let l = normalize(lightPosition - p);
     let v = normalize(cameraPos - p);
     let r = 2*dot(normal, l)*normal - l;
     let dist = length(lightPosition.xyz - p.xyz);
     let attenuation = intensity / (dist * dist);
-  
+
     let diffuse = max(dot(normal, l), 0);
     let diffuseColor = baseColor * diffuse * lightColor;
     let specularColor = Speculer(l,r,v,normal, lightColor,specualrShininess,specualrStrength,specualrColor);
-    return (specularColor + diffuseColor) * attenuation;
-  }`,
+
+    var visibilty = 1f;
+
+    @POINT_SHADOW_VISIBILTY_FUNC_CODE
+
+    return (specularColor + diffuseColor) * attenuation * visibilty;
+}`,
+  shadowAddCode: SHADOW_POINT_COMPARE,
+  shadowAddFunc: SHADOW_POINT_ADD_FUNC,
 };
 
 export const AMBIENT_LIGHT: ShaderLightGadgetTemplate = {
@@ -152,15 +210,54 @@ export const AMBIENT_LIGHT: ShaderLightGadgetTemplate = {
   `,
 };
 
-export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate = {
+export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate = {
   struct: `struct DirectionalLight{
     directional: vec4f,
     intensity: f32,
-    color: vec4f
+    color: vec4f,
+    castShadow: u32,
   }`,
   define: `@group(3) @binding(12) var<uniform> directionalLight:array<DirectionalLight, @DIRECTIONAL_LIGHT_COUNT>;`,
   countPlaceholder: "@DIRECTIONAL_LIGHT_COUNT",
   lengthPlaceholder: "@DIRECTIONAL_LIGHT_LENGTH",
-  code: "",
-  func: ``,
+  code: `
+  var noneDirectionalShadowCount = 0u;
+  for(var i = 0u; i < 1; i++) {
+
+      @DIRECTIONAL_LIGHT_COMPARE_CODE
+
+      finalColor += DirectionalLight_(
+              baseColor,
+              normal,
+              directionalLight[i].intensity,
+              directionalLight[i].directional,
+              directionalLight[i].color,
+              i - noneDirectionalShadowCount,
+              out.world_position,
+          );
+  }
+  `,
+  func: `
+fn DirectionalLight_(
+    baseColor: vec4f,
+    normal: vec4f,
+    intensity: f32,
+    directional: vec4f,
+    lightColor: vec4f,
+    lightIndex: u32,
+    worldPos: vec4f,
+) -> vec4f {
+    let l = normalize(-directional);
+    let diffuse = max(dot(normal, l), 0);
+
+    var visibilty = 1f;
+
+    @DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE
+
+    return baseColor * diffuse * lightColor * intensity * visibilty;
+}
+
+  `,
+  shadowAddCode: SHADOW_DIRECTIONAL_COMPARE,
+  shadowAddFunc:SHADOW_DIRECTIONAL_ADD_FUNC,
 };

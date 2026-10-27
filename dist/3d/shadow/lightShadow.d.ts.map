@@ -1,0 +1,1 @@
+{"version":3,"file":"lightShadow.d.ts","sourceRoot":"","sources":["../../../src/3d/shadow/lightShadow.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,gBAAgB,CAAC;AAE7C,MAAM,WAAW,WAAW;IAC1B,UAAU,EAAE,OAAO,CAAC;IACpB,QAAQ,EAAE,MAAM,CAAC;IACjB,KAAK,EAAE,OAAO,CAAC;IACf,UAAU,EAAE,MAAM,CAAC;IACnB,SAAS,EAAE,MAAM,CAAC;IAClB,YAAY,IAAI,IAAI,CAAC;CACtB"}

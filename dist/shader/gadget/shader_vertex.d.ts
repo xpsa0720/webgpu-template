@@ -1,5 +1,11 @@
 import type { InstanceMesh } from "../../3d/node/mesh/instance";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
+type TypeFamily = "float" | "sint" | "uint";
+/** GPUVertexFormat → { byteSize, family } */
+export declare const FORMAT_TABLE: Record<string, {
+    byteSize: number;
+    family: TypeFamily;
+}>;
 interface VertexInput {
     location: number;
     name: string;

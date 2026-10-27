@@ -89,8 +89,8 @@ export function uniformData<T extends object>(
       throw new Error(`uniformData: struct 멤버 "${member.name}"에 대응하는 데이터가 없음`);
     }
 
-    if (member.type === "u32" && typeof value === "number") {
-      uint32View[member.floatOffset] = value;
+    if (member.type === "u32" && (typeof value === "number" || typeof value === "boolean")) {
+      uint32View[member.floatOffset] = Number(value);
     } else if (member.type === "i32" && typeof value === "number") {
       int32View[member.floatOffset] = value;
     } else {

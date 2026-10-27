@@ -4,6 +4,10 @@ import type { DirectionalLight } from "../../3d/light/directional_light";
 import type { Light } from "../../3d/light/light";
 import type { PointLight } from "../../3d/light/point_light";
 import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
+export interface ShadowGadgetParams {
+    shadowAddFunc: string;
+    shadowAddCode: string;
+}
 export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetParams {
     define: string;
     struct: string;
@@ -32,8 +36,11 @@ export declare abstract class ShaderLightGadget<T extends Light> extends ShaderG
     lengthPlaceholder: string;
     private _lights;
     private onLightChange?;
+    private _bufferCapacity;
     constructor({ struct, define, placeholder, binding, group, code, device, func, lights, countPlaceholder, lengthPlaceholder, onLightChange, }: ShaderLightGadgetParams<T>);
     private createBuffer;
+    /** 버퍼 용량이 충분하면 writeBuffer만, 부족하면 새로 생성 */
+    private ensureBuffer;
     get lights(): readonly T[];
     set lights(value: T[]);
     addLight(light: T): void;
@@ -45,13 +52,36 @@ export declare abstract class ShaderLightGadget<T extends Light> extends ShaderG
     getFunctionCode(): string;
     getStructUniformCode(): string;
 }
+export interface ShadowGadget {
+    shadowPvMatrixDefine: string;
+    shadowTextureDefine: string;
+    shadowAddFunc: string;
+    shadowAddCode: string;
+    getShadowDefinesCode(): string;
+    getShadowAddCode(): string;
+    getShadowAddFuncCode(): string;
+}
 export declare class ShaderAmbientLightGadget extends ShaderLightGadget<AmbientLight> {
     constructor(params: ShaderLightGadgetParams<AmbientLight>);
 }
-export declare class ShaderPointLightGadget extends ShaderLightGadget<PointLight> {
-    constructor(params: ShaderLightGadgetParams<PointLight>);
+export declare class ShaderPointLightGadget extends ShaderLightGadget<PointLight> implements ShadowGadget {
+    shadowPvMatrixDefine: string;
+    shadowTextureDefine: string;
+    shadowAddFunc: string;
+    shadowAddCode: string;
+    constructor(params: ShaderLightGadgetParams<PointLight> & ShadowGadgetParams);
+    getShadowDefinesCode(): string;
+    getShadowAddCode(): string;
+    getShadowAddFuncCode(): string;
 }
-export declare class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalLight> {
-    constructor(params: ShaderLightGadgetParams<DirectionalLight>);
+export declare class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalLight> implements ShadowGadget {
+    shadowPvMatrixDefine: string;
+    shadowTextureDefine: string;
+    shadowAddFunc: string;
+    shadowAddCode: string;
+    constructor(params: ShaderLightGadgetParams<DirectionalLight> & ShadowGadgetParams);
+    getShadowDefinesCode(): string;
+    getShadowAddCode(): string;
+    getShadowAddFuncCode(): string;
 }
 //# sourceMappingURL=shader_light.d.ts.map
