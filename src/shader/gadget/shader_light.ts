@@ -17,6 +17,8 @@ import {
 export interface ShadowGadgetParams {
   shadowAddFunc: string;
   shadowAddCode: string;
+  instanceShadowAddCode: string;
+  instanceShadowAddFunc: string;
 }
 
 export interface ShaderLightGadgetParams<
@@ -184,10 +186,14 @@ export interface ShadowGadget {
   shadowTextureDefine: string;
   shadowAddFunc:string,
   shadowAddCode:string,
+  instanceShadowAddCode:string,
+  instanceShadowAddFunc:string,
   readonly hasShadow: boolean
   getShadowDefinesCode():string
   getShadowAddCode():string
   getShadowAddFuncCode():string
+  getInstanceShadowAddCode():string
+  getInstanceShadowAddFuncCode():string
 }
 
 export class ShaderAmbientLightGadget extends ShaderLightGadget<AmbientLight> {
@@ -201,6 +207,8 @@ export class ShaderPointLightGadget extends ShaderLightGadget<PointLight> implem
   shadowTextureDefine: string;
   shadowAddFunc: string;
   shadowAddCode: string;
+  instanceShadowAddCode: string;
+  instanceShadowAddFunc: string;
 
   constructor(params: ShaderLightGadgetParams<PointLight> & ShadowGadgetParams) {
     super({
@@ -215,6 +223,8 @@ export class ShaderPointLightGadget extends ShaderLightGadget<PointLight> implem
     this.shadowTextureDefine = SHADER_POINT_SHADOW_TEXTURE;
     this.shadowAddFunc = params.shadowAddFunc;
     this.shadowAddCode = params.shadowAddCode;
+    this.instanceShadowAddCode = params.instanceShadowAddCode;
+    this.instanceShadowAddFunc = params.instanceShadowAddFunc;
   }
 
   get hasShadow() {
@@ -222,18 +232,18 @@ export class ShaderPointLightGadget extends ShaderLightGadget<PointLight> implem
   }
 
   // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
-  private syncShadowPlaceholder() {
-    this.placeholder["@POINT_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
-    this.placeholder["@POINT_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+  private syncShadowPlaceholder(instance: boolean = false) {
+    this.placeholder["@POINT_LIGHT_COMPARE_CODE"] = instance ? this.getInstanceShadowAddCode() : this.getShadowAddCode();
+    this.placeholder["@POINT_SHADOW_VISIBILTY_FUNC_CODE"] = instance ? this.getInstanceShadowAddFuncCode() : this.getShadowAddFuncCode();
   }
 
-  getCode() {
-    this.syncShadowPlaceholder();
+  getCode(instance: boolean = false) {
+    this.syncShadowPlaceholder(instance);
     return super.getCode();
   }
 
-  getFunctionCode() {
-    this.syncShadowPlaceholder();
+  getFunctionCode(instance: boolean = false) {
+    this.syncShadowPlaceholder(instance);
     return super.getFunctionCode();
   }
 
@@ -251,6 +261,16 @@ export class ShaderPointLightGadget extends ShaderLightGadget<PointLight> implem
     if (!this.hasShadow) return "";
     return this.shadowAddFunc;
   }
+
+  getInstanceShadowAddCode() {
+    if (!this.hasShadow) return "";
+    return this.instanceShadowAddCode;
+  }
+
+  getInstanceShadowAddFuncCode() {
+    if (!this.hasShadow) return "";
+    return this.instanceShadowAddFunc;
+  }
 }
 
 export class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalLight> implements ShadowGadget {
@@ -258,6 +278,8 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalL
   shadowTextureDefine: string;
   shadowAddFunc: string;
   shadowAddCode: string;
+  instanceShadowAddCode: string;
+  instanceShadowAddFunc: string;
 
   constructor(params: ShaderLightGadgetParams<DirectionalLight> & ShadowGadgetParams) {
     super({
@@ -272,26 +294,26 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalL
     this.shadowTextureDefine = SHADER_DIRECTIONAL_SHADOW_TEXTURE;
     this.shadowAddFunc = params.shadowAddFunc;
     this.shadowAddCode = params.shadowAddCode;
+    this.instanceShadowAddCode = params.instanceShadowAddCode;
+    this.instanceShadowAddFunc = params.instanceShadowAddFunc;
   }
 
-  /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
   get hasShadow() {
     return this.lights.some((l) => l.castShadow);
   }
 
-  // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
-  private syncShadowPlaceholder() {
-    this.placeholder["@DIRECTIONAL_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
-    this.placeholder["@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+  private syncShadowPlaceholder(instance: boolean = false) {
+    this.placeholder["@DIRECTIONAL_LIGHT_COMPARE_CODE"] = instance ? this.getInstanceShadowAddCode() : this.getShadowAddCode();
+    this.placeholder["@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE"] = instance ? this.getInstanceShadowAddFuncCode() : this.getShadowAddFuncCode();
   }
 
-  getCode() {
-    this.syncShadowPlaceholder();
+  getCode(instance: boolean = false) {
+    this.syncShadowPlaceholder(instance);
     return super.getCode();
   }
 
-  getFunctionCode() {
-    this.syncShadowPlaceholder();
+  getFunctionCode(instance: boolean = false) {
+    this.syncShadowPlaceholder(instance);
     return super.getFunctionCode();
   }
 
@@ -308,5 +330,15 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalL
   getShadowAddFuncCode() {
     if (!this.hasShadow) return "";
     return this.shadowAddFunc;
+  }
+
+  getInstanceShadowAddCode() {
+    if (!this.hasShadow) return "";
+    return this.instanceShadowAddCode;
+  }
+
+  getInstanceShadowAddFuncCode() {
+    if (!this.hasShadow) return "";
+    return this.instanceShadowAddFunc;
   }
 }

@@ -22,6 +22,8 @@ struct Matrial {
 }
 @group(3) @binding(1)
 var<uniform> cameraPos: vec4f;
+@group(3) @binding(13)
+var<uniform> lightCounts: vec4<u32>;
 @group(3) @binding(0)
 var<uniform> matrix: Matrixs;
 @group(3) @binding(2)
@@ -56,6 +58,13 @@ fn vs(
     return out;
 }
 
+struct AmbientLight {
+    intensity: f32,
+    color: vec4f,
+}
+@group(3) @binding(11)
+var<uniform> ambientLight: array<AmbientLight, 8>;
+
 struct DirectionalLight {
     directional: vec4f,
     intensity: f32,
@@ -65,15 +74,16 @@ struct DirectionalLight {
 @group(3) @binding(12)
 var<uniform> directionalLight: array<DirectionalLight, 8>;
 
+@group(3) @binding(20)
+var shadowSampler: sampler_comparison;
+@group(3) @binding(21)
+var directionalShadowTexture: texture_depth_2d_array;
+@group(3) @binding(22)
+var<storage, read> directionalLightPVMatrix: array<mat4x4f>;
 
-@group(3) @binding(20) var shadowSampler: sampler_comparison;
-
-@group(3) @binding(21) var diretionalShadowTexture: texture_depth_2d_array;
-@group(3) @binding(22) var<storage, read_write> directionalLightPVMatrix: array<mat4x4f>;
-
-@group(3) @binding(23) var pointShadowTexture: texture_depth_2d_array;
-
-@group(3) @binding(24) var<storage, read_write> pointLightPVMatrix: array<mat4x4f>;
+fn AmbientLight_(baseColor: vec4f, ambient: f32) -> vec4f {
+    return baseColor * ambient;
+}
 
 fn DirectionalLight_(
     baseColor: vec4f,
@@ -83,20 +93,22 @@ fn DirectionalLight_(
     lightColor: vec4f,
     lightIndex: u32,
     worldPos: vec4f,
+    castShadow: bool,
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);
-    let pvMatrix = directionalLightPVMatrix[lightIndex];
-    let lightClip = pvMatrix * worldPos;
-
-    let ndc = lightClip.xyz / lightClip.w;
-
-    let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
 
     var visibilty = 1f;
-    if directionalLight[lightIndex].castShadow == 1 {
+
+    if castShadow {
+        let pvMatrix = directionalLightPVMatrix[lightIndex];
+        let lightClip = pvMatrix * worldPos;
+
+        let ndc = lightClip.xyz / lightClip.w;
+
+        let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
         visibilty = textureSampleCompare(
-                diretionalShadowTexture,
+                directionalShadowTexture,
                 shadowSampler,
                 shadowUV,
                 lightIndex,
@@ -139,11 +151,19 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
     var specualrStrength = matrial.specualrStrength;
     var specualrColor = matrial.specualrColor.xyz;
 
+    for(var i = 0u; i < lightCounts.y; i++) {
+        finalColor += AmbientLight_(baseColor, ambientLight[i].intensity);
+    }
+
     var noneDirectionalShadowCount = 0u;
-    for(var i = 0u; i < 1; i++) {
+    for(var i = 0u; i < lightCounts.z; i++) {
+        var castShadow = true;
+
         if directionalLight[i].castShadow == 0 {
             noneDirectionalShadowCount += 1;
+            castShadow = false;
         }
+
         finalColor += DirectionalLight_(
                 baseColor,
                 normal,
@@ -152,8 +172,10 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
                 directionalLight[i].color,
                 i - noneDirectionalShadowCount,
                 out.world_position,
+                castShadow,
             );
     }
+
     finalColor.a = baseColor.a;
     return finalColor;
 }

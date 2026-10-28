@@ -31,8 +31,6 @@ export class Mesh {
   AabbCenter!: Vector3;
   AabbRadius!: number;
   dirty: boolean = true;
-  castShadow: boolean = false;
-  receiveShadow: boolean = false;
   constructor({
     location,
     rotate,

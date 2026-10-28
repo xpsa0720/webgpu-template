@@ -65,6 +65,7 @@ export declare class Render3DPass extends RenderPass {
     private writeLightCounts;
     private updateMesh;
     private updateNode;
+    private updateInstanceMesh;
     private writeMatrial;
     private nodeRecursionRender;
     updateBindGroupEntray(): void;

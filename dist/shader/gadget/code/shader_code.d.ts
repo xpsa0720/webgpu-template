@@ -8,7 +8,7 @@
  */
 export declare const SHADER_MESH_MATRIX_STRUCT = "\nstruct Matrixs{\n  normalMatrix: mat4x4<f32>,\n  modelMatrix: mat4x4<f32>\n}";
 export declare const SHADER_VERTEXOUT_STRUCT = "\nstruct VertexOut{\n  @builtin(position) position:vec4f,\n  @location(0) normal:vec4f,\n  @location(1) color:vec4f,\n  @location(2) world_position:vec4f,\n  @location(3) @interpolate(flat) instance_index:u32,\n  @location(4) uv:vec2f,\n}";
-export declare const SHADER_MATRIAL_STRUCT = "\nstruct Matrial {\n  baseColor: vec4f,\n  specualrColor: vec4f,\n  specualrStrength: f32,\n  specualrShininess: f32,\n  texturFlag: u32,\n}";
+export declare const SHADER_MATRIAL_STRUCT = "\nstruct Matrial {\n  baseColor: vec4f,\n  specualrColor: vec4f,\n  specualrStrength: f32,\n  specualrShininess: f32,\n  texturFlag: u32,\n  receiveShadow: u32,\n}";
 export declare const SHADER_MATRIX_UNIFORM = "@group(3) @binding(0) var<uniform> matrix:Matrixs;";
 export declare const SHADER_CAMERA_POSITION_UNIFORM = "@group(3) @binding(1) var<uniform> cameraPos:vec4f;";
 export declare const SHADER_LIGHT_COUNTS_UNIFORM = "@group(3) @binding(13) var<uniform> lightCounts: vec4<u32>;";
@@ -34,6 +34,8 @@ export interface ShaderLightGadgetTemplate {
 export interface ShaderShadowTemplate {
     shadowAddCode: string;
     shadowAddFunc: string;
+    instanceShadowAddCode: string;
+    instanceShadowAddFunc: string;
 }
 export declare const POINT_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate;
 export declare const AMBIENT_LIGHT: ShaderLightGadgetTemplate;

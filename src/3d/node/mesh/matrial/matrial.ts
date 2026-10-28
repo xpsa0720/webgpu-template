@@ -11,6 +11,8 @@ export interface MatrialParams {
   specular?: Specular;
   device?: GPUDevice;
   imageBitmap?: ImageBitmap;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
 }
 
 interface MatrialUniformData {
@@ -19,6 +21,7 @@ interface MatrialUniformData {
   specualrStrength: number;
   specualrShininess: number;
   texturFlag: number;
+  receiveShadow: number;
 }
 
 let dummyTexture: GPUTexture | null = null;
@@ -50,10 +53,15 @@ export class Matrial {
   dirty: boolean = true;
   private _cachedData: Float32Array | null = null;
 
-  constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap }: MatrialParams) {
+  castShadow: boolean;
+  receiveShadow: boolean;
+
+  constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap, castShadow, receiveShadow }: MatrialParams) {
     this._color = color;
     this._opacity = opacity;
     this._specualr = specular;
+    this.castShadow = castShadow ?? false;
+    this.receiveShadow = receiveShadow ?? false;
 
     if (device) {
       this.texture = { texture: this.createTexture(device, imageBitmap) };
@@ -101,6 +109,7 @@ export class Matrial {
       specualrShininess: this._specualr.shininess,
       specualrStrength: this._specualr.strength,
       texturFlag: this.textureFlag,
+      receiveShadow: this.receiveShadow ? 1 : 0,
     });
     this.dirty = false;
     return this._cachedData;

@@ -16,7 +16,7 @@ export declare class ShadowResources {
      * 이 순서가 곧 PV 버퍼 칸 번호(i * 64) = shadow map texture layer 번호 = 셰이더 인덱스.
      * update / writePvMatrices / ShadowPass가 모두 이 함수만 사용해야 순서가 어긋나지 않는다.
      */
-    getShadowLights(shaderLights: Record<number, ShaderLightGadget<any>>, type: ShadowLightType): LightShadow[];
+    getShadowLights(shaderLights: Record<number, ShaderLightGadget<any>>, type?: ShadowLightType): LightShadow[];
     /**
      * castShadow light 수에 맞춰 텍스처 배열 / PV 버퍼를 (재)생성한다.
      * @returns 리소스를 다시 만들었으면 true — 기존 버퍼를 destroy했으므로 호출 측은

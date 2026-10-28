@@ -2,7 +2,12 @@ import type { Render3DPass } from "../../../pass/render_3d_pass";
 import { SHADER_MATRIAL_STRUCT } from "../../../shader/gadget/code/shader_code";
 import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../../shader/gadget/code/shader_instance";
 import type { WebGPUBuffer } from "../../../types/resource";
-import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize } from "../../../util/math";
+import {
+  distance,
+  extractFrustumPlanes,
+  isOutsideFrustum,
+  wgslStructSize,
+} from "../../../util/math";
 import { createModelMatrixData } from "../../../util/matrix";
 import type { Mat4x4 } from "../../math/matrix";
 import { Vector3 } from "../../math/vector";
@@ -42,6 +47,7 @@ export class InstanceMesh {
   private cachedMatrixData!: Float32Array[];
   private cachedMatrialData!: Float32Array[];
   private positions!: Float64Array;
+
   // 인덱스 배열: swap 시 실제 데이터 대신 인덱스만 교환
   private indices!: Uint32Array;
   private dirty = true;
@@ -82,10 +88,11 @@ export class InstanceMesh {
     this.dirty = false;
   }
 
-  frustumCull(PV: Mat4x4) {
+  frustumCull(PV: Mat4x4, additionalPVs: Mat4x4[] = []) {
     if (this.dirty) this.buildCache();
 
     const planes = extractFrustumPlanes(PV);
+    const lightPlanes = additionalPVs.map((pv) => extractFrustumPlanes(pv));
     const cx = this.AabbCenter.x;
     const cy = this.AabbCenter.y;
     const cz = this.AabbCenter.z;
@@ -97,10 +104,24 @@ export class InstanceMesh {
     for (let i = 0; i < this.count; i++) {
       const ii = idx[i];
       const o = ii * 3;
-      if (!isOutsideFrustum(planes, cx + pos[o], cy + pos[o + 1], cz + pos[o + 2], r)) {
+
+      const px = cx + pos[o];
+      const py = cy + pos[o + 1];
+      const pz = cz + pos[o + 2];
+      let isVisible = !isOutsideFrustum(planes, px, py, pz, r);
+      if (!isVisible) {
+        for (let j = 0; j < lightPlanes.length; j++) {
+          if (!isOutsideFrustum(lightPlanes[j], px, py, pz, r)) {
+            isVisible = true;
+            break;
+          }
+        }
+      }
+      if (isVisible) {
         if (i !== visible) {
-          // 인덱스만 swap
-          const tmp = idx[visible]; idx[visible] = idx[i]; idx[i] = tmp;
+          const tmp = idx[visible];
+          idx[visible] = idx[i];
+          idx[i] = tmp;
         }
         visible++;
       }

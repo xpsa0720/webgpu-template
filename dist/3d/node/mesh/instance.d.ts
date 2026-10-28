@@ -34,7 +34,7 @@ export declare class InstanceMesh {
     constructor({ instanceInfo, geometry, render3DPass }: MeshParams);
     markDirty(): void;
     private buildCache;
-    frustumCull(PV: Mat4x4): void;
+    frustumCull(PV: Mat4x4, additionalPVs?: Mat4x4[]): void;
     writeAll(): void;
     private writeVisibleBuffers;
     update(): void;

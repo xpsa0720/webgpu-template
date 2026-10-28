@@ -89,6 +89,7 @@ class App3D {
       depth: 500,
       matrial: new Matrial({
         color: new Vector3(0.6, 0.6, 0.6),
+        receiveShadow: true,
       }),
     });
 
@@ -108,7 +109,7 @@ class App3D {
       objRoot.meshs.forEach((mesh) => (mesh.matrial = objMatrial));
       objRoot.location = new Vector3(-2, 0, 0);
       objRoot.updateWorld();
-    //   render3DPass.nodes.push(objRoot);
+      //   render3DPass.nodes.push(objRoot);
       console.log("OBJ 노드 렌더링 등록 완료");
     } catch (e) {
       console.error("OBJ 로드 실패:", e);
@@ -146,20 +147,24 @@ class App3D {
       render3DPass,
       location: new Vector3(0, 0, 0),
       scale: new Vector3(0.1, 0.1, 0.1),
+      matrial: new Matrial({ color: new Vector3(1, 1, 1), castShadow: true }),
     });
 
-    // const instanceCubes = new InstanceMesh({
-    //   render3DPass,
-    //   geometry: templateCube.geometry,
-    //   instanceInfo: InstanceMesh.randomInstanceInfo(
-    //     100000,
-    //     new Matrial({
-    //       color: new Vector3(0.3, 1, 0.3),
-    //       specular: new Specular({ strength: 0.5, shininess: 2 }),
-    //     }),
-    //   ),
-    // });
-    // render3DPass.instanceMesh.push(instanceCubes);
+    const instanceCubes = new InstanceMesh({
+      render3DPass,
+      geometry: templateCube.geometry,
+      instanceInfo: Array.from({ length: 10 }, (_, i) => ({
+        location: new Vector3((i - 5) * 2, 0, -3),
+        rotate: new Vector3(0, 0, 0),
+        scale: new Vector3(0.5, 0.5, 0.5),
+        matrial: new Matrial({
+          color: new Vector3(0.3, 1, 0.3),
+          specular: new Specular({ strength: 0.5, shininess: 2 }),
+          receiveShadow: true,
+        }),
+      })),
+    });
+    render3DPass.instanceMesh.push(instanceCubes);
 
     // === Node 테스트 ===
     // 1) 계층: 태양 → 지구 → 달 (부모 회전 → 자식 공전)
@@ -171,7 +176,10 @@ class App3D {
           render3DPass,
           location: new Vector3(0, 0, 0),
           radius: 0.8,
-          matrial: new Matrial({ color: new Vector3(1, 0.8, 0.2) }),
+          matrial: new Matrial({
+            color: new Vector3(1, 0.8, 0.2),
+            castShadow: true,
+          }),
         }),
       ],
     });
@@ -183,19 +191,26 @@ class App3D {
           render3DPass,
           location: new Vector3(0, 0, 0),
           radius: 0.4,
-          matrial: new Matrial({ color: new Vector3(0.2, 0.5, 1) }),
+          matrial: new Matrial({
+            color: new Vector3(0.2, 0.5, 1),
+            castShadow: true,
+          }),
         }),
       ],
     });
     const moon = new Node({
       render3DPass,
+
       location: new Vector3(1, 0, 0), // 지구 기준
       meshs: [
         new Sphere({
           render3DPass,
           location: new Vector3(0, 0, 0),
           radius: 0.15,
-          matrial: new Matrial({ color: new Vector3(0.8, 0.8, 0.8) }),
+          matrial: new Matrial({
+            color: new Vector3(0.8, 0.8, 0.8),
+            castShadow: true,
+          }),
         }),
       ],
     });
@@ -303,7 +318,9 @@ class App3D {
         ?.updateLightAll();
       console.log(
         "castShadow:",
-        shadowTestLights.map((l, i) => `${shadowTestNames[i]}=${l.castShadow}`).join(", "),
+        shadowTestLights
+          .map((l, i) => `${shadowTestNames[i]}=${l.castShadow}`)
+          .join(", "),
       );
     });
 
@@ -328,20 +345,6 @@ class App3D {
         const light = dynamicLights.pop()!;
         render3DPass.removeLight(light);
         console.log("PointLight 제거, 총:", dynamicLights.length);
-      }
-    });
-
-    // N키: shadow map layer 수 + 각 layer 가운데 열 depth 출력
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "n" || e.key === "N") {
-        render3DPass.shadowPass.readShadowMapColumns();
-      }
-    });
-
-    // M키: shadow map depth 값 콘솔 출력
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "m" || e.key === "M") {
-        render3DPass.shadowPass.readShadowMap(16);
       }
     });
 

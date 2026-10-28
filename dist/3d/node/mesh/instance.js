@@ -1,6 +1,6 @@
 import { SHADER_MATRIAL_STRUCT } from "../../../shader/gadget/code/shader_code";
 import { SHADER_INSTANCE_MATRIX_STRUCT } from "../../../shader/gadget/code/shader_instance";
-import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize } from "../../../util/math";
+import { distance, extractFrustumPlanes, isOutsideFrustum, wgslStructSize, } from "../../../util/math";
 import { createModelMatrixData } from "../../../util/matrix";
 import { Vector3 } from "../../math/vector";
 const RANDOM_RANGE = 100;
@@ -55,10 +55,11 @@ export class InstanceMesh {
         }
         this.dirty = false;
     }
-    frustumCull(PV) {
+    frustumCull(PV, additionalPVs = []) {
         if (this.dirty)
             this.buildCache();
         const planes = extractFrustumPlanes(PV);
+        const lightPlanes = additionalPVs.map((pv) => extractFrustumPlanes(pv));
         const cx = this.AabbCenter.x;
         const cy = this.AabbCenter.y;
         const cz = this.AabbCenter.z;
@@ -69,9 +70,20 @@ export class InstanceMesh {
         for (let i = 0; i < this.count; i++) {
             const ii = idx[i];
             const o = ii * 3;
-            if (!isOutsideFrustum(planes, cx + pos[o], cy + pos[o + 1], cz + pos[o + 2], r)) {
+            const px = cx + pos[o];
+            const py = cy + pos[o + 1];
+            const pz = cz + pos[o + 2];
+            let isVisible = !isOutsideFrustum(planes, px, py, pz, r);
+            if (!isVisible) {
+                for (let j = 0; j < lightPlanes.length; j++) {
+                    if (!isOutsideFrustum(lightPlanes[j], px, py, pz, r)) {
+                        isVisible = true;
+                        break;
+                    }
+                }
+            }
+            if (isVisible) {
                 if (i !== visible) {
-                    // 인덱스만 swap
                     const tmp = idx[visible];
                     idx[visible] = idx[i];
                     idx[i] = tmp;

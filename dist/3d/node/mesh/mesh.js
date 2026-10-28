@@ -15,8 +15,6 @@ export class Mesh {
     AabbCenter;
     AabbRadius;
     dirty = true;
-    castShadow = false;
-    receiveShadow = false;
     constructor({ location, rotate, scale, geometry, render3DPass, matrial, }) {
         this.render3DPass = render3DPass;
         this.location = location;

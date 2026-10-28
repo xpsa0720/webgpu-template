@@ -1,4 +1,4 @@
-import { SHADOW_DIRECTIONAL_ADD_FUNC, SHADOW_DIRECTIONAL_COMPARE, SHADOW_POINT_ADD_FUNC, SHADOW_POINT_COMPARE, } from "./shadow_add";
+import { SHADOW_DIRECTIONAL_ADD_FUNC, SHADOW_DIRECTIONAL_COMPARE, SHADOW_INSTANCE_DIRECTIONAL_ADD_FUNC, SHADOW_INSTANCE_DIRECTIONAL_COMPARE, SHADOW_INSTANCE_POINT_ADD_FUNC, SHADOW_INSTANCE_POINT_COMPARE, SHADOW_POINT_ADD_FUNC, SHADOW_POINT_COMPARE, } from "./shadow_add";
 /**
  * group(3) binding 할당 범위
  *
@@ -28,6 +28,7 @@ struct Matrial {
   specualrStrength: f32,
   specualrShininess: f32,
   texturFlag: u32,
+  receiveShadow: u32,
 }`;
 export const SHADER_MATRIX_UNIFORM = `@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM = `@group(3) @binding(1) var<uniform> cameraPos:vec4f;`;
@@ -160,6 +161,8 @@ fn PointLight_(
 }`,
     shadowAddCode: SHADOW_POINT_COMPARE,
     shadowAddFunc: SHADOW_POINT_ADD_FUNC,
+    instanceShadowAddCode: SHADOW_INSTANCE_POINT_COMPARE,
+    instanceShadowAddFunc: SHADOW_INSTANCE_POINT_ADD_FUNC,
 };
 export const AMBIENT_LIGHT = {
     struct: `struct AmbientLight{
@@ -191,6 +194,7 @@ export const DIRECTIONAL_LIGHT = {
   var noneDirectionalShadowCount = 0u;
   for(var i = 0u; i < lightCounts.z; i++) {
       var castShadow = true;
+      var reciveShadow = true;
         
       @DIRECTIONAL_LIGHT_COMPARE_CODE
 
@@ -202,7 +206,8 @@ export const DIRECTIONAL_LIGHT = {
               directionalLight[i].color,
               i - noneDirectionalShadowCount,
               out.world_position,
-              castShadow
+              castShadow,
+              reciveShadow
           );
   }
   `,
@@ -215,7 +220,8 @@ fn DirectionalLight_(
     lightColor: vec4f,
     lightIndex: u32,
     worldPos: vec4f,
-    castShadow:bool
+    castShadow:bool,
+    reciveShadow:bool,
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);
@@ -230,5 +236,7 @@ fn DirectionalLight_(
   `,
     shadowAddCode: SHADOW_DIRECTIONAL_COMPARE,
     shadowAddFunc: SHADOW_DIRECTIONAL_ADD_FUNC,
+    instanceShadowAddCode: SHADOW_INSTANCE_DIRECTIONAL_COMPARE,
+    instanceShadowAddFunc: SHADOW_INSTANCE_DIRECTIONAL_ADD_FUNC,
 };
 //# sourceMappingURL=shader_code.js.map

@@ -127,6 +127,8 @@ export class ShaderPointLightGadget extends ShaderLightGadget {
     shadowTextureDefine;
     shadowAddFunc;
     shadowAddCode;
+    instanceShadowAddCode;
+    instanceShadowAddFunc;
     constructor(params) {
         super({
             ...params,
@@ -140,22 +142,23 @@ export class ShaderPointLightGadget extends ShaderLightGadget {
         this.shadowTextureDefine = SHADER_POINT_SHADOW_TEXTURE;
         this.shadowAddFunc = params.shadowAddFunc;
         this.shadowAddCode = params.shadowAddCode;
+        this.instanceShadowAddCode = params.instanceShadowAddCode;
+        this.instanceShadowAddFunc = params.instanceShadowAddFunc;
     }
-    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
     get hasShadow() {
         return this.lights.some((l) => l.castShadow);
     }
     // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
-    syncShadowPlaceholder() {
-        this.placeholder["@POINT_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
-        this.placeholder["@POINT_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+    syncShadowPlaceholder(instance = false) {
+        this.placeholder["@POINT_LIGHT_COMPARE_CODE"] = instance ? this.getInstanceShadowAddCode() : this.getShadowAddCode();
+        this.placeholder["@POINT_SHADOW_VISIBILTY_FUNC_CODE"] = instance ? this.getInstanceShadowAddFuncCode() : this.getShadowAddFuncCode();
     }
-    getCode() {
-        this.syncShadowPlaceholder();
+    getCode(instance = false) {
+        this.syncShadowPlaceholder(instance);
         return super.getCode();
     }
-    getFunctionCode() {
-        this.syncShadowPlaceholder();
+    getFunctionCode(instance = false) {
+        this.syncShadowPlaceholder(instance);
         return super.getFunctionCode();
     }
     getShadowDefinesCode() {
@@ -173,12 +176,24 @@ export class ShaderPointLightGadget extends ShaderLightGadget {
             return "";
         return this.shadowAddFunc;
     }
+    getInstanceShadowAddCode() {
+        if (!this.hasShadow)
+            return "";
+        return this.instanceShadowAddCode;
+    }
+    getInstanceShadowAddFuncCode() {
+        if (!this.hasShadow)
+            return "";
+        return this.instanceShadowAddFunc;
+    }
 }
 export class ShaderDirectionalLightGadget extends ShaderLightGadget {
     shadowPvMatrixDefine;
     shadowTextureDefine;
     shadowAddFunc;
     shadowAddCode;
+    instanceShadowAddCode;
+    instanceShadowAddFunc;
     constructor(params) {
         super({
             ...params,
@@ -192,22 +207,22 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget {
         this.shadowTextureDefine = SHADER_DIRECTIONAL_SHADOW_TEXTURE;
         this.shadowAddFunc = params.shadowAddFunc;
         this.shadowAddCode = params.shadowAddCode;
+        this.instanceShadowAddCode = params.instanceShadowAddCode;
+        this.instanceShadowAddFunc = params.instanceShadowAddFunc;
     }
-    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
     get hasShadow() {
         return this.lights.some((l) => l.castShadow);
     }
-    // 그림자 비교 / visibility 코드 placeholder를 hasShadow에 맞춰 채우거나 비운다
-    syncShadowPlaceholder() {
-        this.placeholder["@DIRECTIONAL_LIGHT_COMPARE_CODE"] = this.getShadowAddCode();
-        this.placeholder["@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE"] = this.getShadowAddFuncCode();
+    syncShadowPlaceholder(instance = false) {
+        this.placeholder["@DIRECTIONAL_LIGHT_COMPARE_CODE"] = instance ? this.getInstanceShadowAddCode() : this.getShadowAddCode();
+        this.placeholder["@DIRECTIONAL_SHADOW_VISIBILTY_FUNC_CODE"] = instance ? this.getInstanceShadowAddFuncCode() : this.getShadowAddFuncCode();
     }
-    getCode() {
-        this.syncShadowPlaceholder();
+    getCode(instance = false) {
+        this.syncShadowPlaceholder(instance);
         return super.getCode();
     }
-    getFunctionCode() {
-        this.syncShadowPlaceholder();
+    getFunctionCode(instance = false) {
+        this.syncShadowPlaceholder(instance);
         return super.getFunctionCode();
     }
     getShadowDefinesCode() {
@@ -224,6 +239,16 @@ export class ShaderDirectionalLightGadget extends ShaderLightGadget {
         if (!this.hasShadow)
             return "";
         return this.shadowAddFunc;
+    }
+    getInstanceShadowAddCode() {
+        if (!this.hasShadow)
+            return "";
+        return this.instanceShadowAddCode;
+    }
+    getInstanceShadowAddFuncCode() {
+        if (!this.hasShadow)
+            return "";
+        return this.instanceShadowAddFunc;
     }
 }
 //# sourceMappingURL=shader_light.js.map

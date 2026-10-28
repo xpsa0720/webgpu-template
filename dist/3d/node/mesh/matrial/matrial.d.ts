@@ -7,6 +7,8 @@ export interface MatrialParams {
     specular?: Specular;
     device?: GPUDevice;
     imageBitmap?: ImageBitmap;
+    castShadow?: boolean;
+    receiveShadow?: boolean;
 }
 export declare class Matrial {
     private _color;
@@ -16,7 +18,9 @@ export declare class Matrial {
     private _specualr;
     dirty: boolean;
     private _cachedData;
-    constructor({ color, opacity, specular, device, imageBitmap }: MatrialParams);
+    castShadow: boolean;
+    receiveShadow: boolean;
+    constructor({ color, opacity, specular, device, imageBitmap, castShadow, receiveShadow }: MatrialParams);
     get color(): Vector3;
     set color(v: Vector3);
     get opacity(): number;

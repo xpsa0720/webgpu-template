@@ -106,6 +106,8 @@ export class Render3DPass extends RenderPass {
                 device: this.device,
                 shadowAddCode: POINT_LIGHT.shadowAddCode,
                 shadowAddFunc: POINT_LIGHT.shadowAddFunc,
+                instanceShadowAddCode: POINT_LIGHT.instanceShadowAddCode,
+                instanceShadowAddFunc: POINT_LIGHT.instanceShadowAddFunc,
             }),
             new ShaderAmbientLightGadget({
                 struct: AMBIENT_LIGHT.struct,
@@ -128,6 +130,8 @@ export class Render3DPass extends RenderPass {
                 device: this.device,
                 shadowAddCode: DIRECTIONAL_LIGHT.shadowAddCode,
                 shadowAddFunc: DIRECTIONAL_LIGHT.shadowAddFunc,
+                instanceShadowAddCode: DIRECTIONAL_LIGHT.instanceShadowAddCode,
+                instanceShadowAddFunc: DIRECTIONAL_LIGHT.instanceShadowAddFunc,
             }),
         ];
         LIGHT_CODE_LIST.forEach((e, i) => {
@@ -143,14 +147,28 @@ export class Render3DPass extends RenderPass {
         let structCode = "";
         let functionCode = "";
         let fragmentCode = "";
+        let instanceFunctionCode = "";
+        let instanceFragmentCode = "";
         let shadowDefinesCode = "";
         const lightGadgets = Object.values(this.shaderLights).sort((a, b) => a.binding - b.binding);
+        // 일반 Mesh용 코드 생성
         lightGadgets.forEach((light) => {
             structCode += light.getStructUniformCode() + "\n";
             functionCode += light.getFunctionCode() + "\n";
             fragmentCode += light.getCode() + "\n";
             if (isShadowGadget(light)) {
                 shadowDefinesCode += light.getShadowDefinesCode();
+            }
+        });
+        // Instance용 코드 생성 (shadow compare 코드가 다름)
+        lightGadgets.forEach((light) => {
+            if (isShadowGadget(light)) {
+                instanceFunctionCode += light.getFunctionCode(true) + "\n";
+                instanceFragmentCode += light.getCode(true) + "\n";
+            }
+            else {
+                instanceFunctionCode += light.getFunctionCode() + "\n";
+                instanceFragmentCode += light.getCode() + "\n";
             }
         });
         if (shadowDefinesCode.length > 0) {
@@ -167,8 +185,8 @@ export class Render3DPass extends RenderPass {
         this.instnaceMeshRenderShaderModule = this.device.createShaderModule({
             code: this.shaderInstanceRenderGadgetModule.getSourceCode({
                 lightStructsUniforms: structCode,
-                lightCode: fragmentCode,
-                funtionCode: functionCode,
+                lightCode: instanceFragmentCode,
+                funtionCode: instanceFunctionCode,
                 shadowDefinesCode: shadowDefinesCode,
             }),
         });
@@ -354,11 +372,8 @@ export class Render3DPass extends RenderPass {
         };
         this.camera.update(this.device, aspect);
         const vpMatrix = this.camera.vpMatrix;
-        //캐시된 bind group을 새 리소스로 교체 (addLight, removeLight, castShadow 변경 모두 여기서 처리)
         const presence = this.getShadowPresence();
         if (presence.some((v, i) => v !== this.shadowPresence[i])) {
-            // 그림자 조명이 0 ↔ 1개 이상으로 바뀜 → 셰이더에서 그림자 코드를 넣거나 빼고 다시 컴파일
-            // (compile 안에서 shadowResources 갱신, bind group entry 갱신, 캐시 비우기까지 처리)
             this.compile();
         }
         else if (this.shadowResources.update(this.shaderLights)) {
@@ -415,8 +430,9 @@ export class Render3DPass extends RenderPass {
         if (this.instanceMesh.length > 0) {
             pass.setPipeline(this.instnaceMeshRenderShaderPipeline);
             this.instanceMesh.forEach((instanceMesh) => {
-                instanceMesh.update();
-                instanceMesh.frustumCull(vpMatrix);
+                instanceMesh.frustumCull(vpMatrix, this.shadowResources
+                    .getShadowLights(this.shaderLights)
+                    .map((l) => l.pvMatrix));
                 if (instanceMesh.renderCount === 0)
                     return;
                 if (!instanceMesh.cachedBindGroup) {
@@ -431,6 +447,11 @@ export class Render3DPass extends RenderPass {
                                 binding: 1,
                                 resource: { buffer: this.camera.cameraBuffer.buffer },
                             },
+                            {
+                                binding: 4,
+                                resource: this.dummyTextureView,
+                            },
+                            { binding: 5, resource: this.defaultSampler },
                             ...this.lightBindGroupEntry,
                             {
                                 binding: 30,
@@ -476,6 +497,7 @@ export class Render3DPass extends RenderPass {
             this.writeMatrial(mesh, updatedMatrials);
         });
         this.updateNode(this.nodes, updatedMatrials);
+        this.updateInstanceMesh();
     }
     updateNode(nodes, updatedMatrials) {
         nodes.forEach((node) => {
@@ -493,6 +515,11 @@ export class Render3DPass extends RenderPass {
             });
             if (node.children.length > 0)
                 this.updateNode(node.children, updatedMatrials);
+        });
+    }
+    updateInstanceMesh() {
+        this.instanceMesh.forEach((instanceMesh) => {
+            instanceMesh.update();
         });
     }
     writeMatrial(mesh, updatedMatrials) {
@@ -554,7 +581,10 @@ export class Render3DPass extends RenderPass {
         });
         // 실제 조명 개수 전달
         if (lightGadgets.some((g) => g.lights.length > 0)) {
-            result.push({ binding: 13, resource: { buffer: this.lightCountsBuffer } });
+            result.push({
+                binding: 13,
+                resource: { buffer: this.lightCountsBuffer },
+            });
         }
         // shadow 리소스 바인딩 (20~24) 추가
         if (this.shadowResources) {

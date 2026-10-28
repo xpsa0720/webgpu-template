@@ -24,8 +24,6 @@ export declare class Mesh {
     AabbCenter: Vector3;
     AabbRadius: number;
     dirty: boolean;
-    castShadow: boolean;
-    receiveShadow: boolean;
     constructor({ location, rotate, scale, geometry, render3DPass, matrial, }: MeshParams);
     get location(): Vector3;
     set location(value: Vector3);

@@ -1,12 +1,6 @@
-import type { Render3DPass } from "../../../../pass/render_3d_pass";
-import { Vector3 } from "../../../math/vector";
 import { Matrial } from "../matrial/matrial";
-import { Mesh } from "../mesh";
-export interface SphereParams {
-    render3DPass: Render3DPass;
-    location: Vector3;
-    rotate?: Vector3;
-    scale?: Vector3;
+import { Mesh, type MeshParams } from "../mesh";
+export interface SphereParams extends Omit<MeshParams, "geometry" | "matrial"> {
     radius?: number;
     matrial?: Matrial;
 }

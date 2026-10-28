@@ -7,6 +7,8 @@ import { ShaderGadget, type ShaderGadgetParams } from "./shader_gadget";
 export interface ShadowGadgetParams {
     shadowAddFunc: string;
     shadowAddCode: string;
+    instanceShadowAddCode: string;
+    instanceShadowAddFunc: string;
 }
 export interface ShaderLightGadgetParams<T extends Light> extends ShaderGadgetParams {
     define: string;
@@ -55,10 +57,14 @@ export interface ShadowGadget {
     shadowTextureDefine: string;
     shadowAddFunc: string;
     shadowAddCode: string;
+    instanceShadowAddCode: string;
+    instanceShadowAddFunc: string;
     readonly hasShadow: boolean;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;
+    getInstanceShadowAddCode(): string;
+    getInstanceShadowAddFuncCode(): string;
 }
 export declare class ShaderAmbientLightGadget extends ShaderLightGadget<AmbientLight> {
     constructor(params: ShaderLightGadgetParams<AmbientLight>);
@@ -68,29 +74,35 @@ export declare class ShaderPointLightGadget extends ShaderLightGadget<PointLight
     shadowTextureDefine: string;
     shadowAddFunc: string;
     shadowAddCode: string;
+    instanceShadowAddCode: string;
+    instanceShadowAddFunc: string;
     constructor(params: ShaderLightGadgetParams<PointLight> & ShadowGadgetParams);
-    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
     get hasShadow(): boolean;
     private syncShadowPlaceholder;
-    getCode(): string;
-    getFunctionCode(): string;
+    getCode(instance?: boolean): string;
+    getFunctionCode(instance?: boolean): string;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;
+    getInstanceShadowAddCode(): string;
+    getInstanceShadowAddFuncCode(): string;
 }
 export declare class ShaderDirectionalLightGadget extends ShaderLightGadget<DirectionalLight> implements ShadowGadget {
     shadowPvMatrixDefine: string;
     shadowTextureDefine: string;
     shadowAddFunc: string;
     shadowAddCode: string;
+    instanceShadowAddCode: string;
+    instanceShadowAddFunc: string;
     constructor(params: ShaderLightGadgetParams<DirectionalLight> & ShadowGadgetParams);
-    /** castShadow인 조명이 하나라도 있는지 — false면 셰이더에서 그림자 관련 코드를 전부 뺀다 */
     get hasShadow(): boolean;
     private syncShadowPlaceholder;
-    getCode(): string;
-    getFunctionCode(): string;
+    getCode(instance?: boolean): string;
+    getFunctionCode(instance?: boolean): string;
     getShadowDefinesCode(): string;
     getShadowAddCode(): string;
     getShadowAddFuncCode(): string;
+    getInstanceShadowAddCode(): string;
+    getInstanceShadowAddFuncCode(): string;
 }
 //# sourceMappingURL=shader_light.d.ts.map

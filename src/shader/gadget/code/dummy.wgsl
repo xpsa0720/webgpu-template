@@ -1,6 +1,6 @@
-struct Matrixs {
-    normalMatrix: mat4x4<f32>,
+struct InstanceMatrix {
     modelMatrix: mat4x4<f32>,
+    normalMatrix: mat4x4<f32>,
 }
 
 struct VertexOut {
@@ -19,17 +19,18 @@ struct Matrial {
     specualrStrength: f32,
     specualrShininess: f32,
     texturFlag: u32,
+    receiveShadow: u32,
 }
+@group(3) @binding(0)
+var<uniform> vpMatrix: mat4x4<f32>;
 @group(3) @binding(1)
 var<uniform> cameraPos: vec4f;
 @group(3) @binding(13)
 var<uniform> lightCounts: vec4<u32>;
-@group(3) @binding(0)
-var<uniform> matrix: Matrixs;
-@group(3) @binding(2)
-var<uniform> matrial: Matrial;
-@group(3) @binding(3)
-var<uniform> vpMatrix: mat4x4<f32>;
+@group(3) @binding(30)
+var<storage, read> instanceMatrix: array<InstanceMatrix>;
+@group(3) @binding(31)
+var<storage, read> instanceMatrial: array<Matrial>;
 @group(3) @binding(4)
 var tex: texture_2d<f32>;
 @group(3) @binding(5)
@@ -43,15 +44,14 @@ fn vs(
     @builtin(instance_index) instance_index: u32,
 ) -> VertexOut {
     var out: VertexOut;
-    var mvp = vpMatrix * matrix.modelMatrix;
-    var normalizeNormal = matrix.normalMatrix;
-    var color = matrial.baseColor;
-    var world_position = matrix.modelMatrix;
+    var model = instanceMatrix[instance_index].modelMatrix;
+    var normalizeNormal = instanceMatrix[instance_index].normalMatrix;
+    var color = instanceMatrial[instance_index].baseColor;
 
-    out.position = mvp * vec4f(pos, 1);
+    out.position = vpMatrix * model * vec4f(pos, 1);
     out.normal = normalize(normalizeNormal * vec4f(normal, 0));
     out.color = color;
-    out.world_position = world_position * vec4f(pos, 1);
+    out.world_position = model * vec4f(pos, 1);
     out.instance_index = instance_index;
     out.uv = uv;
 
@@ -93,27 +93,29 @@ fn DirectionalLight_(
     lightColor: vec4f,
     lightIndex: u32,
     worldPos: vec4f,
-    castShadow:bool
+    castShadow: bool,
+    reciveShadow: bool,
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);
 
     var visibilty = 1f;
 
-    if (castShadow) {
-        let pvMatrix = directionalLightPVMatrix[lightIndex];
-        let lightClip = pvMatrix * worldPos;
+    let pvMatrix = directionalLightPVMatrix[lightIndex];
+    let lightClip = pvMatrix * worldPos;
 
-        let ndc = lightClip.xyz / lightClip.w;
+    let ndc = lightClip.xyz / lightClip.w;
 
-        let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
-        visibilty = textureSampleCompare(
-                directionalShadowTexture,
-                shadowSampler,
-                shadowUV,
-                lightIndex,
-                ndc.z,
-            );
+    let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
+    visibilty = textureSampleCompare(
+            directionalShadowTexture,
+            shadowSampler,
+            shadowUV,
+            lightIndex,
+            ndc.z,
+        );
+    if reciveShadow || castShadow {
+        visibilty = 1;
     }
 
     return baseColor * diffuse * lightColor * intensity * visibilty;
@@ -138,18 +140,18 @@ fn Speculer(
 @fragment
 fn fs(out: VertexOut) -> @location(0) vec4f {
     var baseColor = out.color;
-    if matrial.texturFlag == 1 {
-        var texColor = textureSample(tex, texSampler, out.uv);
+    var texColor = textureSample(tex, texSampler, out.uv);
+    if instanceMatrial[out.instance_index].texturFlag == 1 {
         baseColor *= texColor;
     }
 
-    var x = cameraPos.x;
     var finalColor = vec4f(0, 0, 0, 0);
+    var x = cameraPos.x;
     var normal = normalize(out.normal);
 
-    var specualrShininess = matrial.specualrShininess;
-    var specualrStrength = matrial.specualrStrength;
-    var specualrColor = matrial.specualrColor.xyz;
+    var specualrShininess = instanceMatrial[out.instance_index].specualrShininess;
+    var specualrStrength = instanceMatrial[out.instance_index].specualrStrength;
+    var specualrColor = instanceMatrial[out.instance_index].specualrColor.xyz;
 
     for(var i = 0u; i < lightCounts.y; i++) {
         finalColor += AmbientLight_(baseColor, ambientLight[i].intensity);
@@ -158,10 +160,15 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
     var noneDirectionalShadowCount = 0u;
     for(var i = 0u; i < lightCounts.z; i++) {
         var castShadow = true;
+        var reciveShadow = true;
 
         if directionalLight[i].castShadow == 0 {
             noneDirectionalShadowCount += 1;
-            castShadow=false;
+            castShadow = false;
+        }
+        if instanceMatrial[out.instance_index].receiveShadow == 0 {
+            castShadow = false;
+            reciveShadow = false;
         }
 
         finalColor += DirectionalLight_(
@@ -172,10 +179,11 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
                 directionalLight[i].color,
                 i - noneDirectionalShadowCount,
                 out.world_position,
-                castShadow
+                castShadow,
+                reciveShadow,
             );
     }
 
-    finalColor.a = baseColor.a;
+    finalColor.a = out.color.a;
     return finalColor;
 }

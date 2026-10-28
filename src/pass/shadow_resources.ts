@@ -36,13 +36,15 @@ export class ShadowResources {
    */
   getShadowLights(
     shaderLights: Record<number, ShaderLightGadget<any>>,
-    type: ShadowLightType,
+    type?: ShadowLightType,
   ): LightShadow[] {
     const result: LightShadow[] = [];
     for (const gadget of Object.values(shaderLights)) {
       if (!isShadowGadget(gadget)) continue;
-      const isDir = gadget.shadowTextureDefine.includes("directional");
-      if ((type === "directional") !== isDir) continue;
+      if (type) {
+        const isDir = gadget.shadowTextureDefine.includes("directional");
+        if ((type === "directional") !== isDir) continue;
+      }
       for (const light of gadget.lights) {
         if (isLightShadow(light) && light.castShadow) result.push(light);
       }
