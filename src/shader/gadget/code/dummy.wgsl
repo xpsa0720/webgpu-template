@@ -20,6 +20,7 @@ struct Matrial {
     specualrShininess: f32,
     texturFlag: u32,
     receiveShadow: u32,
+    shadowKernelLength: f32,
 }
 @group(3) @binding(0)
 var<uniform> vpMatrix: mat4x4<f32>;
@@ -95,25 +96,37 @@ fn DirectionalLight_(
     worldPos: vec4f,
     castShadow: bool,
     reciveShadow: bool,
+    shadowKernelLength: f32,
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);
 
     var visibilty = 1f;
 
+    visibilty = 0f;
+    let dimensions = vec2f(textureDimensions(directionalShadowTexture));
+    let texelSize = vec2f(1.0) / dimensions;
     let pvMatrix = directionalLightPVMatrix[lightIndex];
     let lightClip = pvMatrix * worldPos;
-
+    let range = i32(floor(shadowKernelLength / 2));
     let ndc = lightClip.xyz / lightClip.w;
 
     let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
-    visibilty = textureSampleCompare(
-            directionalShadowTexture,
-            shadowSampler,
-            shadowUV,
-            lightIndex,
-            ndc.z,
-        );
+
+    for(var y = -range; y <= range; y++) {
+        for(var x = -range; x <= range; x++) {
+            let offset = vec2f(f32(x), f32(y));
+            let sampleUV = shadowUV + offset * texelSize;
+            visibilty += textureSampleCompare(
+                    directionalShadowTexture,
+                    shadowSampler,
+                    sampleUV,
+                    lightIndex,
+                    ndc.z,
+                );
+        }
+    }
+    visibilty /= shadowKernelLength * shadowKernelLength;
     if reciveShadow || castShadow {
         visibilty = 1;
     }
@@ -152,6 +165,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
     var specualrShininess = instanceMatrial[out.instance_index].specualrShininess;
     var specualrStrength = instanceMatrial[out.instance_index].specualrStrength;
     var specualrColor = instanceMatrial[out.instance_index].specualrColor.xyz;
+    var shadowKernelLength = instanceMatrial[out.instance_index].shadowKernelLength;
 
     for(var i = 0u; i < lightCounts.y; i++) {
         finalColor += AmbientLight_(baseColor, ambientLight[i].intensity);
@@ -181,6 +195,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
                 out.world_position,
                 castShadow,
                 reciveShadow,
+                shadowKernelLength,
             );
     }
 

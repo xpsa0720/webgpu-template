@@ -40,6 +40,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
   var specualrShininess= instanceMatrial[out.instance_index].specualrShininess;
   var specualrStrength= instanceMatrial[out.instance_index].specualrStrength;
   var specualrColor= instanceMatrial[out.instance_index].specualrColor.xyz;
+  var shadowKernelLength = 3.0;
 
   @LIGHT_CODES
 

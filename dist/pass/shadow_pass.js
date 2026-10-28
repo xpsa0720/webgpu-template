@@ -75,6 +75,8 @@ export class ShadowPass extends Pass {
         this.settingPipeline();
     }
     settingPipeline() {
+        const depthBias = 4;
+        const depthBiasSlopeScale = 4.0;
         const shader_pipeline = this.device.createRenderPipeline({
             layout: "auto",
             vertex: {
@@ -98,8 +100,8 @@ export class ShadowPass extends Pass {
                 format: "depth32float",
                 depthWriteEnabled: true,
                 depthCompare: "less-equal",
-                depthBias: 2,
-                depthBiasSlopeScale: 2.0,
+                depthBias: depthBias,
+                depthBiasSlopeScale: depthBiasSlopeScale,
             },
             primitive: {
                 topology: "triangle-list",
@@ -131,8 +133,8 @@ export class ShadowPass extends Pass {
                 format: "depth32float",
                 depthWriteEnabled: true,
                 depthCompare: "less-equal",
-                depthBias: 2,
-                depthBiasSlopeScale: 2.0,
+                depthBias: depthBias,
+                depthBiasSlopeScale: depthBiasSlopeScale,
             },
         });
         this.shadowInstanceShaderPipeline = shader_instance_pipeline;

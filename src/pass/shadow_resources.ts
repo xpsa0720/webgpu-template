@@ -52,7 +52,7 @@ export class ShadowResources {
     return result;
   }
 
-  /**
+  /** 
    * castShadow light 수에 맞춰 텍스처 배열 / PV 버퍼를 (재)생성한다.
    * @returns 리소스를 다시 만들었으면 true — 기존 버퍼를 destroy했으므로 호출 측은
    *          bind group entry를 갱신하고 캐시된 bind group을 비워야 한다.

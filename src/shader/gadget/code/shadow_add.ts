@@ -23,37 +23,61 @@ if(instanceMatrial[out.instance_index].receiveShadow == 0){
 `;
 
 export const SHADOW_DIRECTIONAL_ADD_FUNC = `
-if (castShadow) {
-  let pvMatrix = directionalLightPVMatrix[lightIndex];
-  let lightClip = pvMatrix * worldPos;
+if castShadow {
+    visibilty = 0f;
+    let dimensions = vec2f(textureDimensions(directionalShadowTexture));
+    let texelSize = vec2f(1.0) / dimensions;
+    let pvMatrix = directionalLightPVMatrix[lightIndex];
+    let lightClip = pvMatrix * worldPos;
+    let range = i32(floor(shadowKernelLength/2));
+    let ndc = lightClip.xyz / lightClip.w;
 
-  let ndc = lightClip.xyz / lightClip.w;
+    let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
 
-  let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
-  visibilty = textureSampleCompare(
-          directionalShadowTexture,
-          shadowSampler,
-          shadowUV,
-          lightIndex,
-          ndc.z,
-      );
+    
+    for(var y = -range; y <= range; y++) {
+        for(var x = -range; x <= range; x++) {
+            let offset = vec2f(f32(x), f32(y));
+            let sampleUV = shadowUV + offset * texelSize;
+            visibilty += textureSampleCompare(
+                    directionalShadowTexture,
+                    shadowSampler,
+                    sampleUV,
+                    lightIndex,
+                    ndc.z,
+                );
+        }
+    }
+
+    visibilty /= shadowKernelLength*shadowKernelLength;
 }`;
 
 export const SHADOW_INSTANCE_DIRECTIONAL_ADD_FUNC = `
+    visibilty = 0f;
+    let dimensions = vec2f(textureDimensions(directionalShadowTexture));
+    let texelSize = vec2f(1.0) / dimensions;
+    let pvMatrix = directionalLightPVMatrix[lightIndex];
+    let lightClip = pvMatrix * worldPos;
+    let range = i32(floor(shadowKernelLength/2));
+    let ndc = lightClip.xyz / lightClip.w;
 
-let pvMatrix = directionalLightPVMatrix[lightIndex];
-let lightClip = pvMatrix * worldPos;
+    let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
 
-let ndc = lightClip.xyz / lightClip.w;
-
-let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
-visibilty = textureSampleCompare(
-        directionalShadowTexture,
-        shadowSampler,
-        shadowUV,
-        lightIndex,
-        ndc.z,
-    );
+    
+    for(var y = -range; y <= range; y++) {
+        for(var x = -range; x <= range; x++) {
+            let offset = vec2f(f32(x), f32(y));
+            let sampleUV = shadowUV + offset * texelSize;
+            visibilty += textureSampleCompare(
+                    directionalShadowTexture,
+                    shadowSampler,
+                    sampleUV,
+                    lightIndex,
+                    ndc.z,
+                );
+        }
+    }
+    visibilty /= shadowKernelLength*shadowKernelLength;
 if(reciveShadow || castShadow){
   visibilty = 1;
 }  

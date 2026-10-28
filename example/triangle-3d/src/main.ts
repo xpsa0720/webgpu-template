@@ -94,8 +94,8 @@ class App3D {
     });
 
     render3DPass.meshs.push(floor);
-    // render3DPass.meshs.push(cube);
-    // render3DPass.meshs.push(sphere);
+    render3DPass.meshs.push(cube);
+    render3DPass.meshs.push(sphere);
 
     // === OBJ 로더 테스트: public/test_cube.obj 로드 ===
     try {
@@ -178,7 +178,8 @@ class App3D {
           radius: 0.8,
           matrial: new Matrial({
             color: new Vector3(1, 0.8, 0.2),
-            castShadow: true,
+            // castShadow: true,
+            
           }),
         }),
       ],
@@ -236,14 +237,14 @@ class App3D {
     const updateTestNodes = () => {
       const t = (performance.now() - startTime) / 1000;
 
-      sun.rotate.y = t * 0.5; // 지구 공전
+      // sun.rotate.y = t * 0.5; // 지구 공전
       earth.rotate.y = t * 2; // 달 공전
-      sun.updateWorld(); // 루트에서 한 번 → 지구, 달까지 갱신
+      // sun.updateWorld(); // 루트에서 한 번 → 지구, 달까지 갱신
 
-      box.location.y = Math.sin(t * 2);
-      box.rotate.x = t;
-      box.rotate.y = t * 0.7;
-      box.scale = new Vector3(1 + 0.5 * Math.sin(t * 3), 1, 1);
+      // box.location.y = Math.sin(t * 2);
+      // box.rotate.x = t;
+      // box.rotate.y = t * 0.7;
+      // box.scale = new Vector3(1 + 0.5 * Math.sin(t * 3), 1, 1);
       box.updateWorld();
     };
 

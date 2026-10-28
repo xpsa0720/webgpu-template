@@ -29,6 +29,7 @@ struct Matrial {
   specualrShininess: f32,
   texturFlag: u32,
   receiveShadow: u32,
+  shadowKernelLength: f32,
 }`;
 export const SHADER_MATRIX_UNIFORM = `@group(3) @binding(0) var<uniform> matrix:Matrixs;`;
 export const SHADER_CAMERA_POSITION_UNIFORM = `@group(3) @binding(1) var<uniform> cameraPos:vec4f;`;
@@ -92,7 +93,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
   var specualrShininess= matrial.specualrShininess;
   var specualrStrength= matrial.specualrStrength;
   var specualrColor= matrial.specualrColor.xyz;
-
+  var shadowKernelLength = matrial.shadowKernelLength;
 
   @LIGHT_CODES
 
@@ -207,7 +208,8 @@ export const DIRECTIONAL_LIGHT = {
               i - noneDirectionalShadowCount,
               out.world_position,
               castShadow,
-              reciveShadow
+              reciveShadow,
+              shadowKernelLength
           );
   }
   `,
@@ -222,6 +224,7 @@ fn DirectionalLight_(
     worldPos: vec4f,
     castShadow:bool,
     reciveShadow:bool,
+    shadowKernelLength:f32,
 ) -> vec4f {
     let l = normalize(-directional);
     let diffuse = max(dot(normal, l), 0);

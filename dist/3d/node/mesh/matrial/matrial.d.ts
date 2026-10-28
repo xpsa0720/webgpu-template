@@ -9,6 +9,7 @@ export interface MatrialParams {
     imageBitmap?: ImageBitmap;
     castShadow?: boolean;
     receiveShadow?: boolean;
+    shadowKernelLength?: number;
 }
 export declare class Matrial {
     private _color;
@@ -20,7 +21,8 @@ export declare class Matrial {
     private _cachedData;
     castShadow: boolean;
     receiveShadow: boolean;
-    constructor({ color, opacity, specular, device, imageBitmap, castShadow, receiveShadow }: MatrialParams);
+    shadowKernelLength: number;
+    constructor({ color, opacity, specular, device, imageBitmap, castShadow, receiveShadow, shadowKernelLength }: MatrialParams);
     get color(): Vector3;
     set color(v: Vector3);
     get opacity(): number;

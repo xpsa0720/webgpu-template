@@ -24,12 +24,14 @@ export class Matrial {
     _cachedData = null;
     castShadow;
     receiveShadow;
-    constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap, castShadow, receiveShadow }) {
+    shadowKernelLength;
+    constructor({ color, opacity = 1, specular = new Specular({}), device, imageBitmap, castShadow, receiveShadow, shadowKernelLength }) {
         this._color = color;
         this._opacity = opacity;
         this._specualr = specular;
         this.castShadow = castShadow ?? false;
         this.receiveShadow = receiveShadow ?? false;
+        this.shadowKernelLength = shadowKernelLength ?? 3;
         if (device) {
             this.texture = { texture: this.createTexture(device, imageBitmap) };
             this.textureFlag = imageBitmap ? 1 : 0;
@@ -66,6 +68,7 @@ export class Matrial {
             specualrStrength: this._specualr.strength,
             texturFlag: this.textureFlag,
             receiveShadow: this.receiveShadow ? 1 : 0,
+            shadowKernelLength: this.shadowKernelLength,
         });
         this.dirty = false;
         return this._cachedData;
