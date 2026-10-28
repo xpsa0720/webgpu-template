@@ -231,7 +231,7 @@ export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate
   var noneDirectionalShadowCount = 0u;
   for(var i = 0u; i < lightCounts.z; i++) {
       var castShadow = true;
-      var reciveShadow = true;
+      var receiveShadow = true;
         
       @DIRECTIONAL_LIGHT_COMPARE_CODE
 
@@ -244,7 +244,7 @@ export const DIRECTIONAL_LIGHT: ShaderLightGadgetTemplate & ShaderShadowTemplate
               i - noneDirectionalShadowCount,
               out.world_position,
               castShadow,
-              reciveShadow,
+              receiveShadow,
               shadowKernelLength
           );
   }
@@ -259,7 +259,7 @@ fn DirectionalLight_(
     lightIndex: u32,
     worldPos: vec4f,
     castShadow:bool,
-    reciveShadow:bool,
+    receiveShadow:bool,
     shadowKernelLength:f32,
 ) -> vec4f {
     let l = normalize(-directional);

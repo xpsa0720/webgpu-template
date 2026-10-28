@@ -4,11 +4,11 @@ export const SHADOW_DIRECTIONAL_COMPARE = `
 if (directionalLight[i].castShadow == 0) {
   noneDirectionalShadowCount += 1;
   castShadow = false;
-    }
+}
 if(matrial.receiveShadow == 0){
   castShadow = false;
-  reciveShadow = false;
-}  
+  receiveShadow = false;
+}
 `;
 
 export const SHADOW_INSTANCE_DIRECTIONAL_COMPARE = `
@@ -18,8 +18,8 @@ if (directionalLight[i].castShadow == 0) {
 }
 if(instanceMatrial[out.instance_index].receiveShadow == 0){
   castShadow = false;
-  reciveShadow = false;
-}  
+  receiveShadow = false;
+}
 `;
 
 export const SHADOW_DIRECTIONAL_ADD_FUNC = `
@@ -34,7 +34,6 @@ if castShadow {
 
     let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
 
-    
     for(var y = -range; y <= range; y++) {
         for(var x = -range; x <= range; x++) {
             let offset = vec2f(f32(x), f32(y));
@@ -63,7 +62,6 @@ export const SHADOW_INSTANCE_DIRECTIONAL_ADD_FUNC = `
 
     let shadowUV = vec2f((ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5);
 
-    
     for(var y = -range; y <= range; y++) {
         for(var x = -range; x <= range; x++) {
             let offset = vec2f(f32(x), f32(y));
@@ -78,9 +76,9 @@ export const SHADOW_INSTANCE_DIRECTIONAL_ADD_FUNC = `
         }
     }
     visibilty /= shadowKernelLength*shadowKernelLength;
-if(reciveShadow || castShadow){
+if(!receiveShadow || !castShadow){
   visibilty = 1;
-}  
+}
 `;
 
 // ── Point Light Shadow ──
@@ -119,7 +117,6 @@ if (castShadow) {
 }`;
 
 export const SHADOW_INSTANCE_POINT_ADD_FUNC = `
-
 let pvMatrix = pointLightPVMatrix[lightIndex];
 let lightClip = pvMatrix * worldPos;
 
@@ -133,7 +130,7 @@ visibilty = textureSampleCompare(
         lightIndex,
         ndc.z,
     );
-if(reciveShadow || castShadow){
+if(!receiveShadow || !castShadow){
   visibilty = 1;
 }
 `;

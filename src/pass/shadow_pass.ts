@@ -266,62 +266,6 @@ export class ShadowPass extends Pass {
         layerIdx++;
       }
     }
-
-    // point shadow 렌더링
-    // if (shadowRes.pointTexture && shadowRes.pointCount > 0) {
-    //   const pointLights = shadowRes.getShadowLights(
-    //     this.render3DPass.shaderLights,
-    //     "point",
-    //   );
-    //   let layerIdx = 0;
-    //   for (const light of pointLights) {
-    //     encoder.copyBufferToBuffer(
-    //       shadowRes.pointPvMatrixBuffer!,
-    //       layerIdx * 64,
-    //       this.lightVpBuffer.buffer,
-    //       0,
-    //       64,
-    //     );
-
-    //     const layerView = shadowRes.pointTexture.createView({
-    //       dimension: "2d",
-    //       baseArrayLayer: layerIdx,
-    //       arrayLayerCount: 1,
-    //     });
-
-    //     const renderPassDescriptor: GPURenderPassDescriptor = {
-    //       colorAttachments: [],
-    //       depthStencilAttachment: {
-    //         view: layerView,
-    //         depthClearValue: 1.0,
-    //         depthLoadOp: "clear",
-    //         depthStoreOp: "store",
-    //       },
-    //     };
-
-    //     const pass = encoder.beginRenderPass(renderPassDescriptor);
-    //     pass.setPipeline(this.shadowShaderPipeline);
-
-    //     this.render3DPass.meshs.forEach((mesh) => {
-    //       const bindGroup = this.device.createBindGroup({
-    //         layout: this.shadowShaderPipeline.getBindGroupLayout(0),
-    //         entries: [
-    //           { binding: 0, resource: { buffer: mesh.matrixBuffer.buffer } },
-    //           { binding: 1, resource: { buffer: this.lightVpBuffer.buffer } },
-    //         ],
-    //       });
-
-    //       pass.setBindGroup(0, bindGroup);
-    //       pass.setVertexBuffer(0, mesh.geometry.vertexBuffer.buffer);
-    //       pass.setIndexBuffer(mesh.geometry.indexBuffer.buffer, "uint32");
-    //       pass.drawIndexed(mesh.geometry.indexs.length);
-    //     });
-
-    //     this.nodeRecursionRender(this.render3DPass.nodes, light.pvMatrix, pass);
-    //     pass.end();
-    //     layerIdx++;
-    //   }
-    // }
   }
 
   private nodeRecursionRender(

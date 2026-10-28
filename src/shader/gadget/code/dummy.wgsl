@@ -95,7 +95,7 @@ fn DirectionalLight_(
     lightIndex: u32,
     worldPos: vec4f,
     castShadow: bool,
-    reciveShadow: bool,
+    receiveShadow: bool,
     shadowKernelLength: f32,
 ) -> vec4f {
     let l = normalize(-directional);
@@ -127,7 +127,7 @@ fn DirectionalLight_(
         }
     }
     visibilty /= shadowKernelLength * shadowKernelLength;
-    if reciveShadow || castShadow {
+    if !receiveShadow || !castShadow {
         visibilty = 1;
     }
 
@@ -174,7 +174,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
     var noneDirectionalShadowCount = 0u;
     for(var i = 0u; i < lightCounts.z; i++) {
         var castShadow = true;
-        var reciveShadow = true;
+        var receiveShadow = true;
 
         if directionalLight[i].castShadow == 0 {
             noneDirectionalShadowCount += 1;
@@ -182,7 +182,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
         }
         if instanceMatrial[out.instance_index].receiveShadow == 0 {
             castShadow = false;
-            reciveShadow = false;
+            receiveShadow = false;
         }
 
         finalColor += DirectionalLight_(
@@ -194,7 +194,7 @@ fn fs(out: VertexOut) -> @location(0) vec4f {
                 i - noneDirectionalShadowCount,
                 out.world_position,
                 castShadow,
-                reciveShadow,
+                receiveShadow,
                 shadowKernelLength,
             );
     }
