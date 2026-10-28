@@ -38,6 +38,7 @@ export declare class Render3DPass extends RenderPass {
     private depthTexture;
     private depthWidth;
     private depthHeight;
+    private msaaTexture;
     private defaultSampler;
     private dummyTextureView;
     private lightCountsBuffer;

@@ -237,9 +237,9 @@ class App3D {
     const updateTestNodes = () => {
       const t = (performance.now() - startTime) / 1000;
 
-      // sun.rotate.y = t * 0.5; // 지구 공전
+      sun.rotate.y = t * 0.5; // 지구 공전
       earth.rotate.y = t * 2; // 달 공전
-      // sun.updateWorld(); // 루트에서 한 번 → 지구, 달까지 갱신
+      sun.updateWorld(); // 루트에서 한 번 → 지구, 달까지 갱신
 
       // box.location.y = Math.sin(t * 2);
       // box.rotate.x = t;

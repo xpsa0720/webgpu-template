@@ -11,6 +11,7 @@ import { roundUp } from "../util/vertex_layout";
 import { RenderPass } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
 import { ShadowResources } from "./shadow_resources";
+const MSAA_SAMPLE_COUNT = 1;
 export class Render3DPass extends RenderPass {
     meshs;
     nodes;
@@ -29,6 +30,7 @@ export class Render3DPass extends RenderPass {
     depthTexture = null;
     depthWidth = 0;
     depthHeight = 0;
+    msaaTexture = null;
     defaultSampler;
     dummyTextureView;
     // 실제 조명 개수 uniform (x: point, y: ambient, z: directional, w: 미사용)
@@ -219,6 +221,7 @@ export class Render3DPass extends RenderPass {
                 frontFace: "ccw",
                 cullMode: "back",
             },
+            multisample: { count: MSAA_SAMPLE_COUNT },
         });
         this.meshRenderShaderPipeline = mesh_pipeline;
         const instance_pipeline = this.device.createRenderPipeline({
@@ -248,6 +251,7 @@ export class Render3DPass extends RenderPass {
                 frontFace: "ccw",
                 cullMode: "back",
             },
+            multisample: { count: MSAA_SAMPLE_COUNT },
         });
         this.instnaceMeshRenderShaderPipeline = instance_pipeline;
         return mesh_pipeline;
@@ -356,11 +360,22 @@ export class Render3DPass extends RenderPass {
             this.depthWidth !== width ||
             this.depthHeight !== height) {
             this.depthTexture?.destroy();
+            this.msaaTexture?.destroy();
+            this.msaaTexture = null;
             this.depthTexture = this.device.createTexture({
                 size: [width, height],
                 format: "depth24plus",
                 usage: GPUTextureUsage.RENDER_ATTACHMENT,
+                sampleCount: MSAA_SAMPLE_COUNT,
             });
+            if (MSAA_SAMPLE_COUNT > 1) {
+                this.msaaTexture = this.device.createTexture({
+                    size: [width, height],
+                    format: this.format,
+                    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+                    sampleCount: MSAA_SAMPLE_COUNT,
+                });
+            }
             this.depthWidth = width;
             this.depthHeight = height;
         }
@@ -370,6 +385,11 @@ export class Render3DPass extends RenderPass {
             depthLoadOp: "clear",
             depthStoreOp: "store",
         };
+        if (this.msaaTexture) {
+            const colorAtt = renderPassDescriptor.colorAttachments;
+            colorAtt[0].resolveTarget = colorAtt[0].view;
+            colorAtt[0].view = this.msaaTexture.createView();
+        }
         this.camera.update(this.device, aspect);
         const vpMatrix = this.camera.vpMatrix;
         const presence = this.getShadowPresence();

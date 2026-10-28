@@ -32,6 +32,8 @@ import { RenderPass, type RenderPassArg } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
 import { ShadowResources } from "./shadow_resources";
 
+const MSAA_SAMPLE_COUNT = 1;
+
 interface Render3DPassArg extends RenderPassArg {
   target: GPUTexture | HTMLCanvasElement;
   meshs?: Mesh[];
@@ -69,6 +71,7 @@ export class Render3DPass extends RenderPass {
   private depthTexture: GPUTexture | null = null;
   private depthWidth = 0;
   private depthHeight = 0;
+  private msaaTexture: GPUTexture | null = null;
   private defaultSampler: GPUSampler;
   private dummyTextureView: GPUTextureView;
   // 실제 조명 개수 uniform (x: point, y: ambient, z: directional, w: 미사용)
@@ -277,6 +280,7 @@ export class Render3DPass extends RenderPass {
         frontFace: "ccw",
         cullMode: "back",
       },
+      multisample: { count: MSAA_SAMPLE_COUNT },
     });
     this.meshRenderShaderPipeline = mesh_pipeline;
 
@@ -307,6 +311,7 @@ export class Render3DPass extends RenderPass {
         frontFace: "ccw",
         cullMode: "back",
       },
+      multisample: { count: MSAA_SAMPLE_COUNT },
     });
     this.instnaceMeshRenderShaderPipeline = instance_pipeline;
     return mesh_pipeline;
@@ -432,11 +437,22 @@ export class Render3DPass extends RenderPass {
       this.depthHeight !== height
     ) {
       this.depthTexture?.destroy();
+      this.msaaTexture?.destroy();
+      this.msaaTexture = null;
       this.depthTexture = this.device.createTexture({
         size: [width, height],
         format: "depth24plus",
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        sampleCount: MSAA_SAMPLE_COUNT,
       });
+      if (MSAA_SAMPLE_COUNT > 1) {
+        this.msaaTexture = this.device.createTexture({
+          size: [width, height],
+          format: this.format,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          sampleCount: MSAA_SAMPLE_COUNT,
+        });
+      }
       this.depthWidth = width;
       this.depthHeight = height;
     }
@@ -447,6 +463,12 @@ export class Render3DPass extends RenderPass {
       depthLoadOp: "clear",
       depthStoreOp: "store",
     };
+
+    if (this.msaaTexture) {
+      const colorAtt = renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[];
+      colorAtt[0].resolveTarget = colorAtt[0].view;
+      colorAtt[0].view = this.msaaTexture.createView();
+    }
 
     this.camera.update(this.device, aspect);
     const vpMatrix = this.camera.vpMatrix!;
