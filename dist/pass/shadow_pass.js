@@ -52,7 +52,6 @@ export class ShadowPass extends Pass {
     shadowInstanceShaderPipeline;
     shadowShaderModule;
     shadowInstanceShaderModule;
-    blendState;
     lightVpBuffer;
     debugMode;
     constructor(arg) {

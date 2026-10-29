@@ -7,9 +7,8 @@ import type { Light } from "../3d/light/light";
 import type { Camera } from "../types/camera";
 import { RenderPass, type RenderPassArg } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
-import { LightResources } from "./light_resources";
+import { LightResources } from "./resources/light_resources";
 interface Render3DPassArg extends RenderPassArg {
-    target: GPUTexture | HTMLCanvasElement;
     meshs?: Mesh[];
     nodes?: Node[];
     instanceMesh?: InstanceMesh[];
@@ -40,8 +39,8 @@ export declare class Render3DPass extends RenderPass {
     constructor(arg: Render3DPassArg);
     createShaderModule(): void;
     settingPipeline(): GPURenderPipeline;
-    private getTargetSize;
-    private getAspect;
+    getTargetSize(): [number, number];
+    getAspect(): number;
     compile(): void;
     private invalidateAllBindGroups;
     private invalidateNodeBindGroups;

@@ -15,7 +15,6 @@ export declare class ShadowPass extends Pass {
     shadowInstanceShaderPipeline: GPURenderPipeline;
     shadowShaderModule: GPUShaderModule;
     shadowInstanceShaderModule: GPUShaderModule;
-    blendState: GPUBlendState | undefined;
     lightVpBuffer: WebGPUBuffer;
     protected debugMode: boolean;
     constructor(arg: ShadowPassArg);

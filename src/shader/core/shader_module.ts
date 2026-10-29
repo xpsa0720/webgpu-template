@@ -26,23 +26,6 @@ export abstract class ShaderGadgetModule {
   }: ShaderGadgetModuleParams) {
     this.viewShaderCode = viewShaderCode;
     this.module = this.createShaderModule(device)
-    // this.bindGroupEntry = this.updateBindGroupEntry()
-    // {
-    //   structs: [
-    //     new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
-    //     new ShaderStructGadget({ struct: SHADER_VERTEXOUT_STRUCT }),
-    //     new ShaderStructGadget({ struct: SHADER_MATRIAL_STRUCT }),
-    //   ],
-    //   bindings: [
-    //     new ShaderbindingGadget({
-    //       define: SHADER_CAMERA_POSITION_UNIFORM,
-    //       type: "uniform",
-    //     }),
-    //     ...bindings,
-    //   ],
-    //   vertex: new ShaderVertexGadget({ device, code: vertexCode }),
-    //   fragment: new ShaderFragmentGadget({ device, code: fragmentCode }),
-    // };
   }
 
   getSourceCode(lightArg?: {

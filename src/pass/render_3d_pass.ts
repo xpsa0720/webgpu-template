@@ -5,9 +5,7 @@ import type { Mesh } from "../3d/node/mesh/mesh";
 import type { Node } from "../3d/node/node";
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
-import {
-  SHADER_SHADOW_SAMPLER,
-} from "../shader/gadget/code/shader_code";
+import { SHADER_SHADOW_SAMPLER } from "../shader/gadget/code/shader_code";
 import type { Light } from "../3d/light/light";
 import type {
   ShaderLightGadget,
@@ -20,11 +18,11 @@ import { RenderPass, type RenderPassArg } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
 import { LightResources } from "./resources/light_resources";
 import { DummyResources } from "./resources/dummy_resources";
+import { PostProcessingPass } from "./postprocessing_pass";
 
-const MSAA_SAMPLE_COUNT = 1;
+const MSAA_SAMPLE_COUNT = 4;
 
 interface Render3DPassArg extends RenderPassArg {
-  target: GPUTexture | HTMLCanvasElement;
   meshs?: Mesh[];
   nodes?: Node[];
   instanceMesh?: InstanceMesh[];
@@ -78,7 +76,8 @@ export class Render3DPass extends RenderPass {
     });
     this.createShaderModule();
     this.settingPipeline();
-    this.lightResources.currentShadowPresence = this.lightResources.getShadowPresence();
+    this.lightResources.currentShadowPresence =
+      this.lightResources.getShadowPresence();
     this.camera = arg.camera;
     this.camera.cameraBuffer = {
       buffer: this.device.createBuffer({
@@ -175,7 +174,7 @@ export class Render3DPass extends RenderPass {
         ],
       },
       depthStencil: {
-        format: "depth24plus",
+        format: "depth32float",
         depthWriteEnabled: true,
         depthCompare: "less",
       },
@@ -206,7 +205,7 @@ export class Render3DPass extends RenderPass {
         ],
       },
       depthStencil: {
-        format: "depth24plus",
+        format: "depth32float",
         depthWriteEnabled: true,
         depthCompare: "less",
       },
@@ -221,18 +220,21 @@ export class Render3DPass extends RenderPass {
     return mesh_pipeline;
   }
 
-  private getTargetSize(): [number, number] {
+  getTargetSize(): [number, number] {
     return [this.target.width, this.target.height];
   }
 
-  private getAspect(): number {
+  getAspect(): number {
     const [w, h] = this.getTargetSize();
     return w / h;
   }
 
   compile() {
-    this.lightResources.currentShadowPresence = this.lightResources.getShadowPresence();
-    this.lightResources.shadowResources.update(this.lightResources.shaderLights);
+    this.lightResources.currentShadowPresence =
+      this.lightResources.getShadowPresence();
+    this.lightResources.shadowResources.update(
+      this.lightResources.shaderLights,
+    );
     this.lightResources.updateBindGroupEntry();
     this.invalidateAllBindGroups();
     this.createShaderModule();
@@ -292,8 +294,8 @@ export class Render3DPass extends RenderPass {
       this.msaaTexture = null;
       this.depthTexture = this.device.createTexture({
         size: [width, height],
-        format: "depth24plus",
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        format: "depth32float",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         sampleCount: MSAA_SAMPLE_COUNT,
       });
       if (MSAA_SAMPLE_COUNT > 1) {
@@ -316,7 +318,8 @@ export class Render3DPass extends RenderPass {
     };
 
     if (this.msaaTexture) {
-      const colorAtt = renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[];
+      const colorAtt =
+        renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[];
       colorAtt[0].resolveTarget = colorAtt[0].view;
       colorAtt[0].view = this.msaaTexture.createView();
     }
@@ -325,13 +328,23 @@ export class Render3DPass extends RenderPass {
     const vpMatrix = this.camera.vpMatrix!;
 
     const presence = this.lightResources.getShadowPresence();
-    if (presence.some((v, i) => v !== this.lightResources.currentShadowPresence[i])) {
+    if (
+      presence.some(
+        (v, i) => v !== this.lightResources.currentShadowPresence[i],
+      )
+    ) {
       this.compile();
-    } else if (this.lightResources.shadowResources.update(this.lightResources.shaderLights)) {
+    } else if (
+      this.lightResources.shadowResources.update(
+        this.lightResources.shaderLights,
+      )
+    ) {
       this.lightResources.updateBindGroupEntry();
       this.invalidateAllBindGroups();
     }
-    this.lightResources.shadowResources.writePvMatrices(this.lightResources.shaderLights);
+    this.lightResources.shadowResources.writePvMatrices(
+      this.lightResources.shaderLights,
+    );
     this.lightResources.writeLightCounts();
 
     this.updateMesh();

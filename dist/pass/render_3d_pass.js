@@ -1,13 +1,14 @@
 import { ShaderGadgetInstanceMeshModule } from "../shader/core/shader_instance_mesh_module";
 import { ShaderGadgetMeshModule } from "../shader/core/shader_mesh_module";
-import { SHADER_SHADOW_SAMPLER, } from "../shader/gadget/code/shader_code";
+import { SHADER_SHADOW_SAMPLER } from "../shader/gadget/code/shader_code";
 import { isView } from "../util/math";
 import { createMatrix, createModelMatrix } from "../util/matrix";
 import { RenderPass } from "./render_pass";
 import { ShadowPass } from "./shadow_pass";
-import { LightResources } from "./light_resources";
-import { DummyResources } from "./dummy_resources";
-const MSAA_SAMPLE_COUNT = 1;
+import { LightResources } from "./resources/light_resources";
+import { DummyResources } from "./resources/dummy_resources";
+import { PostProcessingPass } from "./postprocessing_pass";
+const MSAA_SAMPLE_COUNT = 4;
 export class Render3DPass extends RenderPass {
     meshs;
     nodes;
@@ -41,7 +42,8 @@ export class Render3DPass extends RenderPass {
         });
         this.createShaderModule();
         this.settingPipeline();
-        this.lightResources.currentShadowPresence = this.lightResources.getShadowPresence();
+        this.lightResources.currentShadowPresence =
+            this.lightResources.getShadowPresence();
         this.camera = arg.camera;
         this.camera.cameraBuffer = {
             buffer: this.device.createBuffer({
@@ -128,7 +130,7 @@ export class Render3DPass extends RenderPass {
                 ],
             },
             depthStencil: {
-                format: "depth24plus",
+                format: "depth32float",
                 depthWriteEnabled: true,
                 depthCompare: "less",
             },
@@ -158,7 +160,7 @@ export class Render3DPass extends RenderPass {
                 ],
             },
             depthStencil: {
-                format: "depth24plus",
+                format: "depth32float",
                 depthWriteEnabled: true,
                 depthCompare: "less",
             },
@@ -180,7 +182,8 @@ export class Render3DPass extends RenderPass {
         return w / h;
     }
     compile() {
-        this.lightResources.currentShadowPresence = this.lightResources.getShadowPresence();
+        this.lightResources.currentShadowPresence =
+            this.lightResources.getShadowPresence();
         this.lightResources.shadowResources.update(this.lightResources.shaderLights);
         this.lightResources.updateBindGroupEntry();
         this.invalidateAllBindGroups();
@@ -233,8 +236,8 @@ export class Render3DPass extends RenderPass {
             this.msaaTexture = null;
             this.depthTexture = this.device.createTexture({
                 size: [width, height],
-                format: "depth24plus",
-                usage: GPUTextureUsage.RENDER_ATTACHMENT,
+                format: "depth32float",
+                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
                 sampleCount: MSAA_SAMPLE_COUNT,
             });
             if (MSAA_SAMPLE_COUNT > 1) {

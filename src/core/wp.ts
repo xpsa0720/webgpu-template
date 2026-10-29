@@ -9,6 +9,7 @@ import {
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
 import { Render2DPass } from "../pass/render_2d_pass";
+import { PostProcessingPass } from "../pass/postprocessing_pass";
 import type { PassCallback } from "../types/callback";
 import type {
   CreateComputePassArg,
@@ -40,7 +41,7 @@ export class WP<
   context: GPUCanvasContext;
   adapter: GPUAdapter | null;
   device: GPUDevice | null;
-  passes: Array<ComputePass | Render2DPass | Render3DPass>;
+  passes: Array<ComputePass | Render2DPass | Render3DPass | PostProcessingPass>;
   config: Required<WPConfig>;
   timeDebugPass: number;
   timeDebugLabels: string[];
@@ -382,7 +383,7 @@ export class WP<
   }
 
   async run(
-    passes: Array<Render2DPass | Render3DPass | ComputePass>,
+    passes: Array<Render2DPass | Render3DPass | ComputePass | PostProcessingPass>,
     substep: number,
     buffers: B,
     dt: number,

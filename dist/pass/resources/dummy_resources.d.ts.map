@@ -1,0 +1,1 @@
+{"version":3,"file":"dummy_resources.d.ts","sourceRoot":"","sources":["../../../src/pass/resources/dummy_resources.ts"],"names":[],"mappings":"AAAA,qBAAa,cAAc;IACzB,QAAQ,CAAC,OAAO,EAAE,UAAU,CAAC;IAC7B,QAAQ,CAAC,WAAW,EAAE,cAAc,CAAC;gBAEzB,MAAM,EAAE,SAAS;CAmB9B"}

@@ -1,6 +1,7 @@
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
 import { Render2DPass } from "../pass/render_2d_pass";
+import { PostProcessingPass } from "../pass/postprocessing_pass";
 import type { PassCallback } from "../types/callback";
 import type { CreateComputePassArg, CreatePassTimeTag, CreateRender3DPassArg, CreateRenderPassArg } from "../types/pass";
 import type { WebGPUBuffer, WebGPUSampler, WebGPUTexture } from "../types/resource";
@@ -14,7 +15,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
     context: GPUCanvasContext;
     adapter: GPUAdapter | null;
     device: GPUDevice | null;
-    passes: Array<ComputePass | Render2DPass | Render3DPass>;
+    passes: Array<ComputePass | Render2DPass | Render3DPass | PostProcessingPass>;
     config: Required<WPConfig>;
     timeDebugPass: number;
     timeDebugLabels: string[];
@@ -40,7 +41,7 @@ export declare class WP<B extends Record<string, WebGPUBuffer> = Record<string, 
         callBack?: PassCallback<B>;
         substepCallback?: PassCallback<B>;
     }): Promise<void>;
-    run(passes: Array<Render2DPass | Render3DPass | ComputePass>, substep: number, buffers: B, dt: number, substepCallback?: PassCallback<B>): Promise<Record<string, Float32Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike>> | null>;
+    run(passes: Array<Render2DPass | Render3DPass | ComputePass | PostProcessingPass>, substep: number, buffers: B, dt: number, substepCallback?: PassCallback<B>): Promise<Record<string, Float32Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike>> | null>;
 }
 export {};
 //# sourceMappingURL=wp.d.ts.map

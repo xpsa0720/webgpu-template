@@ -4,6 +4,7 @@ import { createTimestampQuery, readTimestampLines, resolveTimestampQuery, } from
 import { ComputePass } from "../pass/compute_pass";
 import { Render3DPass } from "../pass/render_3d_pass";
 import { Render2DPass } from "../pass/render_2d_pass";
+import { PostProcessingPass } from "../pass/postprocessing_pass";
 import { loadImageBitmap } from "../util/load_image_bitmap";
 import { DEFAULT_CONFIG } from "./config";
 export class WP {

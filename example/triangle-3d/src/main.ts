@@ -18,6 +18,7 @@ import {
   loadOBJ,
   loadGLTF,
   Node,
+  PostProcessingPass,
 } from "@xpsa0720/webgpu";
 import { normalize, toRadian } from "@xpsa0720/webgpu/dist/util/math";
 import { createFowardRotateMatrix } from "@xpsa0720/webgpu/dist/util/matrix";
@@ -42,6 +43,23 @@ class App3D {
     window.addEventListener("resize", () => this.resize());
 
     const device = this.wp.device!;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    // 중간 렌더 텍스처 (Render3DPass → 여기에 그림 → PostProcessingPass → 캔버스)
+    let renderTexture = device.createTexture({
+      size: [this.canvas.width, this.canvas.height],
+      format: presentationFormat,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+
+    // depth 텍스처 (포스트프로세싱에서 depth 접근용)
+    let depthTexture = device.createTexture({
+      size: [this.canvas.width, this.canvas.height],
+      format: "r32float",
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
 
     const camera = new Camera(
       new Vector3(0, 5, 10),
@@ -52,12 +70,45 @@ class App3D {
     );
 
     const render3DPass = this.wp.createRender3DPass(0, {
-      target: this.canvas,
+      target: renderTexture,
       camera,
       blend: true,
       debugMode: false,
       debugViewShaderCode: true,
+      format: presentationFormat,
     });
+
+    // PostProcessingPass: 중간 텍스처 → 캔버스 출력
+    const postProcessPass = new PostProcessingPass({
+      device,
+      target: this.canvas,
+      inputTexture: renderTexture,
+      depthTexture: depthTexture,
+    });
+    this.wp.passes[1] = postProcessPass;
+
+    // 리사이즈 시 중간 텍스처 재생성
+    const origResize = this.resize.bind(this);
+    this.resize = () => {
+      origResize();
+      renderTexture.destroy();
+      renderTexture = device.createTexture({
+        size: [this.canvas.width, this.canvas.height],
+        format: presentationFormat,
+        usage:
+          GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      depthTexture.destroy();
+      depthTexture = device.createTexture({
+        size: [this.canvas.width, this.canvas.height],
+        format: "r32float",
+        usage:
+          GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      render3DPass.target = renderTexture;
+      postProcessPass.inputTexture = renderTexture;
+      postProcessPass.depthTexture = depthTexture;
+    };
 
     const cube = new Cube({
       render3DPass,
@@ -153,7 +204,7 @@ class App3D {
     const instanceCubes = new InstanceMesh({
       render3DPass,
       geometry: templateCube.geometry,
-      instanceInfo: Array.from({ length: 10 }, (_, i) => ({
+      instanceInfo: Array.from({ length: 100 }, (_, i) => ({
         location: new Vector3((i - 5) * 2, 0, -3),
         rotate: new Vector3(0, 0, 0),
         scale: new Vector3(0.5, 0.5, 0.5),
@@ -178,7 +229,7 @@ class App3D {
           radius: 0.8,
           matrial: new Matrial({
             color: new Vector3(1, 0.8, 0.2),
-            // castShadow: true,
+            castShadow: true,
             
           }),
         }),
@@ -314,7 +365,7 @@ class App3D {
         shadowOffIdx = 0;
       }
       // castShadow는 조명 uniform(castShadow: u32)에도 들어가므로 GPU 버퍼를 다시 써야 셰이더에 반영됨
-      Object.values(render3DPass.shaderLights)
+      Object.values(render3DPass.lightResources.shaderLights)
         .find((g) => g.lights.includes(dirLight))
         ?.updateLightAll();
       console.log(

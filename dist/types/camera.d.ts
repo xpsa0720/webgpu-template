@@ -24,8 +24,6 @@ export declare class Camera {
     set position(v: Vector3);
     get target(): Vector3;
     set target(v: Vector3);
-    /** target 지점을 바라보도록 rotate(pitch, yaw)를 설정한다. */
-    lookAt(target: Vector3): void;
     get rotate(): Vector3;
     set rotate(v: Vector3);
     get upref(): Vector3;

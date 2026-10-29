@@ -10,6 +10,7 @@ export { vertexLayoutFromWGSL, checkVertexLayout } from "./util/vertex_layout";
 export { printDefault } from "./debug/print";
 // 3D
 export { Render3DPass } from "./pass/render_3d_pass";
+export { PostProcessingPass } from "./pass/postprocessing_pass";
 export { Vector3, Vector4 } from "./3d/math/vector";
 export { Mat3x3, Mat4x4 } from "./3d/math/matrix";
 export { Node } from "./3d/node/node";
