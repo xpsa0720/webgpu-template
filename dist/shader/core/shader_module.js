@@ -9,7 +9,7 @@ export class ShaderGadgetModule {
     constructor({ device, viewShaderCode = false, }) {
         this.viewShaderCode = viewShaderCode;
         this.module = this.createShaderModule(device);
-        // this.bindGroupEntry = this.updateBindGroupEntray()
+        // this.bindGroupEntry = this.updateBindGroupEntry()
         // {
         //   structs: [
         //     new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
@@ -39,7 +39,7 @@ export class ShaderGadgetModule {
         result += this.module.fragment.buildCode(lightArg ?? {
             lightStructsUniforms: "",
             lightCode: "",
-            funtionCode: "",
+            functionCode: "",
             shadowDefinesCode: ""
         });
         if (this.viewShaderCode) {

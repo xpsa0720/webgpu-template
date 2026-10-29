@@ -10,7 +10,7 @@ export declare class ShaderFragmentGadget extends ShaderGadget {
     buildCode(arg: {
         lightStructsUniforms: string;
         lightCode: string;
-        funtionCode: string;
+        functionCode: string;
         shadowDefinesCode: string;
     }): string;
 }

@@ -141,11 +141,11 @@ export class ShadowPass extends Pass {
         return shader_pipeline;
     }
     encoderWriteCommand(encoder) {
-        const shadowRes = this.render3DPass.shadowResources;
+        const shadowRes = this.render3DPass.lightResources.shadowResources;
         // directional shadow 렌더링
         if (shadowRes.directionalTexture && shadowRes.directionalCount > 0) {
             // 순서 = ShadowResources.getShadowLights → PV 버퍼 칸
-            const dirLights = shadowRes.getShadowLights(this.render3DPass.shaderLights, "directional");
+            const dirLights = shadowRes.getShadowLights(this.render3DPass.lightResources.shaderLights, "directional");
             let layerIdx = 0;
             for (const light of dirLights) {
                 encoder.copyBufferToBuffer(shadowRes.directionalPvMatrixBuffer, layerIdx * 64, this.lightVpBuffer.buffer, 0, 64);

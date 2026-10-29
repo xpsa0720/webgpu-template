@@ -19,7 +19,7 @@ export declare abstract class ShaderGadgetModule {
     getSourceCode(lightArg?: {
         lightStructsUniforms: string;
         lightCode: string;
-        funtionCode: string;
+        functionCode: string;
         shadowDefinesCode: string;
     }): string;
     getVsEntryPoint(): string;

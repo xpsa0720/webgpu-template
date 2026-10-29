@@ -25,26 +25,26 @@ export class ShaderFragmentGadget extends ShaderGadget {
     this.device = device;
     this.code = code ?? SHADER_FRAGMENT_DEFAULT;
     // this.updatePlaceholder();
-    // this.updateBindGroupEntray();
+    // this.updateBindGroupEntry();
   }
 
   // private wrapLightChange(): () => void {
   //   return () => {
   //     // this.updatePlaceholder();
   //     this.onLightChange?.();
-  //   // this.updateBindGroupEntray();
+  //   // this.updateBindGroupEntry();
   //   };
   // }
 
   buildCode(arg: {
     lightStructsUniforms: string;
     lightCode: string;
-    funtionCode: string;
+    functionCode: string;
     shadowDefinesCode: string;
   }) {
     this.placeholder["@LIGHT_STRUCTS_UNIFORMS"] = arg.lightStructsUniforms;
     this.placeholder["@LIGHT_CODES"] = arg.lightCode;
-    this.placeholder["@LIGHT_FUNCTIONS"] = arg.funtionCode;
+    this.placeholder["@LIGHT_FUNCTIONS"] = arg.functionCode;
     this.placeholder["@SHADOW_DEFINES"] = arg.shadowDefinesCode;
     let result = this.code;
     return super.getCode(result);

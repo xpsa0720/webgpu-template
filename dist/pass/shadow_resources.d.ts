@@ -1,5 +1,5 @@
-import type { LightShadow } from "../3d/shadow/lightShadow";
-import type { ShaderLightGadget } from "../shader/gadget/shader_light";
+import type { LightShadow } from "../../3d/shadow/lightShadow";
+import type { ShaderLightGadget } from "../../shader/gadget/shader_light";
 export type ShadowLightType = "directional" | "point";
 export declare class ShadowResources {
     device: GPUDevice;

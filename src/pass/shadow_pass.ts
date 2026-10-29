@@ -163,13 +163,13 @@ export class ShadowPass extends Pass {
   }
 
   encoderWriteCommand(encoder: GPUCommandEncoder) {
-    const shadowRes = this.render3DPass.shadowResources;
+    const shadowRes = this.render3DPass.lightResources.shadowResources;
 
     // directional shadow 렌더링
     if (shadowRes.directionalTexture && shadowRes.directionalCount > 0) {
       // 순서 = ShadowResources.getShadowLights → PV 버퍼 칸
       const dirLights = shadowRes.getShadowLights(
-        this.render3DPass.shaderLights,
+        this.render3DPass.lightResources.shaderLights,
         "directional",
       );
       let layerIdx = 0;

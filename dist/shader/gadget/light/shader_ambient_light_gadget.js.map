@@ -1,0 +1,1 @@
+{"version":3,"file":"shader_ambient_light_gadget.js","sourceRoot":"","sources":["../../../../src/shader/gadget/light/shader_ambient_light_gadget.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,iBAAiB,EAAgC,MAAM,uBAAuB,CAAC;AAExF,MAAM,OAAO,wBAAyB,SAAQ,iBAA+B;IAC3E,YAAY,MAA6C;QACvD,KAAK,CAAC,MAAM,CAAC,CAAC;IAChB,CAAC;CACF"}

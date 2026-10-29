@@ -1,5 +1,5 @@
-import type { LightShadow } from "../3d/shadow/lightShadow";
-import type { ShaderLightGadget, ShadowGadget } from "../shader/gadget/shader_light";
+import type { LightShadow } from "../../3d/shadow/lightShadow";
+import type { ShaderLightGadget, ShadowGadget } from "../../shader/gadget/shader_light";
 
 const SHADOW_MAP_SIZE = 2048;
 
@@ -151,7 +151,6 @@ export class ShadowResources {
   getBindGroupEntries(): GPUBindGroupEntry[] {
     const entries: GPUBindGroupEntry[] = [];
 
-    // shadow 리소스가 하나도 없으면 빈 배열 (셰이더에도 바인딩 선언 없음)
     if (this.directionalCount === 0 && this.pointCount === 0) {
       return entries;
     }

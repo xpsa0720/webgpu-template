@@ -122,7 +122,6 @@ export class ShadowResources {
      */
     getBindGroupEntries() {
         const entries = [];
-        // shadow 리소스가 하나도 없으면 빈 배열 (셰이더에도 바인딩 선언 없음)
         if (this.directionalCount === 0 && this.pointCount === 0) {
             return entries;
         }

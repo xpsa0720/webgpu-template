@@ -26,7 +26,7 @@ export abstract class ShaderGadgetModule {
   }: ShaderGadgetModuleParams) {
     this.viewShaderCode = viewShaderCode;
     this.module = this.createShaderModule(device)
-    // this.bindGroupEntry = this.updateBindGroupEntray()
+    // this.bindGroupEntry = this.updateBindGroupEntry()
     // {
     //   structs: [
     //     new ShaderStructGadget({ struct: SHADER_MATRIX_STRUCT }),
@@ -48,7 +48,7 @@ export abstract class ShaderGadgetModule {
   getSourceCode(lightArg?: {
     lightStructsUniforms: string;
     lightCode: string;
-    funtionCode: string;
+    functionCode: string;
     shadowDefinesCode: string;
   }): string {
     let result = "";
@@ -65,7 +65,7 @@ export abstract class ShaderGadgetModule {
     result += this.module.fragment.buildCode(lightArg ?? {
       lightStructsUniforms: "",
       lightCode: "",
-      funtionCode: "",
+      functionCode: "",
       shadowDefinesCode: ""
     });
 
@@ -89,7 +89,7 @@ export abstract class ShaderGadgetModule {
   }
 
 
-  // abstract updateBindGroupEntray():GPUBindGroupEntry[]
+  // abstract updateBindGroupEntry():GPUBindGroupEntry[]
   abstract createShaderModule(device:GPUDevice):ShaderModuleStruct
   // {
   //   const result: GPUBindGroupEntry[] = [];
